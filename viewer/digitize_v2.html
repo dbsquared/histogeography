@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>汉末十三州 · 打点工具 v2 (GCP + 州界 + 郡治)</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;font-family:"Microsoft YaHei",sans-serif;background:#1a1d23;color:#d5dae2}
+  #app{display:flex;height:100vh}
+  #side{width:340px;background:#23272f;padding:12px;overflow-y:auto;flex-shrink:0;border-right:1px solid #3a4152}
+  #canvasWrap{flex:1;overflow:hidden;position:relative;background:#0e1116}
+  canvas{display:block;cursor:crosshair;position:absolute;top:0;left:0}
+  h1{font-size:15px;margin:0 0 6px;color:#fff}
+  h2{font-size:13px;margin:12px 0 4px;color:#9fb8d8;border-bottom:1px solid #3a4152;padding-bottom:2px}
+  .hint{font-size:11px;color:#8a94a3;line-height:1.55;margin-bottom:8px}
+  .row{display:flex;gap:4px;margin:4px 0;flex-wrap:wrap}
+  .state-btn{flex:0 0 30%;padding:5px 4px;background:#2c313c;color:#ccc;border:1px solid #404653;border-radius:3px;cursor:pointer;font-size:12px;text-align:center}
+  .state-btn.active{background:#4a6ea5;color:#fff;border-color:#5a7eb5}
+  .state-btn.done{background:#2c4a3a;color:#8fd0a0;border-color:#3a5a4a}
+  .mode-btn{flex:1;padding:7px;background:#2c313c;color:#ccc;border:1px solid #404653;border-radius:3px;cursor:pointer;font-size:12px}
+  .mode-btn.active{background:#a56a3a;color:#fff;border-color:#c58050}
+  button.act{flex:1;padding:6px;background:#3a6ea5;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px}
+  button.act:hover{background:#4a7eb5}
+  button.act.red{background:#a54040}
+  button.act.gray{background:#4a5058}
+  #status{font-size:11px;color:#9cc9a0;margin-top:6px;min-height:40px;white-space:pre-line}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}
+  th,td{padding:3px 4px;border-bottom:1px solid #3a4152;text-align:left}
+  th{color:#9fb8d8;font-weight:normal}
+  td.num{font-family:Consolas,monospace;color:#d5dae2}
+  td.err{color:#e0a0a0}
+  kbd{background:#404653;padding:1px 4px;border-radius:2px;font-size:10px}
+  .gcp-item,.seat-item,.bnd-item{display:flex;justify-content:space-between;padding:2px 4px;font-size:11px;border-bottom:1px dashed #3a4152}
+  .gcp-item:hover,.seat-item:hover,.bnd-item:hover{background:#2c313c;cursor:pointer}
+  .del{color:#e08080;cursor:pointer}
+  .color-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+  /* ── GCP 预设下拉框 ── */
+  #gcpPresetBox{margin:8px 0 2px;padding:8px;border:1px solid #3a4152;border-radius:6px;background:#1a1f29}
+  #gcpPresetBox.hidden{display:none}
+  #gcpPresetBox .sub{font-size:11px;color:#9fb8d8;margin-bottom:4px}
+  #gcpPreset{width:100%;background:#0e1116;color:#e8edf3;border:1px solid #3a4152;border-radius:4px;
+    font-size:12px;padding:4px}
+  #gcpPreset option{padding:2px 4px}
+  #gcpPreset option:hover{background:#2c313c}
+  /* ── 缩放导航按钮 ── */
+  #navBtns{position:absolute;top:10px;right:10px;z-index:10;display:flex;gap:4px;align-items:center;
+    background:rgba(20,25,35,0.85);padding:6px 8px;border-radius:6px;border:1px solid #3a4152}
+  .navbtn{padding:5px 10px;background:#3a6ea5;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:13px;font-weight:bold}
+  .navbtn:hover{background:#4a7eb5}
+  #zoomInfo{color:#9fb8d8;font-size:11px;min-width:44px;text-align:center;font-family:Consolas,monospace}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="side">
+    <h1>汉末十三州 · 打点工具 v2</h1>
+    <div class="hint">
+      三种模式：<br>
+      <b>① 锚点 GCP</b>：在图上点一个<b>现代已知城市</b>的位置，弹出输入城市名/经纬度（或选预设）。≥4 个后自动计算仿射。<br>
+      <b>② 州界</b>：沿州界依次点顶点（最后一点双击/右键闭合）。<br>
+      <b>③ 郡治</b>：点郡治位置，弹出输入郡名/类型。<br>
+      <b>缩放</b>：滚轮 / 右上角 <kbd>⛶ 适应</kbd> <kbd>＋</kbd> <kbd>－</kbd> <kbd>1:1</kbd> 按钮；快捷键 <kbd>F</kbd> 适应窗口、<kbd>+</kbd>/<kbd>-</kbd> 缩放、<kbd>0</kbd> 100%。<br>
+      <b>平移</b>：按住<kbd>空格</kbd>+拖拽；<kbd>Ctrl+Z</kbd> 撤销当前模式上一点。
+    </div>
+
+    <h2>州选择</h2>
+    <div class="row" id="stateBtns"></div>
+
+    <h2>打点模式</h2>
+    <div class="row">
+      <button class="mode-btn active" id="m-gcp">① 锚点 GCP</button>
+      <button class="mode-btn" id="m-bnd">② 州界顶点</button>
+      <button class="mode-btn" id="m-seat">③ 郡治</button>
+    </div>
+
+    <div id="gcpPresetBox">
+      <div class="sub">选城市 → 在图上点该城市位置</div>
+      <select id="gcpPreset" size="6"></select>
+      <div class="sub" style="margin-top:4px">选「自定义…」可在点击后手动输入「名称,经度,纬度」</div>
+    </div>
+
+    <h2>操作</h2>
+    <div class="row">
+      <button class="act gray" id="undoBtn">撤销上一点</button>
+      <button class="act gray" id="clearModeBtn">清空当前模式</button>
+    </div>
+    <div class="row">
+      <button class="act red" id="exportBtn">导出本州 GeoJSON</button>
+    </div>
+    <div class="row">
+      <button class="act" id="exportAllBtn">导出全部 13 州</button>
+    </div>
+
+    <div id="status">就绪。先在图上点 ≥4 个现代同名城市作为 GCP 锚点。</div>
+
+    <h2>GCP 锚点列表 (<span id="gcpCount">0</span>) <span id="affineInfo" style="color:#8a94a3"></span></h2>
+    <div id="gcpList"></div>
+
+    <h2>州界顶点 (<span id="bndCount">0</span>)</h2>
+    <div id="bndList"></div>
+
+    <h2>郡治 (<span id="seatCount">0</span>)</h2>
+    <div id="seatList"></div>
+  </div>
+  <div id="canvasWrap"><canvas id="cv"></canvas>
+    <div id="navBtns">
+      <button class="navbtn" id="btnFit" title="适应窗口 (F)">⛶ 适应</button>
+      <button class="navbtn" id="btnZoomIn" title="放大 (+)">＋</button>
+      <button class="navbtn" id="btnZoomOut" title="缩小 (−)">－</button>
+      <button class="navbtn" id="btnZoom100" title="100% (0)">1:1</button>
+      <span id="zoomInfo">100%</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 13 州定义 ──
+const STATES = [
+  {name:'冀州', img:'ref_imgs/冀州.png', color:'#D27370'},
+  {name:'凉州', img:'ref_imgs/凉州.png', color:'#CCAE84'},
+  {name:'益州', img:'ref_imgs/益州.png', color:'#D5C798'},
+  {name:'司隶', img:'ref_imgs/司隶.png', color:'#BC5D5B'},
+  {name:'并州', img:'ref_imgs/并州.png', color:'#8E44AD'},
+  {name:'青州', img:'ref_imgs/青州.png', color:'#AEBC83'},
+  {name:'幽州', img:'ref_imgs/幽州.png', color:'#FFFFFF'},
+  {name:'兖州', img:'ref_imgs/兖州.png', color:'#D3CBC0'},
+  {name:'豫州', img:'ref_imgs/豫州.png', color:'#B3ADA4'},
+  {name:'徐州', img:'ref_imgs/徐州.png', color:'#BCD398'},
+  {name:'扬州', img:'ref_imgs/扬州.png', color:'#A0D28C'},
+  {name:'荆州', img:'ref_imgs/荆州.png', color:'#CF72C9'},
+  {name:'交州', img:'ref_imgs/交州.png', color:'#E14B9B'},
+];
+
+// ── 预设现代城市库（用于 GCP 锚点快速选填）──
+const PRESET_CITIES = [
+  {name:'北京',   lon:116.41, lat:39.90},
+  {name:'天津',   lon:117.20, lat:39.13},
+  {name:'石家庄', lon:114.51, lat:38.04},
+  {name:'太原',   lon:112.55, lat:37.87},
+  {name:'济南',   lon:117.00, lat:36.65},
+  {name:'郑州',   lon:113.62, lat:34.75},
+  {name:'西安',   lon:108.94, lat:34.34},
+  {name:'洛阳',   lon:112.45, lat:34.62},
+  {name:'南京',   lon:118.78, lat:32.06},
+  {name:'合肥',   lon:117.28, lat:31.86},
+  {name:'武汉',   lon:114.30, lat:30.59},
+  {name:'成都',   lon:104.07, lat:30.67},
+  {name:'长沙',   lon:112.94, lat:28.23},
+  {name:'广州',   lon:113.27, lat:23.13},
+  {name:'兰州',   lon:103.84, lat:36.06},
+  {name:'大同',   lon:113.30, lat:40.08},
+  {name:'开封',   lon:114.31, lat:34.79},
+  {name:'安阳',   lon:114.40, lat:36.10},
+  {name:'邯郸',   lon:114.49, lat:36.61},
+  {name:'临淄',   lon:118.28, lat:36.83},  // 淄博市临淄区
+  {name:'蓟/北京',lon:116.40, lat:39.90},
+  {name:'邺/临漳',lon:114.61, lat:36.32},  // 河北临漳县
+  {name:'武威',   lon:102.64, lat:37.93},
+  {name:'敦煌',   lon:94.68,  lat:40.14},
+  {name:'张掖',   lon:100.45, lat:38.94},
+  {name:'许昌',   lon:113.85, lat:34.04},
+  {name:'襄阳',   lon:112.14, lat:32.04},
+  {name:'寿春',   lon:116.78, lat:32.55},  // 安徽寿县
+  {name:'江陵',   lon:112.24, lat:30.33},  // 荆州
+  {name:'建业',   lon:118.78, lat:32.06},  // 南京
+  {name:'汉中',   lon:107.03, lat:33.07},
+  {name:'宛/南阳',lon:112.53, lat:33.00},
+  {name:'番禺',   lon:113.27, lat:23.13},  // 广州
+  {name:'成都',   lon:104.07, lat:30.67},
+  {name:'晋阳',   lon:112.55, lat:37.87},  // 太原
+  // ── 幽州/东北方向预设（用于补 NE GCP）──
+  {name:'张家口', lon:114.88, lat:40.82},
+  {name:'承德',   lon:117.96, lat:40.95},
+  {name:'秦皇岛', lon:119.60, lat:39.94},
+  {name:'唐山',   lon:118.18, lat:39.63},
+  {name:'锦州',   lon:121.13, lat:41.10},
+  {name:'大连/旅顺', lon:121.55, lat:38.90},
+  {name:'沈阳',   lon:123.43, lat:41.80},
+  {name:'辽阳/襄平', lon:123.18, lat:41.48},
+  {name:'鞍山',   lon:122.99, lat:41.11},
+  {name:'丹东/安东', lon:124.37, lat:40.12},
+  {name:'平壤/乐浪', lon:125.62, lat:39.02},
+  {name:'大同',   lon:113.30, lat:40.08},
+  // ── 并州专用 GCP 预设（山西/陕北/内蒙/冀南/豫北/关中）──
+  {name:'太原',       lon:112.55, lat:37.87},  // 太原郡·晋阳
+  {name:'临汾',       lon:111.52, lat:36.08},  // 平阳·司隶界
+  {name:'运城',       lon:111.00, lat:35.02},  // 安邑·司隶界
+  {name:'长治',       lon:113.13, lat:36.19},  // 上党郡·长子
+  {name:'晋城',       lon:112.85, lat:35.50},  // 上党郡南端
+  {name:'阳泉',       lon:113.58, lat:37.86},  // 真定附近
+  {name:'朔州',       lon:112.43, lat:39.33},  // 马邑·雁门西
+  {name:'忻州',       lon:112.73, lat:38.42},  // 新兴郡
+  {name:'吕梁/离石',   lon:111.13, lat:37.52},  // 西河郡治
+  {name:'延安',       lon:109.49, lat:36.60},  // 上郡·肤施
+  {name:'榆林',       lon:109.74, lat:38.29},  // 上郡北·榆塞
+  {name:'绥德',       lon:110.26, lat:37.50},  // 西河郡北
+  {name:'呼和浩特',   lon:111.73, lat:40.83},  // 云中郡
+  {name:'包头',       lon:109.84, lat:40.66},  // 五原郡
+  {name:'鄂尔多斯/东胜',lon:109.78, lat:39.61},  // 朔方/五原间
+  {name:'乌兰察布/集宁',lon:113.13, lat:41.03},  // 代郡北·阴山
+  {name:'石家庄',     lon:114.51, lat:38.04},  // 常山郡·冀州
+  {name:'邯郸',       lon:114.49, lat:36.61},  // 邯郸郡/邺
+  {name:'张家口',     lon:114.89, lat:40.82},  // 代郡/幽州界
+  {name:'保定',       lon:115.46, lat:38.87},  // 中山国
+  {name:'邢台',       lon:114.50, lat:37.07},  // 赵国/冀州
+  {name:'安阳',       lon:114.40, lat:36.10},  // 魏郡/邺附近
+  {name:'焦作',       lon:113.24, lat:35.24},  // 河内郡
+  {name:'新乡',       lon:113.93, lat:35.30},  // 河内郡东
+  {name:'济源',       lon:112.60, lat:35.07},  // 河内郡北
+  {name:'西安',       lon:108.94, lat:34.34},  // 京兆/司隶
+  {name:'渭南',       lon:109.50, lat:34.50},  // 京兆东
+];
+
+// ── 数据存储（按州分组）──
+// data[state] = {gcps:[{px,py,lon,lat,name}], bnd:[[px,py],...], seats:[{px,py,name,role}]}
+const data = {};
+STATES.forEach(s=>data[s.name]={gcps:[],bnd:[],seats:[]});
+
+// ── 状态 ──
+let curState = '冀州';
+let curMode  = 'gcp';   // gcp | bnd | seat
+let img = new Image();
+let scale=1, offX=0, offY=0, spaceDown=false;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+const statusEl = document.getElementById('status');
+
+// ── 仿射最小二乘：返回 [a,b,c] 使得 lon = a*px + b*py + c ──
+function lstsq(pts, vals){
+  // pts: [[x,y,1],...], vals: [...]
+  const n = pts.length;
+  if(n<3) return null;
+  // 正规方程 (A^T A) x = A^T b
+  let s11=0,s12=0,s13=0,s22=0,s23=0,s33=0;
+  let t1=0,t2=0,t3=0;
+  for(let i=0;i<n;i++){
+    const [x,y,_]=pts[i];
+    s11+=x*x; s12+=x*y; s13+=x;
+    s22+=y*y; s23+=y; s33+=1;
+    t1+=x*vals[i]; t2+=y*vals[i]; t3+=vals[i];
+  }
+  // 3x3 高斯消元
+  const A=[[s11,s12,s13,t1],[s12,s22,s23,t2],[s13,s23,s33,t3]];
+  for(let c=0;c<3;c++){
+    let p=c; for(let r=c+1;r<3;r++) if(Math.abs(A[r][c])>Math.abs(A[p][c])) p=r;
+    [A[c],A[p]]=[A[p],A[c]];
+    const d=A[c][c]; if(Math.abs(d)<1e-12) return null;
+    for(let j=c;j<4;j++) A[c][j]/=d;
+    for(let r=0;r<3;r++){
+      if(r===c) continue;
+      const f=A[r][c];
+      for(let j=c;j<4;j++) A[r][j]-=f*A[c][j];
+    }
+  }
+  return [A[0][3],A[1][3],A[2][3]];
+}
+
+// ── 计算仿射 + 残差 ──
+function computeAffine(){
+  const gcps = data[curState].gcps;
+  if(gcps.length<4) return null;
+  const pts = gcps.map(g=>[g.px,g.py,1]);
+  const Mlon = lstsq(pts, gcps.map(g=>g.lon));
+  const Mlat = lstsq(pts, gcps.map(g=>g.lat));
+  if(!Mlon||!Mlat) return null;
+  // 残差
+  let maxErr=0, sumErr=0;
+  gcps.forEach(g=>{
+    const plon = Mlon[0]*g.px+Mlon[1]*g.py+Mlon[2];
+    const plat = Mlat[0]*g.px+Mlat[1]*g.py+Mlat[2];
+    const errKm = Math.hypot((plon-g.lon)*111*Math.cos(g.lat*Math.PI/180),(plat-g.lat)*111);
+    g.errKm = errKm;
+    maxErr=Math.max(maxErr,errKm); sumErr+=errKm;
+  });
+  return {Mlon,Mlat,maxErr,avgErr:sumErr/gcps.length};
+}
+
+// ── 像素→经纬度 ──
+function pxToLonLat(px,py){
+  const A=computeAffine(); if(!A) return null;
+  return {lon:A.Mlon[0]*px+A.Mlon[1]*py+A.Mlon[2], lat:A.Mlat[0]*px+A.Mlat[1]*py+A.Mlat[2]};
+}
+
+// ── 加载州图 ──
+function loadState(name){
+  curState=name;
+  // 重置该州数据（加载已有像素坐标后会回填）
+  data[name]={gcps:[],bnd:[],seats:[]};
+  img = new Image();
+  img.onload = ()=>{
+    resizeCanvas();
+    fitToWindow();
+    draw();
+    refreshLists();
+  };
+  img.src = STATES.find(s=>s.name===name).img;
+  // 异步回读已有 GeoJSON（含像素坐标），实现"补 GCP 即自动重投影"
+  fetch(`han_states_raw/${encodeURIComponent(name)}.geojson`)
+    .then(r=>r.ok?r.json():null)
+    .then(gj=>{ if(gj && gj.pixels) hydrateFromPixels(gj, name); })
+    .catch(()=>{});
+}
+
+// 用已有像素坐标回填 data[name]，computeAffine 随后自动重投影所有点
+function hydrateFromPixels(gj, name){
+  const px=gj.pixels; if(!px) return;
+  const D=data[name];
+  // GCP（含已知经纬度，作为后续仿射基准）
+  if(px.gcps) D.gcps = px.gcps.map(g=>({px:g.px,py:g.py,lon:g.lon,lat:g.lat,name:g.name}));
+  // 州界顶点（像素）
+  if(px.bnd) D.bnd = px.bnd.map(v=>[v[0],v[1]]);
+  // 郡治（像素 + 名称/类型）
+  if(px.seats) D.seats = px.seats.map(s=>({px:s.px,py:s.py,name:s.name,role:s.role}));
+  refreshLists(); draw();
+  const hasAffine = D.gcps.length>=4;
+  statusEl.textContent = `已载入 ${name} 旧数据（${D.gcps.length} GCP / ${D.bnd.length} 界点 / ${D.seats.length} 郡治）`
+    + (hasAffine?'，添加东北角 GCP 后边界会自动重投影':'，需先补 GCP');
+}
+
+// ── canvas 尺寸匹配容器（关键：不再固定为图像原始尺寸）──
+function resizeCanvas(){
+  cv.width = wrap.clientWidth;
+  cv.height = wrap.clientHeight;
+}
+window.addEventListener('resize', ()=>{ resizeCanvas(); draw(); });
+
+// ── 适应窗口：把整张图缩放到刚好可见 ──
+function fitToWindow(){
+  if(!img.complete||!img.naturalWidth) return;
+  const aw=wrap.clientWidth, ah=wrap.clientHeight;
+  scale=Math.min(aw/img.width,ah/img.height)*0.95;
+  offX=(aw-img.width*scale)/2; offY=(ah-img.height*scale)/2;
+  updateZoomInfo(); draw();
+}
+// ── 缩放：以容器中心为锚点 ──
+function zoomBy(factor){
+  if(!img.complete||!img.naturalWidth) return;
+  const cx=wrap.clientWidth/2, cy=wrap.clientHeight/2;
+  const px=(cx-offX)/scale, py=(cy-offY)/scale;
+  scale=Math.max(0.05,Math.min(30,scale*factor));
+  offX=cx-px*scale; offY=cy-py*scale;
+  updateZoomInfo(); draw();
+}
+function zoom100(){
+  if(!img.complete||!img.naturalWidth) return;
+  const cx=wrap.clientWidth/2, cy=wrap.clientHeight/2;
+  const px=(cx-offX)/scale, py=(cy-offY)/scale;
+  scale=1;
+  offX=cx-px*scale; offY=cy-py*scale;
+  updateZoomInfo(); draw();
+}
+function updateZoomInfo(){
+  const base = Math.min(wrap.clientWidth/img.width, wrap.clientHeight/img.height);
+  const pct = Math.round(scale/base*100);
+  document.getElementById('zoomInfo').textContent = pct+'%';
+}
+
+// ── 画布 ──
+function draw(){
+  // 1. 先清屏（identity transform）
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle='#0e1116'; ctx.fillRect(0,0,cv.width,cv.height);
+  // 2. 应用缩放/平移 transform，再画图（图像+矢量在同一坐标系）
+  ctx.setTransform(scale,0,0,scale,offX,offY);
+  if(img.complete&&img.naturalWidth) ctx.drawImage(img,0,0);
+  const D = data[curState];
+  // 已闭合的州界
+  if(D.bnd.length>=2){
+    ctx.strokeStyle='#ff5050'; ctx.lineWidth=2/scale;
+    ctx.beginPath();
+    ctx.moveTo(D.bnd[0][0],D.bnd[0][1]);
+    for(let k=1;k<D.bnd.length;k++) ctx.lineTo(D.bnd[k][0],D.bnd[k][1]);
+    ctx.stroke();
+    ctx.fillStyle='#ff0';
+    D.bnd.forEach(v=>{ctx.beginPath();ctx.arc(v[0],v[1],3/scale,0,7);ctx.fill();});
+  }
+  // GCP 锚点
+  D.gcps.forEach((g,i)=>{
+    ctx.fillStyle='#4dc3ff';
+    ctx.beginPath();ctx.arc(g.px,g.py,5/scale,0,7);ctx.fill();
+    ctx.fillStyle='#000';ctx.font=`bold ${10/scale}px sans-serif`;
+    ctx.fillText(String(i+1),g.px-3/scale,g.py+3.5/scale);
+  });
+  // 郡治
+  D.seats.forEach(s=>{
+    ctx.fillStyle='#ffd24d';
+    ctx.beginPath();ctx.arc(s.px,s.py,4/scale,0,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font=`${9/scale}px sans-serif`;
+    ctx.fillText(s.name,s.px+6/scale,s.py+3/scale);
+  });
+}
+
+// ── 列表刷新 ──
+function refreshLists(){
+  const D=data[curState];
+  const A=computeAffine();
+  // GCP 列表
+  document.getElementById('gcpCount').textContent=D.gcps.length;
+  document.getElementById('affineInfo').textContent=A?`残差 max=${A.maxErr.toFixed(1)}km avg=${A.avgErr.toFixed(1)}km`:'(需≥4个)';
+  document.getElementById('gcpList').innerHTML=D.gcps.map((g,i)=>{
+    const errTxt = g.errKm!==undefined?`<span style="color:${g.errKm<30?'#9c9':g.errKm<80?'#cc6':'#c66'}">${g.errKm.toFixed(1)}km</span>`:'';
+    return `<div class="gcp-item"><span><b>${i+1}.</b> ${g.name}</span><span class="num">(${g.px},${g.py}) → (${g.lon.toFixed(2)},${g.lat.toFixed(2)}) ${errTxt}</span><span class="del" data-t="gcp" data-i="${i}">✕</span></div>`;
+  }).join('');
+  // 州界
+  document.getElementById('bndCount').textContent=D.bnd.length;
+  document.getElementById('bndList').innerHTML=D.bnd.map((v,i)=>{
+    const ll=A?pxToLonLat(v[0],v[1]):null;
+    const txt=ll?`(${ll.lon.toFixed(3)},${ll.lat.toFixed(3)})`:`(${v[0]},${v[1]})`;
+    return `<div class="bnd-item"><span>${i+1}.</span><span class="num">${txt}</span><span class="del" data-t="bnd" data-i="${i}">✕</span></div>`;
+  }).join('');
+  // 郡治
+  document.getElementById('seatCount').textContent=D.seats.length;
+  document.getElementById('seatList').innerHTML=D.seats.map((s,i)=>{
+    const ll=A?pxToLonLat(s.px,s.py):null;
+    const txt=ll?`(${ll.lon.toFixed(3)},${ll.lat.toFixed(3)})`:`(${s.px},${s.py})`;
+    return `<div class="seat-item"><span>${s.name} <em style="color:#8a94a3">${s.role}</em></span><span class="num">${txt}</span><span class="del" data-t="seat" data-i="${i}">✕</span></div>`;
+  }).join('');
+  // 删除事件
+  document.querySelectorAll('.del').forEach(el=>{
+    el.onclick=e=>{
+      const t=e.target.dataset.t, i=+e.target.dataset.i;
+      if(t==='gcp') D.gcps.splice(i,1);
+      else if(t==='bnd') D.bnd.splice(i,1);
+      else if(t==='seat') D.seats.splice(i,1);
+      refreshLists(); draw();
+    };
+  });
+  // 状态栏
+  const g=D.gcps.length,b=D.bnd.length,s=D.seats.length;
+  statusEl.textContent=`${curState}: GCP=${g} 州界=${b} 郡治=${s}`+(A?`  残差max=${A.maxErr.toFixed(1)}km`:'');
+}
+
+// ── 州按钮 ──
+function buildStateBtns(){
+  const box=document.getElementById('stateBtns'); box.innerHTML='';
+  STATES.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='state-btn'+(s.name===curState?' active':'')+(data[s.name].bnd.length>=3?' done':'');
+    b.innerHTML=`<span class="color-dot" style="background:${s.color}"></span>${s.name}`;
+    b.onclick=()=>{ loadState(s.name); buildStateBtns(); };
+    box.appendChild(b);
+  });
+}
+
+// ── 模式切换 ──
+function setMode(m){
+  curMode=m;
+  ['gcp','bnd','seat'].forEach(x=>document.getElementById('m-'+x).classList.toggle('active',x===m));
+  document.getElementById('gcpPresetBox').classList.toggle('hidden', m!=='gcp');
+}
+
+// ── 填充 GCP 预设下拉框 ──
+function populateGcpPreset(){
+  const sel=document.getElementById('gcpPreset');
+  sel.innerHTML='';
+  PRESET_CITIES.forEach((c,i)=>{
+    const o=document.createElement('option');
+    o.value=String(i);
+    o.textContent=`${c.name}  (${c.lon}, ${c.lat})`;
+    sel.appendChild(o);
+  });
+  const o=document.createElement('option');
+  o.value='custom'; o.textContent='✎ 自定义…（点击后手动输入）';
+  sel.appendChild(o);
+}
+document.getElementById('m-gcp').onclick=()=>setMode('gcp');
+document.getElementById('m-bnd').onclick=()=>setMode('bnd');
+document.getElementById('m-seat').onclick=()=>setMode('seat');
+
+// ── 画布事件 ──
+cv.addEventListener('click',e=>{
+  if(spaceDown) return;
+  const r=cv.getBoundingClientRect();
+  const sx=e.clientX-r.left, sy=e.clientY-r.top;
+  const px=Math.round((sx-offX)/scale), py=Math.round((sy-offY)/scale);
+  if(px<0||py<0||px>img.width||py>img.height) return;
+  const D=data[curState];
+
+  if(curMode==='gcp'){
+    const sel=document.getElementById('gcpPreset');
+    const val=sel.value;
+    let city;
+    if(val==='custom'){
+      const input=prompt('输入 GCP 锚点「名称,经度,纬度」：');
+      if(!input) return;
+      const parts=input.split(/[,，]/).map(s=>s.trim());
+      if(parts.length<3) return alert('格式错误');
+      city={name:parts[0],lon:+parts[1],lat:+parts[2]};
+    }else{
+      city=PRESET_CITIES[parseInt(val)];
+      if(!city) return;
+    }
+    D.gcps.push({px,py,lon:city.lon,lat:city.lat,name:city.name});
+  }
+  else if(curMode==='bnd'){
+    D.bnd.push([px,py]);
+  }
+  else if(curMode==='seat'){
+    const name=prompt('郡治名称（如 魏郡/邺）：');
+    if(!name) return;
+    const ROLE_MAP={'1':'capital','2':'commandery','3':'major','4':'fortress'};
+    const roleInput=prompt('类型：\n  1 = capital (州府)\n  2 = commandery (郡治)\n  3 = major (主要城)\n  4 = fortress (要塞)\n\n输入数字或直接输英文：','2');
+    if(!roleInput) return;
+    const role = ROLE_MAP[roleInput.trim()] || roleInput.trim().toLowerCase() || 'commandery';
+    D.seats.push({px,py,name,role});
+  }
+  refreshLists(); draw();
+});
+cv.addEventListener('dblclick',e=>{ if(curMode==='bnd'){ e.preventDefault(); } });
+cv.addEventListener('contextmenu',e=>{ e.preventDefault(); });
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const px=(mx-offX)/scale,py=(my-offY)/scale;
+  const f=e.deltaY<0?1.15:1/1.15;
+  scale=Math.max(0.05,Math.min(30,scale*f));
+  offX=mx-px*scale; offY=my-py*scale;
+  updateZoomInfo(); draw();
+});
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){spaceDown=true;cv.style.cursor='grab';}
+  if(e.ctrlKey&&e.key==='z'){ undoLast(); }
+  // 缩放快捷键
+  if(e.key==='f'||e.key==='F'){ fitToWindow(); }
+  if(e.key==='+'||e.key==='='){ zoomBy(1.25); }
+  if(e.key==='-'||e.key==='_'){ zoomBy(1/1.25); }
+  if(e.key==='0'){ zoom100(); }
+});
+window.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;cv.style.cursor='crosshair';}});
+let dragging=false,lx=0,ly=0;
+cv.addEventListener('mousedown',e=>{if(spaceDown){dragging=true;lx=e.clientX;ly=e.clientY;}});
+window.addEventListener('mousemove',e=>{if(dragging){offX+=e.clientX-lx;offY+=e.clientY-ly;lx=e.clientX;ly=e.clientY;draw();}});
+window.addEventListener('mouseup',()=>dragging=false);
+
+// ── 撤销/清空 ──
+function undoLast(){
+  const D=data[curState];
+  if(curMode==='gcp') D.gcps.pop();
+  else if(curMode==='bnd') D.bnd.pop();
+  else if(curMode==='seat') D.seats.pop();
+  refreshLists(); draw();
+}
+document.getElementById('undoBtn').onclick=undoLast;
+document.getElementById('clearModeBtn').onclick=()=>{
+  const D=data[curState];
+  if(!confirm(`清空 ${curState} 当前模式 (${curMode}) 的所有点？`)) return;
+  if(curMode==='gcp') D.gcps=[];
+  else if(curMode==='bnd') D.bnd=[];
+  else if(curMode==='seat') D.seats=[];
+  refreshLists(); draw();
+};
+
+// ── 缩放导航按钮 ──
+document.getElementById('btnFit').onclick=fitToWindow;
+document.getElementById('btnZoomIn').onclick=()=>zoomBy(1.3);
+document.getElementById('btnZoomOut').onclick=()=>zoomBy(1/1.3);
+document.getElementById('btnZoom100').onclick=zoom100;
+
+// ── 导出 GeoJSON ──
+function exportState(name){
+  const D=data[name];
+  const A=computeAffine();
+  if(!A){ alert(`${name}: GCP 不足 4 个，无法仿射`); return null; }
+  if(D.bnd.length<3){ alert(`${name}: 州界顶点不足 3 个`); return null; }
+  // 顶点 → 经纬度
+  const ring=D.bnd.map(v=>{
+    const ll=pxToLonLat(v[0],v[1]);
+    return [+ll.lon.toFixed(5),+ll.lat.toFixed(5)];
+  });
+  ring.push(ring[0]); // 闭合
+  // 郡治
+  const seats=D.seats.map(s=>{
+    const ll=pxToLonLat(s.px,s.py);
+    return {name:s.name,role:s.role,lon:+ll.lon.toFixed(5),lat:+ll.lat.toFixed(5)};
+  });
+  const stateMeta=STATES.find(x=>x.name===name);
+  // 像素坐标侧通道（供下次加载后自动重投影；不影响 build_han_states.py）
+  const pixels={
+    gcps:D.gcps.map(g=>({px:+g.px.toFixed(1),py:+g.py.toFixed(1),lon:g.lon,lat:g.lat,name:g.name})),
+    bnd:D.bnd.map(v=>[+v[0].toFixed(1),+v[1].toFixed(1)]),
+    seats:D.seats.map(s=>({px:+s.px.toFixed(1),py:+s.py.toFixed(1),name:s.name,role:s.role}))
+  };
+  return {
+    type:'FeatureCollection',
+    metadata:{state:name,color:stateMeta.color,gcps:D.gcps.length,max_err_km:+A.maxErr.toFixed(1),avg_err_km:+A.avgErr.toFixed(1)},
+    pixels:pixels,
+    features:[
+      {type:'Feature',properties:{kind:'state_boundary',state:name,color:stateMeta.color},geometry:{type:'Polygon',coordinates:[ring]}},
+      ...seats.map(s=>({type:'Feature',properties:{kind:'commandery_seat',state:name,...s},geometry:{type:'Point',coordinates:[s.lon,s.lat]}}))
+    ]
+  };
+}
+
+document.getElementById('exportBtn').onclick=()=>{
+  const gj=exportState(curState);
+  if(!gj) return;
+  downloadJSON(gj,`${curState}.geojson`);
+};
+document.getElementById('exportAllBtn').onclick=()=>{
+  const all={type:'FeatureCollection',metadata:{title:'汉末十三州',states:[]},features:[]};
+  for(const s of STATES){
+    const gj=exportState(s.name);
+    if(gj){ all.features.push(...gj.features); all.metadata.states.push(s.name); }
+  }
+  if(all.features.length===0){ alert('没有任何州可导出'); return; }
+  downloadJSON(all,'han_13states_all.geojson');
+};
+function downloadJSON(obj,fn){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=fn; a.click();
+}
+
+// ── 初始化 ──
+buildStateBtns();
+populateGcpPreset();
+setMode('gcp');    // 默认 GCP 模式，显示预设下拉框
+resizeCanvas();   // 先建立画布尺寸
+loadState('冀州');
+</script>
+</body>
+</html>

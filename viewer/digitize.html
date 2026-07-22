@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>汉末十三州 · 交互式边界描边</title>
+<style>
+  * { box-sizing: border-box; }
+  html,body { margin:0; padding:0; font-family: "Microsoft YaHei", sans-serif; background:#1e1e1e; color:#ddd; height:100%; }
+  #app { display:flex; height:100vh; }
+  #sidebar { width:280px; background:#252525; padding:12px; overflow-y:auto; flex-shrink:0; }
+  #canvasWrap { flex:1; overflow:auto; position:relative; background:#111; }
+  canvas { display:block; cursor:crosshair; }
+  h1 { font-size:16px; margin:0 0 8px; color:#fff; }
+  .hint { font-size:12px; color:#999; line-height:1.5; margin-bottom:10px; }
+  .state-btn { display:block; width:100%; text-align:left; padding:7px 10px; margin:3px 0;
+    background:#333; color:#ccc; border:1px solid #444; border-radius:4px; cursor:pointer; font-size:13px; }
+  .state-btn.active { background:#4a6; color:#fff; border-color:#6c8; }
+  .state-btn.done { background:#263; color:#8c8; border-color:#485; }
+  .row { display:flex; gap:6px; margin:6px 0; }
+  button.act { flex:1; padding:7px; background:#3a6ea5; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:13px; }
+  button.act:hover { background:#4a7eb5; }
+  button.act.red { background:#a55; }
+  #status { font-size:12px; color:#9c9; margin-top:8px; min-height:32px; }
+  .swatch { display:inline-block; width:12px; height:12px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
+  .counter { font-size:12px; color:#bbb; }
+  kbd { background:#444; padding:1px 5px; border-radius:3px; font-size:11px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <h1>汉末十三州 · 边界描边</h1>
+    <div class="hint">
+      在右图沿州界<b>依次点击</b>顶点（顺时针或逆时针均可）。<br>
+      • 单击：添加顶点<br>
+      • 双击 / 右键：结束当前州，进入下一州<br>
+      • <kbd>Ctrl+Z</kbd>：撤销上一个点<br>
+      • 滚轮：缩放；按住<kbd>空格</kbd>拖拽：平移<br>
+      点得越密，边界越精确（系统会再沿真实边线加密）。
+    </div>
+    <div id="states"></div>
+    <div class="row">
+      <button class="act" id="undoBtn">撤销</button>
+      <button class="act" id="clearBtn">清空本州</button>
+    </div>
+    <div class="row">
+      <button class="act" id="finishBtn">结束本州 ▶</button>
+    </div>
+    <div class="row">
+      <button class="act red" id="exportBtn">导出 GeoJSON</button>
+    </div>
+    <div id="status">就绪。</div>
+    <div class="counter" id="counter"></div>
+  </div>
+  <div id="canvasWrap">
+    <canvas id="cv"></canvas>
+  </div>
+</div>
+<script>
+const STATES = [
+  ['凉州','#E8A85C'],['益州','#D4B876'],['司隶','#A685B5'],['并州','#6B8EB8'],
+  ['冀州','#C75050'],['青州','#A8C070'],['幽州','#4A8B5C'],['兖州','#E8DDA8'],
+  ['豫州','#4A8088'],['徐州','#B8A8C8'],['扬州','#A8D490'],['荆州','#D45060'],
+  ['交州','#E850A0']
+];
+const IMG = 'overview_13states.png';
+const polygons = {};           // name -> [[x,y],...]
+let current = 0;
+let verts = [];                // current state vertices (image px)
+let scale = 1, offX = 0, offY = 0;
+let spaceDown = false;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+const statusEl = document.getElementById('status');
+const counterEl = document.getElementById('counter');
+const img = new Image();
+img.onload = () => {
+  cv.width = img.width; cv.height = img.height;
+  // fit to view initially
+  const aw = wrap.clientWidth, ah = wrap.clientHeight;
+  scale = Math.min(aw/img.width, ah/img.height) * 0.95;
+  offX = (aw - img.width*scale)/2; offY = (ah - img.height*scale)/2;
+  draw();
+};
+img.src = IMG;
+
+function draw() {
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.drawImage(img,0,0);
+  ctx.setTransform(scale,0,0,scale,offX,offY);
+  // finished polygons
+  for (let i=0;i<STATES.length;i++){
+    const nm = STATES[i][0];
+    if (i===current) continue;
+    const p = polygons[nm];
+    if (!p || p.length<2) continue;
+    ctx.strokeStyle = STATES[i][1]; ctx.lineWidth = 2/scale;
+    ctx.beginPath();
+    ctx.moveTo(p[0][0],p[0][1]);
+    for (let k=1;k<p.length;k++) ctx.lineTo(p[k][0],p[k][1]);
+    ctx.closePath(); ctx.stroke();
+  }
+  // current polygon
+  if (verts.length){
+    const col = STATES[current][1];
+    ctx.strokeStyle = col; ctx.fillStyle = col+'33'; ctx.lineWidth = 2/scale;
+    ctx.beginPath();
+    ctx.moveTo(verts[0][0],verts[0][1]);
+    for (let k=1;k<verts.length;k++) ctx.lineTo(verts[k][0],verts[k][1]);
+    ctx.stroke();
+    // vertices
+    ctx.fillStyle = '#ff0';
+    for (const v of verts){
+      ctx.beginPath(); ctx.arc(v[0],v[1],3/scale,0,7); ctx.fill();
+    }
+  }
+  // crosshair at cursor handled separately
+  counterEl.textContent = `当前：${STATES[current][0]}  顶点数：${verts.length}  已完成：${Object.keys(polygons).length}/13`;
+}
+
+function buildStateList(){
+  const box = document.getElementById('states');
+  box.innerHTML='';
+  STATES.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='state-btn'+(i===current?' active':'')+(polygons[s[0]]?' done':'');
+    b.innerHTML=`<span class="swatch" style="background:${s[1]}"></span>${s[0]}${polygons[s[0]]?' ✓':''}`;
+    b.onclick=()=>{ saveCurrent(); current=i; verts=polygons[STATES[i][0]]?polygons[STATES[i][0]].slice():[]; draw(); buildStateList(); };
+    box.appendChild(b);
+  });
+}
+function saveCurrent(){
+  if (verts.length>=3) polygons[STATES[current][0]] = verts.slice();
+}
+function finishState(){
+  if (verts.length>=3){ polygons[STATES[current][0]]=verts.slice(); statusEl.textContent=`已保存 ${STATES[current][0]}（${verts.length} 点）`; }
+  else { statusEl.textContent='顶点不足 3 个，未保存'; return; }
+  if (current < STATES.length-1){ current++; verts=[]; }
+  else { statusEl.textContent='全部 13 州已完成，可导出。'; }
+  draw(); buildStateList();
+}
+
+cv.addEventListener('click', e=>{
+  if (spaceDown) return;
+  const r=cv.getBoundingClientRect();
+  const sx=e.clientX-r.left, sy=e.clientY-r.top;
+  const ix=(sx-offX)/scale, iy=(sy-offY)/scale;
+  if (ix<0||iy<0||ix>img.width||iy>img.height) return;
+  verts.push([Math.round(ix),Math.round(iy)]);
+  draw();
+});
+cv.addEventListener('dblclick', e=>{ e.preventDefault(); finishState(); });
+cv.addEventListener('contextmenu', e=>{ e.preventDefault(); finishState(); });
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const ix=(mx-offX)/scale, iy=(my-offY)/scale;
+  const f = e.deltaY<0?1.12:1/1.12;
+  scale*=f;
+  scale=Math.max(0.1,Math.min(20,scale));
+  offX = mx - ix*scale; offY = my - iy*scale;
+  draw();
+});
+window.addEventListener('keydown', e=>{ if(e.code==='Space'){spaceDown=true; cv.style.cursor='grab';} });
+window.addEventListener('keyup', e=>{ if(e.code==='Space'){spaceDown=false; cv.style.cursor='crosshair';} });
+let dragging=false, lx=0, ly=0;
+cv.addEventListener('mousedown', e=>{ if(spaceDown){dragging=true; lx=e.clientX; ly=e.clientY;} });
+window.addEventListener('mousemove', e=>{ if(dragging){ offX+=e.clientX-lx; offY+=e.clientY-ly; lx=e.clientX; ly=e.clientY; draw(); } });
+window.addEventListener('mouseup', ()=>{ dragging=false; });
+
+document.getElementById('undoBtn').onclick=()=>{ verts.pop(); draw(); };
+document.getElementById('clearBtn').onclick=()=>{ verts=[]; draw(); };
+document.getElementById('finishBtn').onclick=finishState;
+document.getElementById('exportBtn').onclick=async ()=>{
+  saveCurrent();
+  if (Object.keys(polygons).length<13){ if(!confirm('只完成了 '+Object.keys(polygons).length+'/13 州，仍要导出？')) return; }
+  statusEl.textContent='导出中…';
+  try{
+    const resp = await fetch('/export',{method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({polygons, states: STATES})});
+    const data = await resp.json();
+    if (data.ok){ statusEl.textContent='✓ 成功写入：'+data.files.join('、'); }
+    else { statusEl.textContent='✗ 错误：'+data.error; }
+  }catch(err){ statusEl.textContent='✗ 提交失败：'+err; }
+};
+
+buildStateList(); draw();
+</script>
+</body>
+</html>

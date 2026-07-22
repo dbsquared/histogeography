@@ -1,0 +1,67 @@
+# ===== 大数据：原始 DEM / 渲染成品 / 中间数据 =====
+srtm_china_data/
+rendered/
+data/
+汉末十三州地图范例/
+
+# ===== 内部工具数据（含工作记忆/个人信息，不公开） =====
+.workbuddy/
+
+# ===== Python 缓存 =====
+__pycache__/
+*.pyc
+
+# ===== 日志与临时文件 =====
+*.log
+nul
+server.log
+build_prov.log
+pack.log
+china_render*.log
+redownload.log
+*.tmp
+
+# ===== 大二进制 / 渲染产物 =====
+*.tif
+*.npy
+china_full_*.png
+china_full_*.tif
+test_*.png
+test_*.tif
+srtm_*.png
+srtm_*.tif
+reg_*.png
+reg_*.npy
+kmeans_*.png
+full_lbl_cache.npy
+v[0-9]*.png
+v[0-9]_*.png
+
+# ===== 调试 / 诊断脚本与图 =====
+debug_*.py
+diag_*.py
+diag_*.png
+v6_diag_*.py
+probe_*.py
+recalc_*.py
+manual_fix_*.py
+preview_results.py
+explore_*.py
+register_*.py
+render_check.py
+rerender_*.py
+redownload_*.py
+verify_*.py
+
+# ===== 各州迭代探索的中间目录（实验产物，非最终成果） =====
+jizhou_*/
+youzhou_*/
+youzhou_diag*/
+youzhou_layer*/
+you_bing_ji_overlay/
+bingzhou_step1_*/
+jizhou_overlay_*/
+jizhou_step1*/
+*_overlay_step1/
+*_overlay_v*/
+*_step1/

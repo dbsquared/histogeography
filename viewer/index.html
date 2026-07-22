@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>中国地形图 · 路线A（晕渲底图 + 矢量等高线）</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  html, body { margin:0; height:100%; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
+  #map { position:absolute; inset:0; background:#0d1b2a; }
+  .panel {
+    background:rgba(20,28,40,0.88); color:#e8eef5; border:1px solid #34507a;
+    border-radius:8px; padding:10px 12px; font-size:13px; line-height:1.7;
+    box-shadow:0 2px 10px rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    transition:opacity .2s ease;
+  }
+  #title { position:absolute; top:12px; left:12px; z-index:1000; max-width:320px; }
+  #title b { font-size:15px; color:#fff; }
+  #title .src { font-size:11px; color:#9fb3c8; margin-top:4px; }
+  #controls { position:absolute; top:12px; right:12px; z-index:1000; }
+  #controls label { display:block; cursor:pointer; user-select:none; }
+  #controls input { vertical-align:middle; margin-right:6px; }
+  #readout {
+    position:absolute; bottom:18px; left:12px; z-index:1000;
+    font-size:14px; min-width:160px;
+  }
+  #readout .elev { font-size:20px; font-weight:bold; color:#ffd479; }
+  #legend { position:absolute; bottom:18px; right:12px; z-index:1000; width:240px; }
+  #legend .bar {
+    height:14px; border-radius:3px; margin:4px 0;
+    background:linear-gradient(to right,
+      #2b5d8c 0%, #4a8ab5 2%, #7fb5d5 5%, #b3d9a0 8%, #8cc579 15%,
+      #6ba356 25%, #c9b458 35%, #c9a048 45%, #a67c3d 55%, #8b5e2f 65%,
+      #9e7a6a 75%, #c8b8a8 85%, #e8ddd0 95%, #ffffff 100%);
+    border:1px solid #34507a;
+  }
+  #legend .ticks { position:relative; height:16px; font-size:10px; color:#cfe0f0; }
+  #legend .ticks span { position:absolute; transform:translateX(-50%); }
+  .clabel {
+    background:rgba(30,20,10,0.72); color:#ffe7c2; border:1px solid #7a5230;
+    border-radius:3px; padding:0 3px; font-size:11px; font-weight:bold;
+    white-space:nowrap; pointer-events:none;
+  }
+  .plabel {
+    color:#fff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000;
+    white-space:nowrap; pointer-events:none;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  .sealabel {
+    color:#ffd24d; font-weight:bold;
+    font-size:calc(9px * var(--lscale,1));
+    text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000;
+    white-space:nowrap; pointer-events:none;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  .rlabel {
+    color:#bfe0ff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #06203f,0 0 3px #06203f,1px 1px 2px #06203f;
+    white-space:nowrap; pointer-events:none;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  .leaflet-control-scale { background:rgba(20,28,40,0.7); }
+  #scs-inset { position:absolute; bottom:135px; right:12px; z-index:1000; width:240px; }
+  #scs-inset .hd { font-weight:bold; margin-bottom:4px; }
+  #scs-inset .note { font-size:10px; color:#9fb3c8; margin-top:3px; line-height:1.45; }
+.scslabel { fill:#ffe7c2; font-size:7px; font-weight:bold; paint-order:stroke;
+            stroke:#5a2a00; stroke-width:1.7px; stroke-linejoin:round; }
+/* ── 汉末十三州图层标签（HTML div 版，无背景、纯描边） ── */
+.hanstate-label {
+  color:#ff6b35; font-weight:bold;
+  font-size:calc(13px * var(--lscale,1));
+  text-shadow:0 0 3px #000,0 0 4px #000,1px 1px 3px #000,
+    -1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;
+  white-space:nowrap; pointer-events:none;
+  display:inline-block; line-height:18px;
+  transform:translate(-50%,-50%);
+  letter-spacing:2px;
+  opacity:0.85;
+}
+.hanseat-label {
+  color:#ffe7c2; font-weight:bold;
+  font-size:calc(6px * var(--lscale,1));
+  text-shadow:0 0 2px #000,0 0 2px #000,1px 1px 2px #000,
+    -1px -1px 1px #000,1px -1px 1px #000,-1px 1px 1px #000;
+  white-space:nowrap; pointer-events:none;
+  display:inline-block; line-height:9px;
+  transform:translate(8px,-50%);
+}
+.hanseat-label.capital {
+  color:#ffd24d;
+  font-size:calc(7px * var(--lscale,1));
+}
+.hanseat-label .zhi {
+  font-size:calc(5px * var(--lscale,1));
+  font-weight:normal; opacity:0.82;
+}
+/* ── 主要城市图层 ── */
+.citypt { pointer-events:auto; cursor:help; }
+.citypt svg { display:block; overflow:visible; }
+.citylabel {
+  font-weight:bold; white-space:nowrap; pointer-events:none;
+  font-size:calc(10px * var(--lscale,1));
+  line-height:14px;
+  display:inline-block;
+  transform:translate(8px, -50%);
+  transform-origin:left center;
+}
+.citylabel.capital         { color:#9fe5f5; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
+.citylabel.ancient_capital { color:#ffd24d; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
+.citylabel.battle          { color:#ffb3b3; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
+#controls .subctl { margin-left:18px; font-size:12px; color:#bcd; }
+#controls .citysep { margin-top:6px; border-top:1px dashed #34507a; padding-top:6px; }
+  #controls .btn {
+    display:inline-block; cursor:pointer; margin-top:8px; margin-right:6px;
+    background:#1f3656; color:#cfe0f0; border:1px solid #4a6fa5;
+    border-radius:5px; padding:3px 10px; font-size:12px;
+  }
+  #controls .btn:hover { background:#2b4a73; }
+  #controls .btnbar { margin-top:8px; border-top:1px solid #34507a; padding-top:8px; }
+  /* 截图模式：一键隐藏所有界面元素（地图内容保留） */
+  .screenshot-mode .panel,
+  .screenshot-mode .leaflet-control-zoom,
+  .screenshot-mode .leaflet-control-scale { opacity:0 !important; pointer-events:none !important; }
+  #exit-shot {
+    position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:2000;
+    display:none; cursor:pointer; background:rgba(192,57,43,0.92); color:#fff;
+    border-radius:6px; padding:6px 14px; font-size:13px; box-shadow:0 2px 10px rgba(0,0,0,0.4);
+  }
+  #exit-shot:hover { background:rgba(220,70,55,0.96); }
+  .screenshot-mode #exit-shot { display:block; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="exit-shot">退出截图（Esc）</div>
+
+<div id="title" class="panel">
+  <b>中国地形图</b><br/>
+  <span style="font-size:12px;color:#bcd;">路线 A · 晕渲底图 + 矢量等高线</span>
+  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）</div>
+</div>
+
+<div id="controls" class="panel">
+  <div style="font-weight:bold;margin-bottom:4px;">图层</div>
+  <label><input type="checkbox" id="cb-base" checked> 地形底图</label>
+  <label><input type="checkbox" id="cb-contour" checked> 矢量等高线</label>
+  <label><input type="checkbox" id="cb-label" checked> 海拔注记</label>
+  <label><input type="checkbox" id="cb-prov" checked> 省行政区</label>
+  <label><input type="checkbox" id="cb-river" checked> 主要河流</label>
+  <label><input type="checkbox" id="cb-scs" checked> 南海诸岛附图</label>
+  <div class="citysep">
+    <div style="font-weight:bold;margin-bottom:2px;">汉末十三州</div>
+    <label><input type="checkbox" id="cb-han-bnd"> 州界</label>
+    <label><input type="checkbox" id="cb-han-seat"> 郡</label>
+  </div>
+  <div class="citysep">
+    <div style="font-weight:bold;margin-bottom:2px;">主要城市</div>
+    <label><input type="checkbox" id="cb-city-capital" checked> 省会/直辖市</label>
+    <label><input type="checkbox" id="cb-city-ancap" checked> 古都</label>
+    <label><input type="checkbox" id="cb-city-battle" checked> 古战场/重镇</label>
+  </div>
+  <div class="btnbar">
+    <button id="btn-all-on" class="btn" type="button">一键叠加全部</button>
+    <button id="btn-all-off" class="btn" type="button">一键消除全部</button>
+  </div>
+  <div class="btnbar">
+    <button id="btn-shot" class="btn" type="button">截图模式（S）</button>
+  </div>
+</div>
+
+<div id="readout" class="panel">
+  海拔<br/><span class="elev" id="elev-val">—</span>
+</div>
+
+<div id="legend" class="panel">
+  <div style="font-weight:bold;">海拔（米）</div>
+  <div class="bar"></div>
+  <div class="ticks" id="legend-ticks"></div>
+</div>
+
+<div id="scs-inset" class="panel">
+  <div class="hd">南海诸岛</div>
+  <div id="scs-svg"></div>
+  <div class="note">十段线·geojson.cn(民政部) ｜ 岸线 Natural Earth ｜ 主要岛礁</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="data.js?v=2026070803"></script>
+<script src="scs_inset_data.js?v=2026070801"></script>
+<script src="cities.js?v=2026072001"></script>
+<script src="han_states.js?v=2026072206"></script>
+<script>
+const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
+const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
+
+// 使用笛卡尔坐标系(CRS.Simple)，与 Plate Carrée 底图一致
+// 避免 Web Mercator 对大范围 imageOverlay 造成 1200km+ 扭曲
+// Simple CRS 下 1 地图单位=1 度，缩放层级用负值表示"看全图"
+const map=L.map('map',{
+  crs:L.CRS.Simple,
+  center:[35,105],
+  minZoom:-2, maxZoom:10, zoomSnap:0.25, zoomDelta:0.5,
+  scrollWheelZoom:true,
+  attributionControl:false
+});
+L.control.scale({imperial:false,position:'bottomleft'}).addTo(map);
+map.fitBounds(BOUNDS);
+
+// 省名标签随镜头缩放：以全图默认缩放为基准(1.0, 约8px)，放大时增大、缩小时减小
+const baseZoom = map.getZoom();
+function updateLabelScale(){
+  let s = Math.pow(1.28, map.getZoom() - baseZoom);
+  s = Math.max(0.7, Math.min(2.4, s));
+  document.documentElement.style.setProperty('--lscale', s);
+}
+map.on('zoomend', updateLabelScale);
+updateLabelScale();
+
+// 1) 地形底图
+const baseLayer=L.imageOverlay('base_terrain.png', BOUNDS, {opacity:1});
+baseLayer.addTo(map);
+
+// 2) 矢量等高线 + 注记
+function contourStyle(f){
+  const k=f.properties.klass;
+  if(k==='coast')  return {color:'#1a3a5a', weight:1.2, opacity:0.9};
+  if(k==='major')  return {color:'#4a2e12', weight:1.1, opacity:0.85};
+  return {color:'#6b4a2a', weight:0.5, opacity:0.45};
+}
+const contourLayer=L.geoJSON(null,{style:contourStyle,
+  filter:f=>f.properties.kind==='contour',
+  onEachFeature:(f,ly)=>{ if(f.properties.klass!=='minor')
+    ly.bindTooltip(f.properties.elevation+' m',{sticky:true}); }
+});
+const labelLayer=L.geoJSON(null,{
+  filter:f=>f.properties.kind==='label',
+  pointToLayer:(f,latlng)=>L.marker(latlng,{
+    icon:L.divIcon({className:'',html:'<div class="clabel">'+f.properties.text+'</div>',
+      iconSize:[28,16], iconAnchor:[14,8]})
+  })
+});
+
+// 数据已通过 data.js 注入 window.APP_DATA (兼容 file:// 与 http://)
+(()=>{
+  const gj=window.APP_DATA.contours;
+  contourLayer.addData(gj); contourLayer.addTo(map);
+  labelLayer.addData(gj);   labelLayer.addTo(map);
+})();
+
+// 2b) 省行政区图层 (Supeset China-GeoData，遵循自然资源部标准地图：含完整藏南·达旺/珞瑜/阿克赛钦)
+const borderLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='country_border',
+  style:{color:'#c0392b', weight:2, opacity:0.95}});
+const provinceLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='province',
+  style:f=>{
+    if(f.properties.border_red)   // 台湾省：红色实线，略粗
+      return {color:'#c0392b', weight:2, opacity:1, fill:false};
+    return {color:'#c0392b', weight:1.6, opacity:1, fill:false};  // 省界红色，与当前粗细一致
+  }});
+const nineDashLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='nine_dash',
+  style:{color:'#c0392b', weight:2.2, opacity:0.95, dashArray:'10,6'}});  // 十段线
+const provLabelLayer=L.layerGroup();
+(()=>{
+  const gj=window.APP_DATA.provinces;
+  provinceLayer.addData(gj); borderLayer.addData(gj); nineDashLayer.addData(gj);
+  gj.features.forEach(f=>{
+    if(f.properties.kind==='province'){
+      provLabelLayer.addLayer(L.marker([f.properties.label_lat, f.properties.label_lon],{
+        icon:L.divIcon({className:'', html:'<div class="plabel">'+f.properties.name_zh+'</div>',
+          iconSize:[120,16], iconAnchor:[60-(f.properties.label_dx||0), 8-(f.properties.label_dy||0)]})
+      }));
+    }
+  });
+  provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map);
+})();
+
+// 2b-2) 主要河流矢量图层 (Natural Earth 10m Rivers, public domain; 含国外主要河流)
+const riverLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='river',
+  style:f=> f.properties.major
+    ? {color:'#2a6fdb', weight:2.4, opacity:0.92}
+    : {color:'#5b9be8', weight:1.3, opacity:0.82}});
+const riverLabelLayer=L.layerGroup();
+function riverMidpoint(geom){
+  let best=null, bestLen=-1;
+  const segs = geom.type==='MultiLineString' ? geom.coordinates : [geom.coordinates];
+  for(const s of segs){ if(s.length>bestLen){ bestLen=s.length; best=s; } }
+  if(!best || !best.length) return null;
+  const m=best[Math.floor(best.length/2)];
+  return [m[1], m[0]];
+}
+(()=>{
+  const gj=window.APP_DATA.rivers;
+  if(!gj || !gj.features) return;
+  riverLayer.addData(gj);
+  // 黑龙江标签移到上游: 取全要素中经度最小端(约源端)略下游一点, 而非最长段中点
+  let hlLabelLL=null;
+  const hlFeats=gj.features.filter(f=>f.properties.name==='黑龙江');
+  if(hlFeats.length){
+    const pts=[];
+    hlFeats.forEach(f=>{
+      const segs=f.geometry.type==='MultiLineString'?f.geometry.coordinates:[f.geometry.coordinates];
+      segs.forEach(s=>s.forEach(p=>pts.push(p)));
+    });
+    if(pts.length){
+      pts.sort((a,b)=>a[0]-b[0]);
+      const up=pts[Math.max(0,Math.floor(pts.length*0.08))];
+      hlLabelLL=[up[1],up[0]];
+    }
+  }
+  const seenRiverNames=new Set();
+  gj.features.forEach(f=>{
+    if(f.properties.label && f.properties.name && !seenRiverNames.has(f.properties.name)){
+      seenRiverNames.add(f.properties.name);
+      const ll = (f.properties.name==='黑龙江' && hlLabelLL) ? hlLabelLL : riverMidpoint(f.geometry);
+      if(!ll) return;
+      riverLabelLayer.addLayer(L.marker(ll,{
+        icon:L.divIcon({className:'', html:'<div class="rlabel">'+f.properties.name+'</div>',
+          iconSize:[120,16], iconAnchor:[60,8]})
+      }));
+    }
+  });
+  riverLayer.addTo(map); riverLabelLayer.addTo(map);
+})();
+
+// 2c) 南海诸岛附图 (完整十段线 + 主要岛礁，补全超出主图范围的南海部分)
+function buildScsInset(){
+  const D = window.SCS_INSET; if(!D) return;
+  const b = D.box, W = 240, midLat = (b.lat0 + b.lat1) / 2;
+  const H = Math.round(W * (b.lat1 - b.lat0) / (b.lon1 - b.lon0) * Math.cos(midLat * Math.PI / 180));
+  const px = (lon, lat) => [ (lon - b.lon0) / (b.lon1 - b.lon0) * W,
+                              (b.lat1 - lat) / (b.lat1 - b.lat0) * H ];
+  const pathOf = segs => {
+    let d = '';
+    segs.forEach(s => { s.forEach((p, i) => {
+      const [x, y] = px(p[0], p[1]);
+      d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }); d += ' '; });
+    return d;
+  };
+  let grid = '';
+  for (let lon = Math.ceil(b.lon0 / 5) * 5; lon <= b.lon1; lon += 5) {
+    const [x0, y0] = px(lon, b.lat0), [x1, y1] = px(lon, b.lat1);
+    grid += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`;
+  }
+  for (let lat = Math.ceil(b.lat0 / 5) * 5; lat <= b.lat1; lat += 5) {
+    const [x0, y0] = px(b.lon0, lat), [x1, y1] = px(b.lon1, lat);
+    grid += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`;
+  }
+  const ne = pathOf(D.ne), coast = pathOf(D.coast), dash = pathOf(D.dash);
+  let marks = '';
+  D.islands.forEach(([lon, lat, name]) => {
+    const [x, y] = px(lon, lat);
+    marks += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2" fill="#fff" stroke="#c0392b" stroke-width="0.8"/>` +
+             `<text x="${(x + 3).toFixed(1)}" y="${(y + 3.2).toFixed(1)}" class="scslabel">${name}</text>`;
+  });
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">
+    <rect x="0" y="0" width="${W}" height="${H}" fill="#0e3a52"/>
+    <g stroke="rgba(255,255,255,0.14)" stroke-width="0.5">${grid}</g>
+    <path d="${ne}" fill="none" stroke="#5d7587" stroke-width="0.7" stroke-linejoin="round" opacity="0.85"/>
+    <path d="${coast}" fill="none" stroke="#e0a06a" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="${dash}" fill="none" stroke="#c0392b" stroke-width="2.3" stroke-dasharray="6,4" stroke-linejoin="round"/>
+    ${marks}
+  </svg>`;
+  document.getElementById('scs-svg').innerHTML = svg;
+}
+function updateScs(){
+  // 附图只受自身开关控制，不依赖省界(cb-prov)——否则关掉省界会顺带隐藏附图
+  const show = document.getElementById('cb-scs').checked;
+  document.getElementById('scs-inset').style.display = show ? 'block' : 'none';
+}
+buildScsInset(); updateScs();
+document.getElementById('cb-scs').onchange = updateScs;
+
+// ── 2d) 汉末十三州（基于交互式打点重建）──
+// 数据: window.HAN_STATES = {meta, states:[{name,color,boundary,seats,meta}]}
+// 两级图层: 州界 (cb-han-bnd) + 郡治/州府 (cb-han-seat)
+const hanBoundaryLayer = L.layerGroup();
+const hanSeatLayer     = L.layerGroup();
+const hanSeatLabelLayer= L.layerGroup();
+const hanStateLabelLayer=L.layerGroup();
+const hanCapitalLayer  =L.layerGroup();  // 州界模式下随州界一起显示的州府（仅治所名）
+
+// 计算州名标签位置：优先面积加权质心（若落在州境内则用之，最贴合"几何中心"）；
+// 若质心落在境外（如渤海海上），改用"最内点"算法（pole of inaccessibility 近似），
+// 即在境内网格采样取离边界最远的点，保证标签始终落在州境内。
+function pointInPolygon(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+    if(((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function distToSeg(px,py,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,l2=dx*dx+dy*dy;
+  if(l2===0) return Math.hypot(px-x1,py-y1);
+  let t=((px-x1)*dx+(py-y1)*dy)/l2; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+function computeLabelPoint(ring){
+  const pts = ring.map(p=>[p[1],p[0]]);  // [[lat,lon]] → [[lon,lat]]
+  const n = pts.length;
+  let A=0,Cx=0,Cy=0;
+  for(let i=0;i<n-1;i++){
+    const x0=pts[i][0],y0=pts[i][1],x1=pts[i+1][0],y1=pts[i+1][1];
+    const cr=x0*y1-x1*y0; A+=cr; Cx+=(x0+x1)*cr; Cy+=(y0+y1)*cr;
+  }
+  A*=0.5;
+  const clon=Cx/(6*A), clat=Cy/(6*A);
+  if(pointInPolygon(clon,clat,pts)) return [clat,clon];
+  let lons=pts.map(p=>p[0]), lats=pts.map(p=>p[1]);
+  const minLon=Math.min(...lons),maxLon=Math.max(...lons),minLat=Math.min(...lats),maxLat=Math.max(...lats);
+  const step=0.12;
+  let best=null,bestDist=-1;
+  for(let lat=minLat;lat<=maxLat;lat+=step){
+    for(let lon=minLon;lon<=maxLon;lon+=step){
+      if(!pointInPolygon(lon,lat,pts)) continue;
+      let dmin=Infinity;
+      for(let i=0;i<n-1;i++){
+        const d=distToSeg(lat,lon,pts[i][1],pts[i][0],pts[i+1][1],pts[i+1][0]);
+        if(d<dmin)dmin=d;
+      }
+      if(dmin>bestDist){bestDist=dmin;best=[lat,lon];}
+    }
+  }
+  return best || [clat,clon];
+}
+
+(function(){
+  const D = window.HAN_STATES;
+  if(!D || !D.states){ console.warn('汉末州数据未加载'); return; }
+  D.states.forEach(st=>{
+    // 1) 州界多边形
+    const ring = st.boundary.map(p=>[p[1],p[0]]);  // [lon,lat]→[lat,lon]
+    const fillOpacity = st.name==='幽州' ? 0.40 : 0.20;  // 幽州白填充调实一点
+    const baseStyle = {color:st.color, weight:2.2, opacity:0.92, fillColor:st.color, fillOpacity};
+    const poly = L.polygon(ring, baseStyle);
+    // hover 高亮：颜色加深（降低透明度→更实）+ 加粗描边 + 置顶
+    poly.on('mouseover', function(){
+      this.setStyle({ weight:3.4, opacity:1, fillOpacity:0.58 });
+      this.bringToFront();
+    });
+    poly.on('mouseout', function(){
+      this.setStyle(baseStyle);
+    });
+    const capital = st.seats.find(s => s.role === 'capital');
+    poly.bindTooltip(`<b>${st.name}</b><br/>州府：${capital ? capital.name : '—'}`,
+      {sticky:true, opacity:0.95});
+    hanBoundaryLayer.addLayer(poly);
+
+    // 2) 州名标签（默认落在州境内：质心在境内则用之，否则取最内点；
+    //    若某州指定了州名锚点郡——如幽州放在"右北平郡"上方——则优先用该锚点）
+    let labelLL;
+    const anchorSeat = st.seats.find(s=>s.name.includes('右北平'));
+    if(anchorSeat){
+      const aLat=anchorSeat.lat+0.6, aLon=anchorSeat.lon;  // 右北平郡正北约 67km（燕山南麓，仍在境内）
+      const pts=ring.map(p=>[p[1],p[0]]);
+      labelLL = pointInPolygon(aLon,aLat,pts) ? [aLat,aLon] : computeLabelPoint(ring);
+    } else {
+      labelLL = computeLabelPoint(ring);
+    }
+    hanStateLabelLayer.addLayer(L.marker(labelLL,{
+      icon:L.divIcon({className:'', html:'<div class="hanstate-label">'+st.name+'</div>',
+        iconSize:[0,0], iconAnchor:[0,0]}),
+      interactive:false, keyboard:false
+    }));
+
+    // 3) 郡治点 + 标签
+    // seat.name 形如 "太原郡/晋阳"（郡在上、治所在下）；无 '/' 则整体当郡名
+    const splitSeat = n => { const i=n.indexOf('/'); return i<0 ? [n,''] : [n.slice(0,i), n.slice(i+1)]; };
+    st.seats.forEach(seat=>{
+      const isCap = seat.role==='capital';
+      const [jun, zhi] = splitSeat(seat.name);
+      const dotColor = isCap ? '#ffd24d' : (seat.role==='commandery' ? '#ffb870' : '#c8c8c8');
+      const dot = L.circleMarker([seat.lat,seat.lon],{
+        radius: isCap?6:4,
+        color:'#fff', weight:1.2, opacity:0.95,
+        fillColor:dotColor, fillOpacity:0.92,
+      });
+      dot.bindTooltip(`<b>${seat.name}</b><br/>${st.name} · ${isCap?'州府':seat.role==='commandery'?'郡治':seat.role}`,
+        {direction:'top', offset:[0,-6], opacity:0.95});
+      hanSeatLayer.addLayer(dot);
+      // 郡模式标签：两行（郡上 / 郡治下）
+      const labelCls = isCap ? 'hanseat-label capital' : 'hanseat-label';
+      const labelHtml = zhi ? `${jun}<br><span class="zhi">${zhi}</span>` : jun;
+      hanSeatLabelLayer.addLayer(L.marker([seat.lat,seat.lon],{
+        icon:L.divIcon({className:'', html:`<div class="${labelCls}">${labelHtml}</div>`,
+          iconSize:[0,0], iconAnchor:[0,0]}),
+        interactive:false, keyboard:false
+      }));
+      // 州界模式：仅州府（显示治所名，不带郡名）+ 黄点定位
+      if(isCap){
+        hanCapitalLayer.addLayer(L.circleMarker([seat.lat,seat.lon],{
+          radius:6, color:'#fff', weight:1.2, opacity:0.95,
+          fillColor:'#ffd24d', fillOpacity:0.92,
+        }));
+        hanCapitalLayer.addLayer(L.marker([seat.lat,seat.lon],{
+          icon:L.divIcon({className:'', html:`<div class="hanseat-label capital">${zhi||jun}</div>`,
+            iconSize:[0,0], iconAnchor:[0,0]}),
+          interactive:false, keyboard:false
+        }));
+      }
+    });
+  });
+  console.log(`汉末十三州: ${D.states.length} 州已加载`);
+})();
+function showHanBnd(){ hanBoundaryLayer.addTo(map); hanStateLabelLayer.addTo(map); hanCapitalLayer.addTo(map); }
+function hideHanBnd(){ map.removeLayer(hanBoundaryLayer); map.removeLayer(hanStateLabelLayer); map.removeLayer(hanCapitalLayer); }
+function showHanSeat(){ hanSeatLayer.addTo(map); hanSeatLabelLayer.addTo(map); }
+function hideHanSeat(){ map.removeLayer(hanSeatLayer); map.removeLayer(hanSeatLabelLayer); }
+document.getElementById('cb-han-bnd').onchange = e => e.target.checked ? showHanBnd() : hideHanBnd();
+document.getElementById('cb-han-seat').onchange = e => e.target.checked ? showHanSeat() : hideHanSeat();
+// 初始化
+if(document.getElementById('cb-han-bnd').checked) showHanBnd();
+if(document.getElementById('cb-han-seat').checked) showHanSeat();
+
+// ── 2e) 主要城市图层 (省会/直辖市 · 古都 · 古战场) ──
+// 三类城市按类型分色分形状；同一城市有多重身份时主 type 取最高优先级（古都>省会>战场）
+const cityTypeMeta = {
+  capital:          { color:'#7ad1e8', shape:'circle'  },
+  ancient_capital:  { color:'#ffd24d', shape:'star'    },
+  battle:           { color:'#ff6b6b', shape:'triangle'}
+};
+// 形状 SVG：circle 实心圆+白描边；star 五角星+红描边；triangle 等边三角+白描边
+function cityShapeSVG(type){
+  const m = cityTypeMeta[type];
+  const c = m.color;
+  if(m.shape==='star'){
+    // 五角星 path（圆心 6,6 外径 6.5 内径 2.6）
+    return `<svg width="13" height="13" viewBox="0 0 13 13">
+      <path d="M6.5 0.4 L8.05 4.4 L12.35 4.6 L8.95 7.3 L10.15 11.45 L6.5 9.0 L2.85 11.45 L4.05 7.3 L0.65 4.6 L4.95 4.4 Z"
+        fill="${c}" stroke="#3a0d0d" stroke-width="0.9" stroke-linejoin="round"/></svg>`;
+  }
+  if(m.shape==='triangle'){
+    return `<svg width="12" height="12" viewBox="0 0 12 12">
+      <path d="M6 0.6 L11.3 10.6 L0.7 10.6 Z"
+        fill="${c}" stroke="#fff" stroke-width="1.0" stroke-linejoin="round"/></svg>`;
+  }
+  // circle
+  return `<svg width="12" height="12" viewBox="0 0 12 12">
+    <circle cx="6" cy="6" r="4.5" fill="${c}" stroke="#fff" stroke-width="1.1"/></svg>`;
+}
+// 类别中文（用于 tooltip 头）
+const cityTypeLabel = { capital:'省会/直辖市', ancient_capital:'古都', battle:'古战场/重镇' };
+
+// 三类城市分别独立 layerGroup，方便单独开关
+const cityMarkerLayer = { capital:L.layerGroup(), ancient_capital:L.layerGroup(), battle:L.layerGroup() };
+const cityLabelLayer  = { capital:L.layerGroup(), ancient_capital:L.layerGroup(), battle:L.layerGroup() };
+(function(){
+  const D = window.MAJOR_CITIES;
+  if(!D || !D.features){ console.warn('主要城市数据未加载'); return; }
+  D.features.forEach(f=>{
+    const t = f.type;
+    if(!cityTypeMeta[t]) return;
+    const ll = [f.lat, f.lon];
+    // 点
+    cityMarkerLayer[t].addLayer(L.marker(ll,{
+      icon: L.divIcon({ className:'citypt', html: cityShapeSVG(t),
+        iconSize:[13,13], iconAnchor:[6.5,6.5] }),
+      keyboard:false
+    }).bindTooltip(`<b>${f.name}</b> · ${cityTypeLabel[t]}<br/>${f.note||''}`,
+      { direction:'top', offset:[0,-6], opacity:0.95 }));
+    // 标签（锚点=点位置，文字用 CSS transform 偏移到点右侧 8px）
+    cityLabelLayer[t].addLayer(L.marker(ll,{
+      icon: L.divIcon({ className:'', html:`<div class="citylabel ${t}">${f.name}</div>`,
+        iconSize:[0,0], iconAnchor:[0,0] }),
+      interactive:false, keyboard:false
+    }));
+  });
+  console.log(`主要城市: 共 ${D.features.length} 处`);
+  // 按勾选状态初始化显示
+  ['capital','ancient_capital','battle'].forEach(t=>{
+    if(document.getElementById('cb-city-'+(t==='ancient_capital'?'ancap':t)).checked)
+      showCityType(t);
+  });
+})();
+function showCityType(t){
+  cityMarkerLayer[t].addTo(map); cityLabelLayer[t].addTo(map);
+}
+function hideCityType(t){
+  map.removeLayer(cityMarkerLayer[t]); map.removeLayer(cityLabelLayer[t]);
+}
+document.getElementById('cb-city-capital').onchange = e => e.target.checked ? showCityType('capital') : hideCityType('capital');
+document.getElementById('cb-city-ancap').onchange  = e => e.target.checked ? showCityType('ancient_capital') : hideCityType('ancient_capital');
+document.getElementById('cb-city-battle').onchange = e => e.target.checked ? showCityType('battle') : hideCityType('battle');
+
+// 3) 悬停查海拔 (数据已通过 data.js 注入 window.APP_DATA)
+let elevData=null, elevMeta=null;
+(()=>{
+  try{
+    elevMeta=window.APP_DATA.elevMeta;
+    const b64=window.APP_DATA.elevGridB64;
+    const bin=atob(b64);
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    elevData=new Float32Array(bytes.buffer);
+  }catch(e){ console.error('高程网格加载失败',e); }
+})();
+
+function sampleElev(lon,lat){
+  if(!elevData||!elevMeta) return null;
+  const {width:W,height:Hh,lon_min,lon_max,lat_max,lat_min}=elevMeta;
+  let fx=(lon-lon_min)/(lon_max-lon_min)*(W-1);
+  let fy=(lat_max-lat)/(lat_max-lat_min)*(Hh-1);
+  if(fx<0||fy<0||fx>W-1||fy>Hh-1) return null;
+  const x0=Math.floor(fx), y0=Math.floor(fy);
+  const x1=Math.min(x0+1,W-1), y1=Math.min(y0+1,Hh-1);
+  const tx=fx-x0, ty=fy-y0;
+  const g=i=>elevData[i];
+  const v00=g(y0*W+x0), v10=g(y0*W+x1), v01=g(y1*W+x0), v11=g(y1*W+x1);
+  if([v00,v10,v01,v11].some(Number.isNaN)) return null;
+  const v=(v00*(1-tx)+v10*tx)*(1-ty)+(v01*(1-tx)+v11*tx)*ty;
+  return Math.round(v);
+}
+map.on('mousemove',e=>{
+  const v=sampleElev(e.latlng.lng,e.latlng.lat);
+  document.getElementById('elev-val').textContent = (v===null)?'—':v+' m';
+});
+
+// 4) 图层开关
+document.getElementById('cb-base').onchange=e=>{
+  e.target.checked?baseLayer.addTo(map):map.removeLayer(baseLayer);
+};
+document.getElementById('cb-contour').onchange=e=>{
+  e.target.checked?contourLayer.addTo(map):map.removeLayer(contourLayer);
+};
+document.getElementById('cb-label').onchange=e=>{
+  e.target.checked?labelLayer.addTo(map):map.removeLayer(labelLayer);
+};
+document.getElementById('cb-prov').onchange=e=>{
+  const on=e.target.checked;
+  if(on){ provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map); }
+  else { map.removeLayer(provinceLayer); map.removeLayer(borderLayer); map.removeLayer(nineDashLayer); map.removeLayer(provLabelLayer); }
+  updateScs();
+};
+document.getElementById('cb-river').onchange=e=>{
+  e.target.checked?(riverLayer.addTo(map), riverLabelLayer.addTo(map))
+    :(map.removeLayer(riverLayer), map.removeLayer(riverLabelLayer));
+};
+
+// 4b) 一键叠加全部 / 一键消除全部（复用逐层开关逻辑）
+function setAll(on){
+  ['cb-base','cb-contour','cb-label','cb-prov','cb-river',
+   'cb-han-bnd','cb-han-seat',
+   'cb-city-capital','cb-city-ancap','cb-city-battle'].forEach(id=>{
+    const cb=document.getElementById(id);
+    if(cb.checked!==on){ cb.checked=on; cb.onchange({target:cb}); }
+  });
+}
+document.getElementById('btn-all-on').onclick=()=>setAll(true);
+document.getElementById('btn-all-off').onclick=()=>setAll(false);
+
+// 6) 截图模式：一键隐藏所有界面元素（地图内容保留）
+function toggleShot(){ document.body.classList.toggle('screenshot-mode'); }
+document.getElementById('btn-shot').onclick=toggleShot;
+document.getElementById('exit-shot').onclick=toggleShot;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ document.body.classList.remove('screenshot-mode'); }
+  else if(e.key==='s'||e.key==='S'){ e.preventDefault(); toggleShot(); }
+});
+
+// 5) 图例刻度
+const ticks=[[0,5.4],[1000,16.0],[2000,26.7],[4000,48.1],[6000,69.5],[8000,91.0]];
+const box=document.getElementById('legend-ticks');
+ticks.forEach(([v,p])=>{
+  const s=document.createElement('span'); s.style.left=p+'%'; s.textContent=v; box.appendChild(s);
+});
+</script>
+</body>
+</html>
