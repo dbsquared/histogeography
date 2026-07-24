@@ -43,11 +43,17 @@ for fp in files:
             p = f['properties']
             role_raw = p.get('role', 'commandery')
             role = ROLE_NORM.get(role_raw, 'commandery')
+            # 兼容两种坐标存储：properties.lon/lat 或 geometry.coordinates(Point=[lon,lat])
+            if 'lon' in p and 'lat' in p:
+                lon, lat = p['lon'], p['lat']
+            else:
+                coords = f['geometry']['coordinates']
+                lon, lat = coords[0], coords[1]
             seats.append({
                 'name': p['name'],
                 'role': role,
-                'lon': p['lon'],
-                'lat': p['lat'],
+                'lon': lon,
+                'lat': lat,
             })
     if boundary is None:
         print(f'WARN: {state_name} 缺 state_boundary，跳过')
