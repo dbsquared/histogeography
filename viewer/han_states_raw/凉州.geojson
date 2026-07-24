@@ -5,7 +5,8 @@
     "color": "#E91E63",
     "gcps": 6,
     "max_err_km": 4,
-    "avg_err_km": 2.6
+    "avg_err_km": 2.6,
+    "verified": true
   },
   "pixels": {
     "gcps": [

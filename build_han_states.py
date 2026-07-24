@@ -67,6 +67,7 @@ for fp in files:
             'gcps': meta.get('gcps'),
             'max_err_km': meta.get('max_err_km'),
             'avg_err_km': meta.get('avg_err_km'),
+            'verified': meta.get('verified', False),
         }
     })
     print(f'  ✓ {state_name}: boundary={len(boundary)}v, seats={len(seats)}, err={meta.get("max_err_km")}km')

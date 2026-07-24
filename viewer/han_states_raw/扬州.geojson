@@ -5,7 +5,8 @@
     "color": "#F48FB1",
     "gcps": 26,
     "max_err_km": 0.1,
-    "avg_err_km": 0.0
+    "avg_err_km": 0.0,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -898,7 +899,164 @@
         64
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 1039.5,
+        "py": 1009.1,
+        "name": "历阳/和县",
+        "role": "commandery"
+      },
+      {
+        "px": 877.6,
+        "py": 1102.9,
+        "name": "寿春/寿县",
+        "role": "commandery"
+      },
+      {
+        "px": 927.6,
+        "py": 1024.0,
+        "name": "合肥/合肥",
+        "role": "commandery"
+      },
+      {
+        "px": 1257.3,
+        "py": 960.0,
+        "name": "吴/苏州",
+        "role": "commandery"
+      },
+      {
+        "px": 1257.3,
+        "py": 811.3,
+        "name": "会稽/绍兴",
+        "role": "commandery"
+      },
+      {
+        "px": 1077.4,
+        "py": 1046.9,
+        "name": "丹阳/南京",
+        "role": "commandery"
+      },
+      {
+        "px": 785.7,
+        "py": 660.4,
+        "name": "豫章/南昌",
+        "role": "commandery"
+      },
+      {
+        "px": 900.6,
+        "py": 954.3,
+        "name": "庐江/庐江",
+        "role": "commandery"
+      },
+      {
+        "px": 1140.4,
+        "py": 1084.6,
+        "name": "广陵/扬州(苏)",
+        "role": "commandery"
+      },
+      {
+        "px": 798.7,
+        "py": 778.2,
+        "name": "柴桑/九江",
+        "role": "commandery"
+      },
+      {
+        "px": 1191.3,
+        "py": 1092.6,
+        "name": "海陵/泰州",
+        "role": "commandery"
+      },
+      {
+        "px": 1158.4,
+        "py": 1038.9,
+        "name": "曲阿/丹阳(苏)",
+        "role": "commandery"
+      },
+      {
+        "px": 1208.3,
+        "py": 913.1,
+        "name": "乌程/湖州",
+        "role": "commandery"
+      },
+      {
+        "px": 1275.2,
+        "py": 900.5,
+        "name": "由拳/嘉兴",
+        "role": "commandery"
+      },
+      {
+        "px": 1215.3,
+        "py": 842.2,
+        "name": "余杭/杭州",
+        "role": "commandery"
+      },
+      {
+        "px": 1257.3,
+        "py": 811.3,
+        "name": "山阴/绍兴",
+        "role": "commandery"
+      },
+      {
+        "px": 1343.2,
+        "py": 652.4,
+        "name": "章安/台州",
+        "role": "commandery"
+      },
+      {
+        "px": 1264.3,
+        "py": 582.6,
+        "name": "永宁/温州",
+        "role": "commandery"
+      },
+      {
+        "px": 1032.5,
+        "py": 474.0,
+        "name": "建安/建瓯",
+        "role": "commandery"
+      },
+      {
+        "px": 1129.4,
+        "py": 363.1,
+        "name": "侯官/福州",
+        "role": "commandery"
+      },
+      {
+        "px": 866.6,
+        "py": 697.0,
+        "name": "鄱阳/鄱阳",
+        "role": "commandery"
+      },
+      {
+        "px": 698.8,
+        "py": 482.0,
+        "name": "庐陵/吉安",
+        "role": "commandery"
+      },
+      {
+        "px": 693.8,
+        "py": 336.8,
+        "name": "赣/赣州",
+        "role": "commandery"
+      },
+      {
+        "px": 676.8,
+        "py": 315.1,
+        "name": "南野/南康",
+        "role": "commandery"
+      },
+      {
+        "px": 1312.2,
+        "py": 681.0,
+        "name": "临海/临海",
+        "role": "commandery"
+      },
+      {
+        "px": 1164.4,
+        "py": 706.1,
+        "name": "东阳/金华",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -1621,6 +1779,422 @@
               23.30632
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "历阳/和县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "寿春/寿县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "合肥/合肥",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "吴/苏州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "会稽/绍兴",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "丹阳/南京",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "豫章/南昌",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "庐江/庐江",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "广陵/扬州(苏)",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "柴桑/九江",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "海陵/泰州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "曲阿/丹阳(苏)",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "乌程/湖州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "由拳/嘉兴",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "余杭/杭州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "山阴/绍兴",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "章安/台州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "永宁/温州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "建安/建瓯",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "侯官/福州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "鄱阳/鄱阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "庐陵/吉安",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "赣/赣州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "南野/南康",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "临海/临海",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "扬州",
+        "name": "东阳/金华",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65,
+          29.08
         ]
       }
     }

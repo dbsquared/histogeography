@@ -5,7 +5,8 @@
     "color": "#880E4F",
     "gcps": 12,
     "max_err_km": 0.0,
-    "avg_err_km": 0.0
+    "avg_err_km": 0.0,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -636,7 +637,80 @@
         51
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 932.5,
+        "py": 854.3,
+        "name": "临淄/淄博",
+        "role": "commandery"
+      },
+      {
+        "px": 1148.0,
+        "py": 815.1,
+        "name": "北海/潍坊",
+        "role": "commandery"
+      },
+      {
+        "px": 735.4,
+        "py": 818.4,
+        "name": "济南/章丘",
+        "role": "commandery"
+      },
+      {
+        "px": 872.0,
+        "py": 965.3,
+        "name": "乐安/高青",
+        "role": "commandery"
+      },
+      {
+        "px": 448.9,
+        "py": 962.0,
+        "name": "平原/平原",
+        "role": "commandery"
+      },
+      {
+        "px": 1368.7,
+        "py": 968.5,
+        "name": "东莱/莱州",
+        "role": "commandery"
+      },
+      {
+        "px": 1571.1,
+        "py": 900.0,
+        "name": "长广/莱阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1077.0,
+        "py": 449.5,
+        "name": "城阳/莒县",
+        "role": "commandery"
+      },
+      {
+        "px": 1376.6,
+        "py": 867.3,
+        "name": "胶东/平度",
+        "role": "commandery"
+      },
+      {
+        "px": 1502.8,
+        "py": 710.6,
+        "name": "即墨/即墨",
+        "role": "commandery"
+      },
+      {
+        "px": 1000.8,
+        "py": 749.8,
+        "name": "临朐/临朐",
+        "role": "commandery"
+      },
+      {
+        "px": 530.4,
+        "py": 736.8,
+        "name": "祝阿/齐河",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -1195,6 +1269,198 @@
               34.35412
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "临淄/淄博",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "北海/潍坊",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "济南/章丘",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "乐安/高青",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "平原/平原",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "东莱/莱州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "长广/莱阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "城阳/莒县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "胶东/平度",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "即墨/即墨",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "临朐/临朐",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "青州",
+        "name": "祝阿/齐河",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.75,
+          36.47
         ]
       }
     }

@@ -5,7 +5,8 @@
     "color": "#5E35B1",
     "gcps": 15,
     "max_err_km": 0.0,
-    "avg_err_km": 0.0
+    "avg_err_km": 0.0,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -737,7 +738,98 @@
         186
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 1118.1,
+        "py": 712.4,
+        "name": "谯/亳州",
+        "role": "commandery"
+      },
+      {
+        "px": 896.2,
+        "py": 520.6,
+        "name": "汝南/平舆",
+        "role": "commandery"
+      },
+      {
+        "px": 674.4,
+        "py": 776.4,
+        "name": "颍川/禹州",
+        "role": "commandery"
+      },
+      {
+        "px": 943.6,
+        "py": 682.7,
+        "name": "陈/淮阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1091.5,
+        "py": 835.7,
+        "name": "梁/商丘",
+        "role": "commandery"
+      },
+      {
+        "px": 1336.2,
+        "py": 810.6,
+        "name": "沛/沛县",
+        "role": "commandery"
+      },
+      {
+        "px": 1345.6,
+        "py": 1102.9,
+        "name": "鲁/曲阜",
+        "role": "commandery"
+      },
+      {
+        "px": 974.0,
+        "py": 315.1,
+        "name": "弋阳/潢川",
+        "role": "commandery"
+      },
+      {
+        "px": 1125.7,
+        "py": 324.2,
+        "name": "安丰/固始",
+        "role": "commandery"
+      },
+      {
+        "px": 687.6,
+        "py": 710.1,
+        "name": "襄城/襄城",
+        "role": "commandery"
+      },
+      {
+        "px": 784.3,
+        "py": 648.5,
+        "name": "郾/漯河",
+        "role": "commandery"
+      },
+      {
+        "px": 1061.2,
+        "py": 710.1,
+        "name": "苦/鹿邑",
+        "role": "commandery"
+      },
+      {
+        "px": 917.1,
+        "py": 365.3,
+        "name": "新息/息县",
+        "role": "commandery"
+      },
+      {
+        "px": 674.4,
+        "py": 776.4,
+        "name": "阳翟/禹州",
+        "role": "commandery"
+      },
+      {
+        "px": 1118.1,
+        "py": 712.4,
+        "name": "城父/亳州",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -1376,6 +1468,246 @@
               31.25363
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "谯/亳州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "汝南/平舆",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "颍川/禹州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "陈/淮阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "梁/商丘",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "沛/沛县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "鲁/曲阜",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "弋阳/潢川",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "安丰/固始",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "襄城/襄城",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "郾/漯河",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "苦/鹿邑",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "新息/息县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "阳翟/禹州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "豫州",
+        "name": "城父/亳州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.79,
+          33.87
         ]
       }
     }

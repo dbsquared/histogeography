@@ -5,7 +5,8 @@
     "color": "#D81B60",
     "gcps": 12,
     "max_err_km": 0.0,
-    "avg_err_km": 0.0
+    "avg_err_km": 0.0,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -1396,7 +1397,80 @@
         58
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 1042.7,
+        "py": 831.0,
+        "name": "郯/郯城",
+        "role": "commandery"
+      },
+      {
+        "px": 983.0,
+        "py": 700.9,
+        "name": "下邳/睢宁",
+        "role": "commandery"
+      },
+      {
+        "px": 815.6,
+        "py": 749.7,
+        "name": "彭城/徐州",
+        "role": "commandery"
+      },
+      {
+        "px": 1244.8,
+        "py": 315.1,
+        "name": "广陵/扬州(苏)",
+        "role": "commandery"
+      },
+      {
+        "px": 1040.8,
+        "py": 944.9,
+        "name": "琅琊/临沂",
+        "role": "commandery"
+      },
+      {
+        "px": 1096.6,
+        "py": 1102.9,
+        "name": "东莞/沂水",
+        "role": "commandery"
+      },
+      {
+        "px": 1075.4,
+        "py": 456.9,
+        "name": "临淮/盱眙",
+        "role": "commandery"
+      },
+      {
+        "px": 775.2,
+        "py": 610.2,
+        "name": "曲阳/宿州",
+        "role": "commandery"
+      },
+      {
+        "px": 1196.7,
+        "py": 863.5,
+        "name": "朐/连云港",
+        "role": "commandery"
+      },
+      {
+        "px": 1075.4,
+        "py": 877.5,
+        "name": "利城/临沭",
+        "role": "commandery"
+      },
+      {
+        "px": 971.5,
+        "py": 765.9,
+        "name": "良成/邳州",
+        "role": "commandery"
+      },
+      {
+        "px": 1027.3,
+        "py": 682.3,
+        "name": "下相/宿迁",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -2715,6 +2789,198 @@
               31.27068
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "郯/郯城",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "下邳/睢宁",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "彭城/徐州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "广陵/扬州(苏)",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "琅琊/临沂",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "东莞/沂水",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "临淮/盱眙",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "曲阳/宿州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "朐/连云港",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "利城/临沭",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "良成/邳州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "徐州",
+        "name": "下相/宿迁",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.28,
+          33.97
         ]
       }
     }

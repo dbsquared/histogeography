@@ -5,7 +5,8 @@
     "color": "#6A1B9A",
     "gcps": 15,
     "max_err_km": 0.0,
-    "avg_err_km": 0.0
+    "avg_err_km": 0.0,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -653,7 +654,98 @@
         480
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 688.4,
+        "py": 621.1,
+        "name": "长安/西安",
+        "role": "commandery"
+      },
+      {
+        "px": 1383.1,
+        "py": 688.5,
+        "name": "洛阳/洛阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1080.3,
+        "py": 664.4,
+        "name": "弘农/灵宝",
+        "role": "commandery"
+      },
+      {
+        "px": 1139.6,
+        "py": 811.3,
+        "name": "河东/夏县",
+        "role": "commandery"
+      },
+      {
+        "px": 1571.1,
+        "py": 799.3,
+        "name": "河内/武陟",
+        "role": "commandery"
+      },
+      {
+        "px": 888.3,
+        "py": 731.9,
+        "name": "冯翊/大荔",
+        "role": "commandery"
+      },
+      {
+        "px": 448.9,
+        "py": 606.7,
+        "name": "扶风/眉县",
+        "role": "commandery"
+      },
+      {
+        "px": 918.0,
+        "py": 676.5,
+        "name": "华阴/华阴",
+        "role": "commandery"
+      },
+      {
+        "px": 1133.7,
+        "py": 727.1,
+        "name": "陕/三门峡",
+        "role": "commandery"
+      },
+      {
+        "px": 1248.5,
+        "py": 724.6,
+        "name": "渑池/渑池",
+        "role": "commandery"
+      },
+      {
+        "px": 1323.7,
+        "py": 712.6,
+        "name": "新安/新安",
+        "role": "commandery"
+      },
+      {
+        "px": 601.3,
+        "py": 611.5,
+        "name": "槐里/兴平",
+        "role": "commandery"
+      },
+      {
+        "px": 1032.8,
+        "py": 659.6,
+        "name": "湖/阌乡",
+        "role": "commandery"
+      },
+      {
+        "px": 741.8,
+        "py": 628.3,
+        "name": "戏/临潼",
+        "role": "commandery"
+      },
+      {
+        "px": 963.5,
+        "py": 741.5,
+        "name": "蒲坂/永济",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -1208,6 +1300,246 @@
               33.53368
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "长安/西安",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "洛阳/洛阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "弘农/灵宝",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "河东/夏县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "河内/武陟",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "冯翊/大荔",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "扶风/眉县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "华阴/华阴",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "陕/三门峡",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "渑池/渑池",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "新安/新安",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "槐里/兴平",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "湖/阌乡",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "戏/临潼",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "司隶",
+        "name": "蒲坂/永济",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.33,
+          34.84
         ]
       }
     }

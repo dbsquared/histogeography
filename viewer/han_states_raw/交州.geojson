@@ -5,7 +5,8 @@
     "color": "#EC407A",
     "gcps": 19,
     "max_err_km": 0.1,
-    "avg_err_km": 0.1
+    "avg_err_km": 0.1,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -789,7 +790,122 @@
         378
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 1031.5,
+        "py": 941.2,
+        "name": "广信/梧州",
+        "role": "commandery"
+      },
+      {
+        "px": 1195.2,
+        "py": 909.6,
+        "name": "番禺/广州",
+        "role": "commandery"
+      },
+      {
+        "px": 1031.5,
+        "py": 941.2,
+        "name": "苍梧/梧州",
+        "role": "commandery"
+      },
+      {
+        "px": 926.0,
+        "py": 934.0,
+        "name": "郁林/桂平",
+        "role": "commandery"
+      },
+      {
+        "px": 880.5,
+        "py": 777.7,
+        "name": "合浦/合浦",
+        "role": "commandery"
+      },
+      {
+        "px": 569.1,
+        "py": 719.8,
+        "name": "交趾/河内",
+        "role": "commandery"
+      },
+      {
+        "px": 563.1,
+        "py": 613.2,
+        "name": "九真/清化",
+        "role": "commandery"
+      },
+      {
+        "px": 767.4,
+        "py": 315.1,
+        "name": "日南/顺化",
+        "role": "commandery"
+      },
+      {
+        "px": 1127.7,
+        "py": 902.3,
+        "name": "高要/肇庆",
+        "role": "commandery"
+      },
+      {
+        "px": 886.4,
+        "py": 905.0,
+        "name": "布山/贵港",
+        "role": "commandery"
+      },
+      {
+        "px": 943.8,
+        "py": 1102.9,
+        "name": "始安/桂林",
+        "role": "commandery"
+      },
+      {
+        "px": 1223.1,
+        "py": 1061.3,
+        "name": "始兴/韶关",
+        "role": "commandery"
+      },
+      {
+        "px": 1456.9,
+        "py": 947.5,
+        "name": "揭阳/揭阳",
+        "role": "commandery"
+      },
+      {
+        "px": 932.8,
+        "py": 656.6,
+        "name": "徐闻/徐闻",
+        "role": "commandery"
+      },
+      {
+        "px": 947.1,
+        "py": 629.5,
+        "name": "珠崖/海口",
+        "role": "commandery"
+      },
+      {
+        "px": 1086.4,
+        "py": 794.8,
+        "name": "高凉/阳江",
+        "role": "commandery"
+      },
+      {
+        "px": 697.3,
+        "py": 843.6,
+        "name": "临尘/崇左",
+        "role": "commandery"
+      },
+      {
+        "px": 577.5,
+        "py": 728.9,
+        "name": "龙编/河内北",
+        "role": "commandery"
+      },
+      {
+        "px": 1195.2,
+        "py": 909.6,
+        "name": "南海/广州",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -1452,6 +1568,310 @@
               16.93619
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "广信/梧州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "番禺/广州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "苍梧/梧州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "郁林/桂平",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "合浦/合浦",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "交趾/河内",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "九真/清化",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "日南/顺化",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "高要/肇庆",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "布山/贵港",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "始安/桂林",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "始兴/韶关",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "揭阳/揭阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "徐闻/徐闻",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "珠崖/海口",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "高凉/阳江",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "临尘/崇左",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "龙编/河内北",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "交州",
+        "name": "南海/广州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.27,
+          23.13
         ]
       }
     }

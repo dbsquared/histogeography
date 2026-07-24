@@ -5,7 +5,8 @@
     "color": "#C62828",
     "gcps": 14,
     "max_err_km": 0.0,
-    "avg_err_km": 0.0
+    "avg_err_km": 0.0,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -1378,7 +1379,92 @@
         340
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 1137.3,
+        "py": 579.2,
+        "name": "昌邑/巨野",
+        "role": "commandery"
+      },
+      {
+        "px": 497.3,
+        "py": 315.1,
+        "name": "陈留/开封",
+        "role": "commandery"
+      },
+      {
+        "px": 759.1,
+        "py": 735.9,
+        "name": "东郡/濮阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1239.1,
+        "py": 825.4,
+        "name": "东平/东平",
+        "role": "commandery"
+      },
+      {
+        "px": 1326.4,
+        "py": 592.6,
+        "name": "任城/济宁",
+        "role": "commandery"
+      },
+      {
+        "px": 1522.7,
+        "py": 937.3,
+        "name": "泰山/泰安",
+        "role": "commandery"
+      },
+      {
+        "px": 1377.3,
+        "py": 1102.9,
+        "name": "济北/长清",
+        "role": "commandery"
+      },
+      {
+        "px": 1137.3,
+        "py": 579.2,
+        "name": "山阳/巨野",
+        "role": "commandery"
+      },
+      {
+        "px": 951.8,
+        "py": 444.9,
+        "name": "济阴/定陶",
+        "role": "commandery"
+      },
+      {
+        "px": 759.1,
+        "py": 735.9,
+        "name": "濮阳/濮阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1090.0,
+        "py": 673.2,
+        "name": "廪丘/郓城",
+        "role": "commandery"
+      },
+      {
+        "px": 1159.1,
+        "py": 838.8,
+        "name": "寿张/东平",
+        "role": "commandery"
+      },
+      {
+        "px": 933.6,
+        "py": 664.2,
+        "name": "鄄城/鄄城",
+        "role": "commandery"
+      },
+      {
+        "px": 1348.2,
+        "py": 556.8,
+        "name": "亢父/济宁",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -2665,6 +2751,230 @@
               34.086
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "昌邑/巨野",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "陈留/开封",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "东郡/濮阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "东平/东平",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "任城/济宁",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "泰山/泰安",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "济北/长清",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "山阳/巨野",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "济阴/定陶",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "濮阳/濮阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "廪丘/郓城",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "寿张/东平",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "鄄城/鄄城",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "兖州",
+        "name": "亢父/济宁",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.65,
+          35.33
         ]
       }
     }

@@ -200,7 +200,7 @@
 <script src="data.js?v=2026070803"></script>
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
-<script src="han_states.js?v=2026072411"></script>
+<script src="han_states.js?v=2026072412"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -440,7 +440,10 @@ function computeLabelPoint(ring){
 (function(){
   const D = window.HAN_STATES;
   if(!D || !D.states){ console.warn('汉末州数据未加载'); return; }
-  D.states.forEach(st=>{
+  // 仅叠加「已校正」(verified) 的州；未校正的自动初稿先不显示（用户校正后可逐个开启）
+  const visibleStates = D.states.filter(st => st.meta && st.meta.verified === true);
+  console.log(`汉末十三州: 共 ${D.states.length} 州，本次显示已校正的 ${visibleStates.length} 州`);
+  visibleStates.forEach(st=>{
     // 1) 州界多边形
     const ring = st.boundary.map(p=>[p[1],p[0]]);  // [lon,lat]→[lat,lon]
     const fillOpacity = st.name==='幽州' ? 0.40 : 0.20;  // 幽州白填充调实一点
@@ -513,7 +516,7 @@ function computeLabelPoint(ring){
       }
     });
   });
-  console.log(`汉末十三州: ${D.states.length} 州已加载`);
+  console.log(`汉末十三州: ${visibleStates.length} 州已叠加`);
 })();
 function showHanBnd(){ hanBoundaryLayer.addTo(map); hanStateLabelLayer.addTo(map); hanCapitalLayer.addTo(map); }
 function hideHanBnd(){ map.removeLayer(hanBoundaryLayer); map.removeLayer(hanStateLabelLayer); map.removeLayer(hanCapitalLayer); }

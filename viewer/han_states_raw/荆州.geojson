@@ -5,7 +5,8 @@
     "color": "#AB47BC",
     "gcps": 21,
     "max_err_km": 0.1,
-    "avg_err_km": 0.0
+    "avg_err_km": 0.0,
+    "verified": false
   },
   "pixels": {
     "gcps": [
@@ -735,7 +736,134 @@
         80
       ]
     ],
-    "seats": []
+    "seats": [
+      {
+        "px": 1014.6,
+        "py": 1002.1,
+        "name": "襄阳/襄阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1023.7,
+        "py": 822.4,
+        "name": "江陵/荆州",
+        "role": "commandery"
+      },
+      {
+        "px": 1050.3,
+        "py": 1102.9,
+        "name": "宛/南阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1212.5,
+        "py": 849.7,
+        "name": "江夏/武汉",
+        "role": "commandery"
+      },
+      {
+        "px": 1087.9,
+        "py": 601.9,
+        "name": "长沙/长沙",
+        "role": "commandery"
+      },
+      {
+        "px": 974.3,
+        "py": 685.9,
+        "name": "武陵/常德",
+        "role": "commandery"
+      },
+      {
+        "px": 966.0,
+        "py": 411.7,
+        "name": "零陵/永州",
+        "role": "commandery"
+      },
+      {
+        "px": 1094.3,
+        "py": 343.5,
+        "name": "桂阳/郴州",
+        "role": "commandery"
+      },
+      {
+        "px": 936.7,
+        "py": 860.3,
+        "name": "夷陵/宜昌",
+        "role": "commandery"
+      },
+      {
+        "px": 880.8,
+        "py": 875.0,
+        "name": "秭归/秭归",
+        "role": "commandery"
+      },
+      {
+        "px": 807.5,
+        "py": 900.2,
+        "name": "巫/巫山",
+        "role": "commandery"
+      },
+      {
+        "px": 979.8,
+        "py": 831.9,
+        "name": "枝江/枝江",
+        "role": "commandery"
+      },
+      {
+        "px": 982.5,
+        "py": 875.0,
+        "name": "当阳/当阳",
+        "role": "commandery"
+      },
+      {
+        "px": 1084.2,
+        "py": 769.9,
+        "name": "华容/监利",
+        "role": "commandery"
+      },
+      {
+        "px": 1087.9,
+        "py": 601.9,
+        "name": "临湘/长沙",
+        "role": "commandery"
+      },
+      {
+        "px": 1087.9,
+        "py": 559.8,
+        "name": "衡阳/湘潭",
+        "role": "commandery"
+      },
+      {
+        "px": 953.2,
+        "py": 497.9,
+        "name": "昭陵/邵阳",
+        "role": "commandery"
+      },
+      {
+        "px": 965.1,
+        "py": 315.1,
+        "name": "营浦/道县",
+        "role": "commandery"
+      },
+      {
+        "px": 998.1,
+        "py": 672.2,
+        "name": "阴山/汉寿",
+        "role": "commandery"
+      },
+      {
+        "px": 967.8,
+        "py": 899.1,
+        "name": "临沮/远安",
+        "role": "commandery"
+      },
+      {
+        "px": 1071.4,
+        "py": 1011.5,
+        "name": "章陵/枣阳",
+        "role": "commandery"
+      }
+    ]
   },
   "features": [
     {
@@ -1330,6 +1458,342 @@
               23.12835
             ]
           ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "襄阳/襄阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "江陵/荆州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "宛/南阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "江夏/武汉",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "长沙/长沙",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "武陵/常德",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "零陵/永州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "桂阳/郴州",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "夷陵/宜昌",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "秭归/秭归",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "巫/巫山",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "枝江/枝江",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "当阳/当阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "华容/监利",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "临湘/长沙",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "衡阳/湘潭",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "昭陵/邵阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "营浦/道县",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "阴山/汉寿",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "临沮/远安",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "kind": "commandery_seat",
+        "state": "荆州",
+        "name": "章陵/枣阳",
+        "role": "commandery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.76,
+          32.13
         ]
       }
     }
