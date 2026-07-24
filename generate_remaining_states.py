@@ -21,7 +21,7 @@ REF_DIR = os.path.join(HERE, 'viewer', 'ref_imgs')
 IMG_W, IMG_H = 2020, 1418
 SEG_TOL = 40
 F_EXPAND = 1.8
-TARGET_BND_POINTS = 300
+TARGET_BND_POINTS = 400  # 加密边界锚点，预描更细致（原 300）
 
 def extract_gcp_db(path):
     txt = open(path, encoding='utf-8').read()
@@ -148,7 +148,8 @@ def segment_state_contour(state, diag_dir=None):
     clean = cv2.morphologyEx(clean, cv2.MORPH_CLOSE, kernel, iterations=2)
     clean = cv2.morphologyEx(clean, cv2.MORPH_OPEN, kernel, iterations=1)
 
-    contours, _ = cv2.findContours(clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # CHAIN_APPROX_NONE 保留所有像素点，便于后续去锯齿 + 均匀重采样加密
+    contours, _ = cv2.findContours(clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if not contours:
         raise RuntimeError(f'{state}: 未找到外轮廓')
     cnt = max(contours, key=cv2.contourArea)
@@ -164,46 +165,45 @@ def segment_state_contour(state, diag_dir=None):
     return pts, clean
 
 def simplify_contour(cnt, target):
-    """把轮廓简化到目标点数附近，防止坍缩"""
-    MIN_PTS = 120
-    MAX_PTS = 450
-    if len(cnt) <= MIN_PTS:
-        return cnt
+    """去像素级锯齿后，沿弧长均匀重采样到固定点数，边界平滑且锚点密集。
+
+    旧实现用 approxPolyDP 二分 epsilon，点数受形状复杂度限制、常远低于 target
+    （很多州只有 130~180 点）。改为：小 epsilon 去锯齿 → 弧长均匀重采样到精确
+    target 点，保证每个州都有稳定且更密的边界锚点，预描更细致。
+    """
     peri = cv2.arcLength(cnt, True)
-    best = cnt
-    # 二分 epsilon，以 peri 的 0.1%~20% 为范围
-    lo, hi = 0.001, 0.20
-    for _ in range(40):
-        mid = (lo + hi) / 2
-        approx = cv2.approxPolyDP(cnt, mid * peri, True)
-        if len(approx) < 4:
-            hi = mid
-            continue
-        if len(approx) > target:
-            lo = mid
-        else:
-            hi = mid
-        # 记录落在窗内的最优
-        if MIN_PTS <= len(approx) <= MAX_PTS:
-            best = approx
-            if abs(len(approx) - target) < 20:
-                break
-    # 如果二分没落到窗内，强制重采样
-    if len(best) < MIN_PTS or len(best) > MAX_PTS:
-        pts = cnt.reshape(-1, 2)
-        n = len(pts)
-        step = max(1, n // target)
-        sampled = pts[::step].copy()
-        if len(sampled) < MIN_PTS:
-            # 再加密：在相邻点间插入中点
-            dense = []
-            for i in range(len(sampled)):
-                dense.append(sampled[i])
-                nxt = sampled[(i+1)%len(sampled)]
-                dense.append((sampled[i] + nxt) / 2)
-            sampled = np.array(dense)
-        best = sampled.reshape(-1, 1, 2).astype(np.int32)
-    return best
+    if peri <= 0:
+        return cnt
+    # 极小 epsilon：只抹掉像素级台阶锯齿，几乎不改变形状
+    approx = cv2.approxPolyDP(cnt, 0.0012 * peri, True)
+    if len(approx) < 4:
+        approx = cnt
+    return resample_contour(approx, target)
+
+
+def resample_contour(cnt, n):
+    """沿闭合轮廓按弧长均匀重采样为恰好 n 个点。"""
+    pts = cnt.reshape(-1, 2).astype(np.float64)
+    if len(pts) < 3:
+        return cnt.reshape(-1, 1, 2).astype(np.int32)
+    ring = np.vstack([pts, pts[0]])  # 闭合
+    seg = np.diff(ring, axis=0)
+    dist = np.sqrt((seg ** 2).sum(axis=1))
+    cum = np.concatenate([[0.0], np.cumsum(dist)])
+    total = cum[-1]
+    if total <= 0:
+        return cnt.reshape(-1, 1, 2).astype(np.int32)
+    targets = np.linspace(0.0, total, n, endpoint=False)
+    out = []
+    j = 0
+    for t in targets:
+        while j < len(cum) - 1 and cum[j + 1] < t:
+            j += 1
+        seg_len = cum[j + 1] - cum[j]
+        r = 0.0 if seg_len == 0 else (t - cum[j]) / seg_len
+        p = ring[j] * (1 - r) + ring[j + 1] * r
+        out.append([int(round(p[0])), int(round(p[1]))])
+    return np.array(out, dtype=np.int32).reshape(-1, 1, 2)
 
 def estimate_affine(cities, F=F_EXPAND):
     """返回 (a, e, c, f): lon=a*px+c, lat=e*py+f; 方形像素、居中"""
@@ -274,6 +274,7 @@ def generate_state(state, color, db, diag_dir=None):
             'gcps': len(gcps),
             'max_err_km': round(max_err, 1),
             'avg_err_km': round(avg_err, 1),
+            'verified': False,  # 自动初稿，未经用户 GCP 校正，地图暂不叠加
         },
         'pixels': {
             'gcps': gcps,
@@ -292,10 +293,11 @@ def generate_state(state, color, db, diag_dir=None):
 
 def main():
     db = extract_gcp_db(DIGITIZE)
-    remaining = ['司隶','兖州','豫州','徐州','青州','荆州','扬州','交州']
+    # 注意：司隶已由用户校正（verified=true），绝不能覆盖 —— 只重新生成 7 个未校正州
+    remaining = ['兖州','豫州','徐州','青州','荆州','扬州','交州']
     # 配色方案（非黄/绿/蓝/橙，高反差；与已有 5 州区分）
     colors = {
-        '司隶': '#6A1B9A',  # 深紫（与并州 #8E44AD 区分）
+        '司隶': '#6A1B9A',  # 深紫（与并州 #8E44AD 区分）— 已校正，不在 remaining 内
         '兖州': '#C62828',  # 正红（与冀州 #D27370 浅珊瑚红区分）
         '豫州': '#5E35B1',  # 靛紫（紫家族）
         '徐州': '#D81B60',  # 樱桃红（与凉州 #E91E63 区分）

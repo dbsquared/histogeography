@@ -130,263 +130,262 @@ const STATES = [
   {name:'荆州', img:'ref_imgs/荆州.png', color:'#AB47BC'},
   {name:'交州', img:'ref_imgs/交州.png', color:'#EC407A'},
 ];
+// 工具版本（用于 geojson 缓存失效；每次改结构时 +1）
+const TOOL_VERSION='20260725a';
 
-// ── 各州 GCP 预设库（古地名/现代城市 → 经纬度）──
-// 每州列出其境内主要城市/郡治，供打点时快速选填。
+// ── 各州 GCP 预设库（现代城市 → 经纬度）──
+// GCP = 地理配准锚点，必须是「能查到坐标」的现代城市（如石家庄/北京/武汉…），
+// 这样在图上才能定位去点。古地名只用于最终地图的「郡治」标注（见各州 geojson features），不在此处。
 // 选州时只显示「本州 + 相邻州」的城市（附近 GCP），减少选择负担。
 const GCP_DB = {
   '司隶':[
-    {name:'长安/西安',lon:108.94,lat:34.34},
-    {name:'洛阳/洛阳',lon:112.45,lat:34.62},
-    {name:'弘农/灵宝',lon:110.92,lat:34.52},
-    {name:'河东/夏县',lon:111.22,lat:35.13},
-    {name:'河内/武陟',lon:113.40,lat:35.08},
-    {name:'冯翊/大荔',lon:109.95,lat:34.80},
-    {name:'扶风/眉县',lon:107.73,lat:34.28},
-    {name:'华阴/华阴',lon:110.10,lat:34.57},
-    {name:'陕/三门峡',lon:111.19,lat:34.78},
-    {name:'渑池/渑池',lon:111.77,lat:34.77},
-    {name:'新安/新安',lon:112.15,lat:34.72},
-    {name:'槐里/兴平',lon:108.50,lat:34.30},
-    {name:'湖/阌乡',lon:110.68,lat:34.50},
-    {name:'戏/临潼',lon:109.21,lat:34.37},
-    {name:'蒲坂/永济',lon:110.33,lat:34.84},
+    {name:'西安',lon:108.940,lat:34.341},
+    {name:'洛阳',lon:112.454,lat:34.619},
+    {name:'三门峡',lon:111.190,lat:34.780},
+    {name:'渭南',lon:109.502,lat:34.499},
+    {name:'咸阳',lon:108.705,lat:34.329},
+    {name:'宝鸡',lon:107.238,lat:34.363},
+    {name:'汉中',lon:107.028,lat:33.071},
+    {name:'运城',lon:111.003,lat:35.023},
+    {name:'临汾',lon:111.519,lat:36.088},
+    {name:'延安',lon:109.490,lat:36.596},
+    {name:'郑州',lon:113.625,lat:34.746},
+    {name:'南阳',lon:112.538,lat:32.999},
+    {name:'安康',lon:109.029,lat:32.690},
+    {name:'商洛',lon:109.939,lat:33.868},
+    {name:'铜川',lon:108.979,lat:34.916},
+    {name:'平凉',lon:106.665,lat:35.543},
   ],
   '冀州':[
-    {name:'邺/临漳',lon:114.61,lat:36.32},
-    {name:'信都/冀州',lon:115.36,lat:37.07},
-    {name:'中山/定州',lon:115.03,lat:38.52},
-    {name:'常山/元氏',lon:114.17,lat:37.77},
-    {name:'赵/邯郸',lon:114.49,lat:36.61},
-    {name:'巨鹿/巨鹿',lon:115.03,lat:37.22},
-    {name:'清河/清河',lon:115.95,lat:37.07},
-    {name:'安平/安平',lon:115.51,lat:38.23},
-    {name:'河间/河间',lon:116.08,lat:38.45},
-    {name:'渤海/南皮',lon:116.66,lat:38.07},
-    {name:'高阳/蠡县',lon:115.59,lat:38.49},
-    {name:'饶阳/饶阳',lon:115.74,lat:38.24},
-    {name:'弓高/阜城',lon:116.14,lat:38.08},
-    {name:'南皮/南皮',lon:116.66,lat:38.07},
-    {name:'甘陵/清河',lon:115.95,lat:37.07},
+    {name:'石家庄',lon:114.514,lat:38.042},
+    {name:'保定',lon:115.464,lat:38.873},
+    {name:'北京',lon:116.407,lat:39.904},
+    {name:'天津',lon:117.201,lat:39.085},
+    {name:'唐山',lon:118.175,lat:39.635},
+    {name:'廊坊',lon:116.702,lat:39.521},
+    {name:'沧州',lon:116.838,lat:38.304},
+    {name:'衡水',lon:115.665,lat:37.735},
+    {name:'邢台',lon:114.504,lat:37.070},
+    {name:'邯郸',lon:114.491,lat:36.613},
+    {name:'张家口',lon:114.888,lat:40.824},
+    {name:'承德',lon:117.962,lat:40.987},
+    {name:'秦皇岛',lon:119.600,lat:39.935},
+    {name:'太原',lon:112.549,lat:37.857},
+    {name:'郑州',lon:113.625,lat:34.746},
+    {name:'安阳',lon:114.352,lat:36.103},
+    {name:'济南',lon:117.000,lat:36.651},
+    {name:'德州',lon:116.357,lat:37.434},
   ],
   '并州':[
-    {name:'晋阳/太原',lon:112.55,lat:37.87},
-    {name:'上党/长子',lon:112.87,lat:36.12},
-    {name:'雁门/代县',lon:112.97,lat:39.07},
-    {name:'新兴/忻州',lon:112.73,lat:38.42},
-    {name:'西河/离石',lon:111.13,lat:37.52},
-    {name:'上郡/榆林',lon:109.74,lat:38.29},
-    {name:'云中/呼和浩特',lon:111.73,lat:40.83},
-    {name:'五原/包头',lon:109.84,lat:40.66},
-    {name:'朔方/磴口',lon:107.00,lat:40.30},
-    {name:'定襄/和林格尔',lon:111.82,lat:40.37},
-    {name:'马邑/朔州',lon:112.43,lat:39.33},
-    {name:'界休/介休',lon:111.92,lat:37.03},
-    {name:'隰城/汾阳',lon:111.76,lat:37.27},
-    {name:'蒲子/隰县',lon:110.93,lat:36.63},
-    {name:'虑虒/五台',lon:113.28,lat:38.72},
-    {name:'盂/阳曲',lon:112.68,lat:38.07},
+    {name:'太原',lon:112.549,lat:37.857},
+    {name:'大同',lon:113.300,lat:40.076},
+    {name:'临汾',lon:111.519,lat:36.088},
+    {name:'运城',lon:111.003,lat:35.023},
+    {name:'晋中',lon:112.751,lat:37.687},
+    {name:'长治',lon:113.113,lat:36.195},
+    {name:'阳泉',lon:113.557,lat:37.851},
+    {name:'忻州',lon:112.734,lat:38.417},
+    {name:'朔州',lon:112.433,lat:39.331},
+    {name:'吕梁',lon:111.134,lat:37.524},
+    {name:'晋城',lon:112.851,lat:35.490},
+    {name:'介休',lon:111.921,lat:37.032},
+    {name:'侯马',lon:111.368,lat:35.623},
+    {name:'原平',lon:112.708,lat:38.744},
+    {name:'汾阳',lon:111.763,lat:37.265},
   ],
   '幽州':[
-    {name:'蓟/北京',lon:116.40,lat:39.90},
-    {name:'涿/涿州',lon:115.98,lat:39.48},
-    {name:'渔阳/密云',lon:116.84,lat:40.37},
-    {name:'右北平/平泉',lon:118.68,lat:40.98},
-    {name:'辽西/义县',lon:121.23,lat:41.53},
-    {name:'辽东/辽阳',lon:123.18,lat:41.48},
-    {name:'玄菟/沈阳东',lon:123.60,lat:41.90},
-    {name:'乐浪/平壤',lon:125.62,lat:39.02},
-    {name:'代/蔚县',lon:114.57,lat:39.83},
-    {name:'上谷/怀来',lon:115.53,lat:40.43},
-    {name:'居庸/延庆',lon:115.97,lat:40.46},
-    {name:'昌平/昌平',lon:116.23,lat:40.22},
-    {name:'泉州/武清',lon:117.03,lat:39.37},
-    {name:'平刚/宁城',lon:119.35,lat:41.60},
-    {name:'襄平/辽阳',lon:123.18,lat:41.48},
+    {name:'北京',lon:116.407,lat:39.904},
+    {name:'天津',lon:117.201,lat:39.085},
+    {name:'唐山',lon:118.175,lat:39.635},
+    {name:'承德',lon:117.962,lat:40.987},
+    {name:'秦皇岛',lon:119.600,lat:39.935},
+    {name:'廊坊',lon:116.702,lat:39.521},
+    {name:'张家口',lon:114.888,lat:40.824},
+    {name:'沈阳',lon:123.431,lat:41.805},
+    {name:'大连',lon:121.618,lat:38.914},
+    {name:'锦州',lon:121.128,lat:41.088},
+    {name:'朝阳',lon:120.447,lat:41.570},
+    {name:'葫芦岛',lon:120.836,lat:40.711},
+    {name:'辽阳',lon:123.173,lat:41.272},
+    {name:'鞍山',lon:122.995,lat:41.109},
+    {name:'保定',lon:115.464,lat:38.873},
   ],
   '兖州':[
-    {name:'昌邑/巨野',lon:116.07,lat:35.38},
-    {name:'陈留/开封',lon:114.31,lat:34.79},
-    {name:'东郡/濮阳',lon:115.03,lat:35.73},
-    {name:'东平/东平',lon:116.35,lat:35.93},
-    {name:'任城/济宁',lon:116.59,lat:35.41},
-    {name:'泰山/泰安',lon:117.13,lat:36.18},
-    {name:'济北/长清',lon:116.73,lat:36.55},
-    {name:'山阳/巨野',lon:116.07,lat:35.38},
-    {name:'济阴/定陶',lon:115.56,lat:35.08},
-    {name:'濮阳/濮阳',lon:115.03,lat:35.73},
-    {name:'廪丘/郓城',lon:115.94,lat:35.59},
-    {name:'寿张/东平',lon:116.13,lat:35.96},
-    {name:'鄄城/鄄城',lon:115.51,lat:35.57},
-    {name:'亢父/济宁',lon:116.65,lat:35.33},
+    {name:'济南',lon:117.000,lat:36.651},
+    {name:'济宁',lon:116.587,lat:35.415},
+    {name:'泰安',lon:117.129,lat:36.180},
+    {name:'菏泽',lon:115.469,lat:35.233},
+    {name:'聊城',lon:115.980,lat:36.456},
+    {name:'郑州',lon:113.625,lat:34.746},
+    {name:'开封',lon:114.341,lat:34.797},
+    {name:'濮阳',lon:115.041,lat:35.734},
+    {name:'商丘',lon:115.650,lat:34.437},
+    {name:'枣庄',lon:117.557,lat:34.859},
+    {name:'临沂',lon:118.355,lat:35.104},
+    {name:'徐州',lon:117.184,lat:34.262},
+    {name:'周口',lon:114.668,lat:33.633},
+    {name:'新乡',lon:113.926,lat:35.303},
+    {name:'鹤壁',lon:114.295,lat:35.748},
+    {name:'邯郸',lon:114.491,lat:36.613},
   ],
   '豫州':[
-    {name:'谯/亳州',lon:115.79,lat:33.87},
-    {name:'汝南/平舆',lon:114.62,lat:33.03},
-    {name:'颍川/禹州',lon:113.45,lat:34.15},
-    {name:'陈/淮阳',lon:114.87,lat:33.74},
-    {name:'梁/商丘',lon:115.65,lat:34.41},
-    {name:'沛/沛县',lon:116.94,lat:34.30},
-    {name:'鲁/曲阜',lon:116.99,lat:35.58},
-    {name:'弋阳/潢川',lon:115.03,lat:32.13},
-    {name:'安丰/固始',lon:115.83,lat:32.17},
-    {name:'襄城/襄城',lon:113.52,lat:33.86},
-    {name:'郾/漯河',lon:114.03,lat:33.59},
-    {name:'苦/鹿邑',lon:115.49,lat:33.86},
-    {name:'新息/息县',lon:114.73,lat:32.35},
-    {name:'阳翟/禹州',lon:113.45,lat:34.15},
-    {name:'城父/亳州',lon:115.79,lat:33.87},
+    {name:'郑州',lon:113.625,lat:34.746},
+    {name:'洛阳',lon:112.454,lat:34.619},
+    {name:'开封',lon:114.341,lat:34.797},
+    {name:'许昌',lon:113.862,lat:34.036},
+    {name:'漯河',lon:114.026,lat:33.581},
+    {name:'驻马店',lon:114.018,lat:33.011},
+    {name:'信阳',lon:114.091,lat:32.150},
+    {name:'南阳',lon:112.538,lat:32.999},
+    {name:'周口',lon:114.668,lat:33.633},
+    {name:'平顶山',lon:113.307,lat:33.744},
+    {name:'商丘',lon:115.650,lat:34.437},
+    {name:'安阳',lon:114.352,lat:36.103},
+    {name:'新乡',lon:113.926,lat:35.303},
+    {name:'焦作',lon:113.238,lat:35.215},
+    {name:'濮阳',lon:115.041,lat:35.734},
+    {name:'三门峡',lon:111.190,lat:34.780},
   ],
   '徐州':[
-    {name:'郯/郯城',lon:118.36,lat:34.61},
-    {name:'下邳/睢宁',lon:118.05,lat:34.05},
-    {name:'彭城/徐州',lon:117.18,lat:34.26},
-    {name:'广陵/扬州(苏)',lon:119.41,lat:32.39},
-    {name:'琅琊/临沂',lon:118.35,lat:35.10},
-    {name:'东莞/沂水',lon:118.64,lat:35.78},
-    {name:'临淮/盱眙',lon:118.53,lat:33.00},
-    {name:'曲阳/宿州',lon:116.97,lat:33.66},
-    {name:'朐/连云港',lon:119.16,lat:34.75},
-    {name:'利城/临沭',lon:118.53,lat:34.81},
-    {name:'良成/邳州',lon:117.99,lat:34.33},
-    {name:'下相/宿迁',lon:118.28,lat:33.97},
+    {name:'徐州',lon:117.184,lat:34.262},
+    {name:'连云港',lon:119.164,lat:34.754},
+    {name:'宿迁',lon:118.275,lat:33.973},
+    {name:'淮安',lon:119.017,lat:33.620},
+    {name:'蚌埠',lon:117.389,lat:32.916},
+    {name:'宿州',lon:116.984,lat:33.657},
+    {name:'枣庄',lon:117.557,lat:34.859},
+    {name:'临沂',lon:118.355,lat:35.104},
+    {name:'商丘',lon:115.650,lat:34.437},
+    {name:'亳州',lon:115.792,lat:33.870},
+    {name:'阜阳',lon:115.819,lat:32.896},
+    {name:'淮南',lon:117.019,lat:32.626},
+    {name:'盐城',lon:120.139,lat:33.378},
+    {name:'扬州',lon:119.412,lat:32.394},
+    {name:'泰州',lon:119.915,lat:32.461},
+    {name:'淮北',lon:116.791,lat:33.974},
   ],
   '青州':[
-    {name:'临淄/淄博',lon:118.28,lat:36.83},
-    {name:'北海/潍坊',lon:119.10,lat:36.71},
-    {name:'济南/章丘',lon:117.53,lat:36.72},
-    {name:'乐安/高青',lon:118.05,lat:37.17},
-    {name:'平原/平原',lon:116.44,lat:37.16},
-    {name:'东莱/莱州',lon:119.94,lat:37.18},
-    {name:'长广/莱阳',lon:120.71,lat:36.97},
-    {name:'城阳/莒县',lon:118.83,lat:35.59},
-    {name:'胶东/平度',lon:119.97,lat:36.87},
-    {name:'即墨/即墨',lon:120.45,lat:36.39},
-    {name:'临朐/临朐',lon:118.54,lat:36.51},
-    {name:'祝阿/齐河',lon:116.75,lat:36.47},
+    {name:'青岛',lon:120.382,lat:36.067},
+    {name:'潍坊',lon:119.107,lat:36.709},
+    {name:'淄博',lon:118.054,lat:36.813},
+    {name:'济南',lon:117.000,lat:36.651},
+    {name:'烟台',lon:121.392,lat:37.539},
+    {name:'临沂',lon:118.355,lat:35.104},
+    {name:'日照',lon:119.461,lat:35.428},
+    {name:'东营',lon:118.675,lat:37.434},
+    {name:'威海',lon:122.120,lat:37.510},
+    {name:'济宁',lon:116.587,lat:35.415},
+    {name:'泰安',lon:117.129,lat:36.180},
+    {name:'德州',lon:116.357,lat:37.434},
+    {name:'滨州',lon:118.016,lat:37.383},
+    {name:'聊城',lon:115.980,lat:36.456},
+    {name:'菏泽',lon:115.469,lat:35.233},
   ],
   '荆州':[
-    {name:'襄阳/襄阳',lon:112.14,lat:32.04},
-    {name:'江陵/荆州',lon:112.24,lat:30.33},
-    {name:'宛/南阳',lon:112.53,lat:33.00},
-    {name:'江夏/武汉',lon:114.30,lat:30.59},
-    {name:'长沙/长沙',lon:112.94,lat:28.23},
-    {name:'武陵/常德',lon:111.70,lat:29.03},
-    {name:'零陵/永州',lon:111.61,lat:26.42},
-    {name:'桂阳/郴州',lon:113.01,lat:25.77},
-    {name:'夷陵/宜昌',lon:111.29,lat:30.69},
-    {name:'秭归/秭归',lon:110.68,lat:30.83},
-    {name:'巫/巫山',lon:109.88,lat:31.07},
-    {name:'枝江/枝江',lon:111.76,lat:30.42},
-    {name:'当阳/当阳',lon:111.79,lat:30.83},
-    {name:'华容/监利',lon:112.90,lat:29.83},
-    {name:'临湘/长沙',lon:112.94,lat:28.23},
-    {name:'衡阳/湘潭',lon:112.94,lat:27.83},
-    {name:'昭陵/邵阳',lon:111.47,lat:27.24},
-    {name:'营浦/道县',lon:111.60,lat:25.50},
-    {name:'阴山/汉寿',lon:111.96,lat:28.90},
-    {name:'临沮/远安',lon:111.63,lat:31.06},
-    {name:'章陵/枣阳',lon:112.76,lat:32.13},
+    {name:'武汉',lon:114.305,lat:30.593},
+    {name:'荆州',lon:112.239,lat:30.326},
+    {name:'宜昌',lon:111.291,lat:30.691},
+    {name:'襄阳',lon:112.142,lat:32.041},
+    {name:'长沙',lon:112.938,lat:28.228},
+    {name:'岳阳',lon:113.132,lat:29.359},
+    {name:'常德',lon:111.699,lat:29.031},
+    {name:'衡阳',lon:112.607,lat:26.893},
+    {name:'怀化',lon:110.000,lat:27.550},
+    {name:'十堰',lon:110.788,lat:32.629},
+    {name:'株洲',lon:113.132,lat:27.832},
+    {name:'湘潭',lon:112.944,lat:27.829},
+    {name:'邵阳',lon:111.471,lat:27.238},
+    {name:'永州',lon:111.613,lat:26.419},
+    {name:'益阳',lon:112.355,lat:28.554},
+    {name:'荆门',lon:112.204,lat:31.035},
+    {name:'张家界',lon:110.479,lat:29.117},
+    {name:'恩施',lon:109.486,lat:30.293},
   ],
   '扬州':[
-    {name:'历阳/和县',lon:118.40,lat:31.73},
-    {name:'寿春/寿县',lon:116.78,lat:32.55},
-    {name:'合肥/合肥',lon:117.28,lat:31.86},
-    {name:'吴/苏州',lon:120.58,lat:31.30},
-    {name:'会稽/绍兴',lon:120.58,lat:30.00},
-    {name:'丹阳/南京',lon:118.78,lat:32.06},
-    {name:'豫章/南昌',lon:115.86,lat:28.68},
-    {name:'庐江/庐江',lon:117.01,lat:31.25},
-    {name:'广陵/扬州(苏)',lon:119.41,lat:32.39},
-    {name:'柴桑/九江',lon:115.99,lat:29.71},
-    {name:'海陵/泰州',lon:119.92,lat:32.46},
-    {name:'曲阿/丹阳(苏)',lon:119.59,lat:31.99},
-    {name:'乌程/湖州',lon:120.09,lat:30.89},
-    {name:'由拳/嘉兴',lon:120.76,lat:30.78},
-    {name:'余杭/杭州',lon:120.16,lat:30.27},
-    {name:'山阴/绍兴',lon:120.58,lat:30.00},
-    {name:'章安/台州',lon:121.44,lat:28.61},
-    {name:'永宁/温州',lon:120.65,lat:28.00},
-    {name:'建安/建瓯',lon:118.33,lat:27.05},
-    {name:'侯官/福州',lon:119.30,lat:26.08},
-    {name:'鄱阳/鄱阳',lon:116.67,lat:29.00},
-    {name:'庐陵/吉安',lon:114.99,lat:27.12},
-    {name:'赣/赣州',lon:114.94,lat:25.85},
-    {name:'南野/南康',lon:114.77,lat:25.66},
-    {name:'临海/临海',lon:121.13,lat:28.86},
-    {name:'东阳/金华',lon:119.65,lat:29.08},
+    {name:'南京',lon:118.797,lat:32.060},
+    {name:'上海',lon:121.473,lat:31.230},
+    {name:'杭州',lon:120.155,lat:30.274},
+    {name:'苏州',lon:120.619,lat:31.299},
+    {name:'无锡',lon:120.301,lat:31.574},
+    {name:'常州',lon:119.946,lat:31.772},
+    {name:'合肥',lon:117.227,lat:31.821},
+    {name:'宁波',lon:121.550,lat:29.875},
+    {name:'绍兴',lon:120.582,lat:30.001},
+    {name:'扬州',lon:119.412,lat:32.394},
+    {name:'嘉兴',lon:120.755,lat:30.746},
+    {name:'金华',lon:119.652,lat:29.082},
+    {name:'温州',lon:120.699,lat:28.001},
+    {name:'福州',lon:119.296,lat:26.074},
+    {name:'南昌',lon:115.858,lat:28.682},
+    {name:'九江',lon:115.992,lat:29.712},
+    {name:'台州',lon:121.428,lat:28.659},
+    {name:'南通',lon:120.864,lat:31.980},
+    {name:'镇江',lon:119.452,lat:32.204},
+    {name:'湖州',lon:120.088,lat:30.894},
   ],
   '益州':[
-    {name:'雒/广汉',lon:104.40,lat:31.13},
-    {name:'成都/成都',lon:104.07,lat:30.67},
-    {name:'犍为/宜宾',lon:104.64,lat:28.77},
-    {name:'牂牁/贵阳',lon:106.71,lat:26.65},
-    {name:'越嶲/西昌',lon:102.27,lat:27.90},
-    {name:'益州/昆明',lon:102.71,lat:25.04},
-    {name:'永昌/保山',lon:99.17,lat:25.12},
-    {name:'汉中/汉中',lon:107.03,lat:33.07},
-    {name:'巴郡/重庆',lon:106.55,lat:29.56},
-    {name:'巴西/阆中',lon:105.97,lat:31.56},
-    {name:'巴东/奉节',lon:109.46,lat:31.02},
-    {name:'梓潼/梓潼',lon:105.16,lat:31.65},
-    {name:'涪/绵阳',lon:104.68,lat:31.47},
-    {name:'江州/重庆',lon:106.55,lat:29.56},
-    {name:'垫江/合川',lon:106.27,lat:29.84},
-    {name:'武阳/彭山',lon:103.87,lat:30.19},
-    {name:'朱提/昭通',lon:103.71,lat:29.27},
-    {name:'味/曲靖',lon:103.80,lat:25.49},
-    {name:'滇池/昆明',lon:102.71,lat:25.04},
-    {name:'弄栋/姚安',lon:101.13,lat:25.58},
-    {name:'邛都/西昌',lon:102.27,lat:27.90},
-    {name:'汶山/茂县',lon:103.85,lat:31.68},
-    {name:'临邛/邛崃',lon:103.47,lat:30.42},
-    {name:'广都/双流',lon:103.92,lat:30.58},
-    {name:'僰道/宜宾',lon:104.64,lat:28.77},
-    {name:'俞元/澄江',lon:102.91,lat:24.68},
+    {name:'成都',lon:104.066,lat:30.572},
+    {name:'重庆',lon:106.551,lat:29.563},
+    {name:'绵阳',lon:104.679,lat:31.468},
+    {name:'乐山',lon:103.769,lat:29.552},
+    {name:'昆明',lon:102.833,lat:24.880},
+    {name:'贵阳',lon:106.713,lat:26.578},
+    {name:'宜宾',lon:104.641,lat:28.752},
+    {name:'南充',lon:106.083,lat:30.795},
+    {name:'西昌',lon:102.268,lat:27.900},
+    {name:'大理',lon:100.225,lat:25.606},
+    {name:'丽江',lon:100.233,lat:26.865},
+    {name:'泸州',lon:105.443,lat:28.870},
+    {name:'自贡',lon:104.778,lat:29.339},
+    {name:'攀枝花',lon:101.718,lat:26.582},
+    {name:'曲靖',lon:103.797,lat:25.490},
+    {name:'保山',lon:99.167,lat:25.117},
+    {name:'昭通',lon:103.717,lat:29.271},
+    {name:'汉中',lon:107.028,lat:33.071},
+    {name:'广元',lon:105.827,lat:32.439},
+    {name:'雅安',lon:103.007,lat:29.987},
   ],
   '凉州':[
-    {name:'姑臧/武威',lon:102.64,lat:37.93},
-    {name:'陇西/临洮',lon:103.85,lat:35.37},
-    {name:'天水/天水',lon:105.72,lat:34.58},
-    {name:'安定/固原',lon:106.27,lat:36.01},
-    {name:'北地/吴忠',lon:106.20,lat:37.98},
-    {name:'武都/武都',lon:104.92,lat:33.40},
-    {name:'金城/兰州',lon:103.84,lat:36.06},
-    {name:'西平/西宁',lon:101.78,lat:36.62},
-    {name:'张掖/张掖',lon:100.45,lat:38.94},
-    {name:'酒泉/酒泉',lon:98.49,lat:39.74},
-    {name:'敦煌/敦煌',lon:94.68,lat:40.14},
-    {name:'令居/永登',lon:103.25,lat:36.74},
-    {name:'冀/甘谷',lon:105.30,lat:34.72},
-    {name:'临洮/临洮',lon:103.85,lat:35.37},
-    {name:'下辨/成县',lon:105.76,lat:33.76},
-    {name:'河关/积石山',lon:102.52,lat:35.69},
-    {name:'允吾/民和',lon:102.85,lat:36.33},
-    {name:'破羌/乐都',lon:102.39,lat:36.50},
-    {name:'居延/额济纳',lon:100.97,lat:41.98},
-    {name:'显美/武威',lon:102.64,lat:37.93},
-    {name:'番和/永昌',lon:102.03,lat:38.23},
+    {name:'兰州',lon:103.834,lat:36.061},
+    {name:'西宁',lon:101.778,lat:36.617},
+    {name:'银川',lon:106.231,lat:38.487},
+    {name:'武威',lon:102.634,lat:37.929},
+    {name:'张掖',lon:100.446,lat:38.936},
+    {name:'酒泉',lon:98.489,lat:39.740},
+    {name:'天水',lon:105.724,lat:34.580},
+    {name:'嘉峪关',lon:98.289,lat:39.773},
+    {name:'敦煌',lon:94.684,lat:40.141},
+    {name:'宝鸡',lon:107.238,lat:34.363},
+    {name:'庆阳',lon:107.642,lat:35.705},
+    {name:'平凉',lon:106.665,lat:35.543},
+    {name:'吴忠',lon:106.198,lat:37.984},
+    {name:'中卫',lon:105.186,lat:37.510},
+    {name:'临夏',lon:103.211,lat:35.614},
+    {name:'海东',lon:102.106,lat:36.517},
+    {name:'陇南',lon:104.922,lat:33.399},
+    {name:'格尔木',lon:94.908,lat:36.407},
   ],
   '交州':[
-    {name:'广信/梧州',lon:111.33,lat:23.48},
-    {name:'番禺/广州',lon:113.27,lat:23.13},
-    {name:'苍梧/梧州',lon:111.33,lat:23.48},
-    {name:'郁林/桂平',lon:110.08,lat:23.40},
-    {name:'合浦/合浦',lon:109.54,lat:21.67},
-    {name:'交趾/河内',lon:105.85,lat:21.03},
-    {name:'九真/清化',lon:105.78,lat:19.85},
-    {name:'日南/顺化',lon:108.20,lat:16.55},
-    {name:'高要/肇庆',lon:112.47,lat:23.05},
-    {name:'布山/贵港',lon:109.61,lat:23.08},
-    {name:'始安/桂林',lon:110.29,lat:25.27},
-    {name:'始兴/韶关',lon:113.60,lat:24.81},
-    {name:'揭阳/揭阳',lon:116.37,lat:23.55},
-    {name:'徐闻/徐闻',lon:110.16,lat:20.33},
-    {name:'珠崖/海口',lon:110.33,lat:20.03},
-    {name:'高凉/阳江',lon:111.98,lat:21.86},
-    {name:'临尘/崇左',lon:107.37,lat:22.40},
-    {name:'龙编/河内北',lon:105.95,lat:21.13},
-    {name:'南海/广州',lon:113.27,lat:23.13},
+    {name:'广州',lon:113.264,lat:23.129},
+    {name:'南宁',lon:108.367,lat:22.817},
+    {name:'海口',lon:110.331,lat:20.032},
+    {name:'佛山',lon:113.122,lat:23.021},
+    {name:'深圳',lon:114.085,lat:22.547},
+    {name:'珠海',lon:113.553,lat:22.269},
+    {name:'桂林',lon:110.290,lat:25.274},
+    {name:'韶关',lon:113.604,lat:24.814},
+    {name:'湛江',lon:110.359,lat:21.270},
+    {name:'柳州',lon:109.420,lat:24.327},
+    {name:'北海',lon:109.120,lat:21.481},
+    {name:'玉林',lon:110.188,lat:22.627},
+    {name:'肇庆',lon:112.472,lat:23.047},
+    {name:'茂名',lon:110.925,lat:21.663},
+    {name:'河内',lon:105.854,lat:21.028},
+    {name:'三亚',lon:109.508,lat:18.252},
+    {name:'东莞',lon:113.751,lat:23.020},
+    {name:'惠州',lon:114.416,lat:23.111},
+    {name:'梧州',lon:111.329,lat:23.476},
+    {name:'凭祥',lon:106.760,lat:22.107},
   ],
 };
 // 相邻州关系（用于「只显示附近相邻 GCP」）
@@ -424,9 +423,12 @@ function lonLatToPx(lon,lat){
 
 
 // ── 数据存储（按州分组）──
-// data[state] = {gcps:[{px,py,lon,lat,name}], bnd:[[px,py],...], seats:[{px,py,name,role}]}
+// data[state] = {gcps:[{px,py,lon,lat,name}], bnd:[[px,py],...], seats:[{px,py,name,role}],
+//                bndLL:[[lon,lat]...], seatsLL:[{lon,lat,name,role}], bndFromFeatures:bool}
+// bndLL/seatsLL 仅在「无 pixels 块、仅有 features」的州（如冀州）使用：保留用户经纬度原数据，
+// 待用户打 ≥4 个 GCP 后用正确仿射投影成像素（bnd/seats），之后用户对 bnd 的手动编辑会令 bndFromFeatures=false。
 const data = {};
-STATES.forEach(s=>data[s.name]={gcps:[],bnd:[],seats:[]});
+STATES.forEach(s=>data[s.name]={gcps:[],bnd:[],seats:[],bndLL:null,seatsLL:[],bndFromFeatures:false});
 
 // ── 状态 ──
 let curState = '冀州';
@@ -510,9 +512,9 @@ function loadState(name){
   };
   img.src = STATES.find(s=>s.name===name).img;
   // 异步回读已有 GeoJSON（含像素坐标），实现"补 GCP 即自动重投影"
-  fetch(`han_states_raw/${encodeURIComponent(name)}.geojson`)
+  fetch(`han_states_raw/${encodeURIComponent(name)}.geojson?v=${TOOL_VERSION}`)
     .then(r=>r.ok?r.json():null)
-    .then(gj=>{ if(gj && gj.pixels) hydrateFromPixels(gj, name); })
+    .then(gj=>{ if(gj){ if(gj.pixels) hydrateFromPixels(gj,name); else if(gj.features) hydrateFromFeatures(gj,name); } })
     .catch(()=>{});
 }
 
@@ -530,6 +532,43 @@ function hydrateFromPixels(gj, name){
   const hasAffine = D.gcps.length>=4;
   statusEl.textContent = `已载入 ${name} 旧数据（${D.gcps.length} GCP / ${D.bnd.length} 界点 / ${D.seats.length} 郡治）`
     + (hasAffine?'，添加东北角 GCP 后边界会自动重投影':'，需先补 GCP');
+}
+
+// 无 pixels 块时，从 features 载入用户经纬度原数据（州界多边形 + 郡治），保留为 lon/lat。
+// 不猜仿射、不投影：等用户在 GCP 模式打 ≥4 个控制点后，projectFeaturesIfReady() 才用正确仿射投影成像素。
+function hydrateFromFeatures(gj, name){
+  const D=data[name];
+  const feats=gj.features||[];
+  const seatsLL=[]; let bndLL=null;
+  feats.forEach(f=>{
+    const k=f.properties&&f.properties.kind;
+    if(k==='commandery_seat'){
+      const co=f.geometry.coordinates;
+      seatsLL.push({name:f.properties.name, role:f.properties.role||'commandery', lon:co[0], lat:co[1]});
+    } else if(k==='state_boundary'){
+      bndLL=f.geometry.coordinates[0];
+    }
+  });
+  if(!bndLL && !seatsLL.length) return;
+  D.bndLL = bndLL ? bndLL.slice(0,bndLL.length-1).map(p=>[p[0],p[1]]) : null;  // [[lon,lat]...]
+  D.seatsLL = seatsLL;
+  D.bndFromFeatures = true;
+  D.bnd = []; D.seats = []; D.gcps = [];   // 清空，待 GCP 对齐后再投影
+  refreshLists(); draw(); populateGcpPreset();
+  statusEl.textContent = `已载入 ${name}（features 模式，保留你给的经纬度原数据；请在 GCP 模式打 ≥4 个控制点以对齐）`;
+}
+
+// 当用户已打 ≥4 个 GCP（computeAffine 可用）时，把保留的经纬度边界/郡治投影成像素。
+// 仅当该州源自 features 且用户尚未手动改过 bnd（bndFromFeatures）时才自动投影/重投影。
+function projectFeaturesIfReady(name){
+  const D=data[name];
+  if(!D.bndFromFeatures || !D.bndLL) return;
+  const A=computeAffine(); if(!A) return;
+  const bp = D.bndLL.map(([lon,lat])=>{ const p=lonLatToPx(lon,lat); return p?[Math.round(p.px),Math.round(p.py)]:null; }).filter(Boolean);
+  if(bp.length>=3) D.bnd = bp;
+  if(D.seatsLL.length){
+    D.seats = D.seatsLL.map(s=>{ const p=lonLatToPx(s.lon,s.lat); return p?{px:Math.round(p.px),py:Math.round(p.py),name:s.name,role:s.role}:null; }).filter(Boolean);
+  }
 }
 
 // ── canvas 尺寸匹配容器（关键：不再固定为图像原始尺寸）──
@@ -587,8 +626,21 @@ function draw(){
     ctx.moveTo(D.bnd[0][0],D.bnd[0][1]);
     for(let k=1;k<D.bnd.length;k++) ctx.lineTo(D.bnd[k][0],D.bnd[k][1]);
     ctx.stroke();
-    ctx.fillStyle='#ff0';
-    D.bnd.forEach(v=>{ctx.beginPath();ctx.arc(v[0],v[1],3/scale,0,7);ctx.fill();});
+    // 悬停时高亮将插入的位置（半透明黄 + 白圈）
+    if(curMode==='bnd' && hoverInsert){
+      ctx.fillStyle='rgba(255,255,0,0.45)';
+      ctx.beginPath();ctx.arc(hoverInsert.px,hoverInsert.py,5/scale,0,7);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1/scale;ctx.stroke();
+    }
+    // 界点（黄）；拖拽中/悬停时加白色描边
+    D.bnd.forEach((v,i)=>{
+      ctx.fillStyle='#ff0';
+      ctx.beginPath();ctx.arc(v[0],v[1],3/scale,0,7);ctx.fill();
+      if(i===dragIdx || i===hoverIdx){
+        ctx.strokeStyle='#fff';ctx.lineWidth=1.5/scale;
+        ctx.beginPath();ctx.arc(v[0],v[1],5/scale,0,7);ctx.stroke();
+      }
+    });
   }
   // 已设 GCP 锚点（绿色 = 已选，不可再选）
   D.gcps.forEach((g,i)=>{
@@ -616,12 +668,21 @@ function draw(){
     ctx.fillStyle='#fff';ctx.font=`${9/scale}px sans-serif`;
     ctx.fillText(s.name,s.px+6/scale,s.py+3/scale);
   });
+  // features 模式且尚未对齐（GCP<4，边界未投影）：顶部黄条提示，避免误以为是正确位置
+  if(D.bndFromFeatures && D.bnd.length<2){
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.fillStyle='rgba(255,209,77,0.95)';
+    ctx.font='bold 20px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(`「${curState}」尚未对齐：切到 GCP 模式打 ≥4 个控制点，边界会自动归位`, cv.width/2, 42);
+    ctx.textAlign='left';
+  }
 }
 
 // ── 列表刷新 ──
 function refreshLists(){
   const D=data[curState];
   const A=computeAffine();
+  projectFeaturesIfReady(curState);   // features 模式：GCP 达标后自动把经纬度边界投影成像素
   // GCP 列表
   document.getElementById('gcpCount').textContent=D.gcps.length;
   document.getElementById('affineInfo').textContent=A?`残差 max=${A.maxErr.toFixed(1)}km avg=${A.avgErr.toFixed(1)}km`:'(需≥4个)';
@@ -648,7 +709,7 @@ function refreshLists(){
     el.onclick=e=>{
       const t=e.target.dataset.t, i=+e.target.dataset.i;
       if(t==='gcp') D.gcps.splice(i,1);
-      else if(t==='bnd') D.bnd.splice(i,1);
+      else if(t==='bnd'){ D.bnd.splice(i,1); D.bndFromFeatures=false; }
       else if(t==='seat') D.seats.splice(i,1);
       refreshLists(); draw();
     };
@@ -729,7 +790,14 @@ cv.addEventListener('click',e=>{
     populateGcpPreset();   // 立即把刚选的标记为「已选」
   }
   else if(curMode==='bnd'){
-    D.bnd.push([px,py]);
+    // 拖拽刚结束时，click 仍会触发——用 didDragBnd 抑制误插入
+    if(didDragBnd){ didDragBnd=false; return; }
+    const D=data[curState];
+    const hit=pickBnd(px,py);
+    if(hit && hit.type==='point'){ return; }                              // 点在已有锚点上 → 不重复
+    if(hit && hit.type==='seg'){ D.bnd.splice(hit.idx,0,[hit.px,hit.py]); }  // 点在边界线段上 → 插入新点
+    else { D.bnd.push([px,py]); }                                        // 空白处 → 追加到末尾
+    D.bndFromFeatures=false;   // 用户手动编辑边界 → 不再用 features 经纬度自动覆盖
   }
   else if(curMode==='seat'){
     const name=prompt('郡治名称（如 魏郡/邺）：');
@@ -765,9 +833,73 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;cv.style.cursor='crosshair';}});
 let dragging=false,lx=0,ly=0;
-cv.addEventListener('mousedown',e=>{if(spaceDown){dragging=true;lx=e.clientX;ly=e.clientY;}});
-window.addEventListener('mousemove',e=>{if(dragging){offX+=e.clientX-lx;offY+=e.clientY-ly;lx=e.clientX;ly=e.clientY;draw();}});
-window.addEventListener('mouseup',()=>dragging=false);
+// ── 边界锚点：拖拽 + 线段插入 ──
+let dragIdx=-1, didDragBnd=false, hoverIdx=-1, hoverInsert=null;
+
+// 点到线段距离 + 投影参数 t
+function pointSegDist(px,py,ax,ay,bx,by){
+  const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy;
+  let t = l2>0 ? ((px-ax)*dx+(py-ay)*dy)/l2 : 0;
+  t=Math.max(0,Math.min(1,t));
+  const cx=ax+t*dx, cy=ay+t*dy;
+  return {d:Math.hypot(px-cx,py-cy), t};
+}
+// 在 bnd 数组中查找：命中最近锚点 -> {type:'point',idx}；否则命中最近线段 -> {type:'seg',idx(插入位置),px,py}
+function pickBnd(px,py){
+  const D=data[curState], n=D.bnd.length, ptTh=8/scale, segTh=8/scale;
+  // 1) 最近锚点
+  let best=-1,bd=Infinity;
+  D.bnd.forEach((v,i)=>{const d=Math.hypot(v[0]-px,v[1]-py); if(d<bd){bd=d;best=i;}});
+  if(best>=0 && bd<=ptTh) return {type:'point',idx:best};
+  // 2) 最近线段（相邻顶点之间）
+  let segBest=-1,segD=Infinity,segT=0,insX=px,insY=py;
+  for(let i=0;i<n-1;i++){
+    const a=D.bnd[i], b=D.bnd[i+1];
+    const r=pointSegDist(px,py,a[0],a[1],b[0],b[1]);
+    if(r.d<segD){segD=r.d;segBest=i;segT=r.t;insX=a[0]+(b[0]-a[0])*segT;insY=a[1]+(b[1]-a[1])*segT;}
+  }
+  if(segBest>=0 && segD<=segTh) return {type:'seg',idx:segBest+1,px:Math.round(insX),py:Math.round(insY)};
+  return null;
+}
+
+cv.addEventListener('mousedown',e=>{
+  if(spaceDown){dragging=true;lx=e.clientX;ly=e.clientY;return;}
+  if(curMode==='bnd'){
+    const r=cv.getBoundingClientRect();
+    const sx=e.clientX-r.left, sy=e.clientY-r.top;
+    const px=(sx-offX)/scale, py=(sy-offY)/scale;
+    if(px<0||py<0||px>img.width||py>img.height) return;
+    const hit=pickBnd(px,py);
+    if(hit && hit.type==='point'){ dragIdx=hit.idx; didDragBnd=false; cv.style.cursor='grabbing'; }
+  }
+});
+window.addEventListener('mousemove',e=>{
+  if(dragging){offX+=e.clientX-lx;offY+=e.clientY-ly;lx=e.clientX;ly=e.clientY;draw();return;}
+  if(dragIdx>=0){
+    const r=cv.getBoundingClientRect();
+    const sx=e.clientX-r.left, sy=e.clientY-r.top;
+    let px=Math.round((sx-offX)/scale), py=Math.round((sy-offY)/scale);
+    px=Math.max(0,Math.min(img.width,px)); py=Math.max(0,Math.min(img.height,py));
+      data[curState].bnd[dragIdx]=[px,py];
+    data[curState].bndFromFeatures=false;   // 拖拽=手动编辑，停止自动覆盖
+    didDragBnd=true; draw(); return;
+  }
+  // 悬停反馈（仅 bnd 模式）
+  if(curMode==='bnd'){
+    const r=cv.getBoundingClientRect();
+    const sx=e.clientX-r.left, sy=e.clientY-r.top;
+    const px=(sx-offX)/scale, py=(sy-offY)/scale;
+    const hit=pickBnd(px,py);
+    if(hit && hit.type==='point'){ hoverIdx=hit.idx; hoverInsert=null; cv.style.cursor='grab'; }
+    else if(hit && hit.type==='seg'){ hoverIdx=-1; hoverInsert={px:hit.px,py:hit.py}; cv.style.cursor='copy'; }
+    else { hoverIdx=-1; hoverInsert=null; cv.style.cursor='crosshair'; }
+    draw();
+  }
+});
+window.addEventListener('mouseup',()=>{
+  if(dragIdx>=0){ dragIdx=-1; cv.style.cursor='crosshair'; refreshLists(); }
+  dragging=false;
+});
 
 // ── 撤销/清空 ──
 function undoLast(){
@@ -782,7 +914,7 @@ document.getElementById('clearModeBtn').onclick=()=>{
   const D=data[curState];
   if(!confirm(`清空 ${curState} 当前模式 (${curMode}) 的所有点？`)) return;
   if(curMode==='gcp') D.gcps=[];
-  else if(curMode==='bnd') D.bnd=[];
+  else if(curMode==='bnd'){ D.bnd=[]; D.bndFromFeatures=false; }
   else if(curMode==='seat') D.seats=[];
   refreshLists(); draw();
 };
