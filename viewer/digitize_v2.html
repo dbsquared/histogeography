@@ -60,7 +60,8 @@
       <b>② 州界</b>：沿州界依次点顶点（最后一点双击/右键闭合）。<br>
       <b>③ 郡治</b>：点郡治位置，弹出输入郡名/类型。<br>
       <b>缩放</b>：滚轮 / 右上角 <kbd>⛶ 适应</kbd> <kbd>＋</kbd> <kbd>－</kbd> <kbd>1:1</kbd> 按钮；快捷键 <kbd>F</kbd> 适应窗口、<kbd>+</kbd>/<kbd>-</kbd> 缩放、<kbd>0</kbd> 100%。<br>
-      <b>平移</b>：按住<kbd>空格</kbd>+拖拽；<kbd>Ctrl+Z</kbd> 撤销当前模式上一点。
+      <b>平移</b>：按住<kbd>空格</kbd>+拖拽；<kbd>Ctrl+Z</kbd> 撤销当前模式上一点。<br>
+      <b>框选删除</b>：按住<kbd>Shift</kbd>+拖拽框选当前模式的点（青色高亮），按<kbd>Delete</kbd>或「删除选中」按钮批量删除；<kbd>Esc</kbd> 取消选择。
     </div>
 
     <h2>州选择</h2>
@@ -83,6 +84,9 @@
     <div class="row">
       <button class="act gray" id="undoBtn">撤销上一点</button>
       <button class="act gray" id="clearModeBtn">清空当前模式</button>
+    </div>
+    <div class="row">
+      <button class="act gray" id="delSelBtn" style="display:none;background:#7a3030;color:#ffd0d0">删除选中 (<span id="selCount">0</span>)</button>
     </div>
     <div class="row">
       <button class="act red" id="exportBtn">导出本州 GeoJSON</button>
@@ -131,7 +135,7 @@ const STATES = [
   {name:'交州', img:'ref_imgs/交州.png', color:'#EC407A'},
 ];
 // 工具版本（用于 geojson 缓存失效；每次改结构时 +1）
-const TOOL_VERSION='20260725a';
+const TOOL_VERSION='20260725b';
 
 // ── 各州 GCP 预设库（现代城市 → 经纬度）──
 // GCP = 地理配准锚点，必须是「能查到坐标」的现代城市（如石家庄/北京/武汉…），
@@ -500,6 +504,7 @@ function pxToLonLat(px,py){
 // ── 加载州图 ──
 function loadState(name){
   curState=name;
+  clearSelection();      // 切州清除框选（索引针对旧州数组）
   populateGcpPreset();   // 切换州时刷新 GCP 下拉（按本州+相邻州过滤）
   // 重置该州数据（加载已有像素坐标后会回填）
   data[name]={gcps:[],bnd:[],seats:[]};
@@ -632,20 +637,26 @@ function draw(){
       ctx.beginPath();ctx.arc(hoverInsert.px,hoverInsert.py,5/scale,0,7);ctx.fill();
       ctx.strokeStyle='#fff';ctx.lineWidth=1/scale;ctx.stroke();
     }
-    // 界点（黄）；拖拽中/悬停时加白色描边
+    // 界点（黄）；拖拽中/悬停时加白色描边；框选中 = 青色
     D.bnd.forEach((v,i)=>{
-      ctx.fillStyle='#ff0';
-      ctx.beginPath();ctx.arc(v[0],v[1],3/scale,0,7);ctx.fill();
-      if(i===dragIdx || i===hoverIdx){
+      const sel = curMode==='bnd' && selSet.has(i);
+      ctx.fillStyle= sel ? '#00e5ff' : '#ff0';
+      ctx.beginPath();ctx.arc(v[0],v[1],(sel?4:3)/scale,0,7);ctx.fill();
+      if(sel){
+        ctx.strokeStyle='#00e5ff';ctx.lineWidth=1.5/scale;
+        ctx.beginPath();ctx.arc(v[0],v[1],6/scale,0,7);ctx.stroke();
+      }else if(i===dragIdx || i===hoverIdx){
         ctx.strokeStyle='#fff';ctx.lineWidth=1.5/scale;
         ctx.beginPath();ctx.arc(v[0],v[1],5/scale,0,7);ctx.stroke();
       }
     });
   }
-  // 已设 GCP 锚点（绿色 = 已选，不可再选）
+  // 已设 GCP 锚点（绿色 = 已选，不可再选）；框选中 = 青色描边
   D.gcps.forEach((g,i)=>{
-    ctx.fillStyle='#4dff88';
+    const sel = curMode==='gcp' && selSet.has(i);
+    ctx.fillStyle= sel ? '#00e5ff' : '#4dff88';
     ctx.beginPath();ctx.arc(g.px,g.py,5/scale,0,7);ctx.fill();
+    if(sel){ctx.strokeStyle='#00e5ff';ctx.lineWidth=1.5/scale;ctx.beginPath();ctx.arc(g.px,g.py,7/scale,0,7);ctx.stroke();}
     ctx.fillStyle='#063';ctx.font=`bold ${10/scale}px sans-serif`;
     ctx.fillText(String(i+1),g.px-3/scale,g.py+3.5/scale);
   });
@@ -661,13 +672,25 @@ function draw(){
       ctx.fillText(c.name, pp.px+4/scale, pp.py+3/scale);
     });
   }
-  // 郡治
-  D.seats.forEach(s=>{
-    ctx.fillStyle='#ffd24d';
-    ctx.beginPath();ctx.arc(s.px,s.py,4/scale,0,7);ctx.fill();
+  // 郡治；框选中 = 青色
+  D.seats.forEach((s,i)=>{
+    const sel = curMode==='seat' && selSet.has(i);
+    ctx.fillStyle= sel ? '#00e5ff' : '#ffd24d';
+    ctx.beginPath();ctx.arc(s.px,s.py,(sel?5:4)/scale,0,7);ctx.fill();
     ctx.fillStyle='#fff';ctx.font=`${9/scale}px sans-serif`;
     ctx.fillText(s.name,s.px+6/scale,s.py+3/scale);
   });
+  // 框选矩形（拖拽中）
+  if(selBox){
+    ctx.strokeStyle='rgba(0,229,255,0.9)'; ctx.lineWidth=1/scale;
+    ctx.setLineDash([6/scale,4/scale]);
+    ctx.strokeRect(Math.min(selBox.x0,selBox.x1),Math.min(selBox.y0,selBox.y1),
+                   Math.abs(selBox.x1-selBox.x0),Math.abs(selBox.y1-selBox.y0));
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(0,229,255,0.08)';
+    ctx.fillRect(Math.min(selBox.x0,selBox.x1),Math.min(selBox.y0,selBox.y1),
+                 Math.abs(selBox.x1-selBox.x0),Math.abs(selBox.y1-selBox.y0));
+  }
   // features 模式且尚未对齐（GCP<4，边界未投影）：顶部黄条提示，避免误以为是正确位置
   if(D.bndFromFeatures && D.bnd.length<2){
     ctx.setTransform(1,0,0,1,0,0);
@@ -711,6 +734,7 @@ function refreshLists(){
       if(t==='gcp') D.gcps.splice(i,1);
       else if(t==='bnd'){ D.bnd.splice(i,1); D.bndFromFeatures=false; }
       else if(t==='seat') D.seats.splice(i,1);
+      clearSelection();  // 数组索引已变化，清除框选
       refreshLists(); draw();
     };
   });
@@ -734,8 +758,10 @@ function buildStateBtns(){
 // ── 模式切换 ──
 function setMode(m){
   curMode=m;
+  clearSelection();  // 切模式清除框选（索引针对旧模式数组）
   ['gcp','bnd','seat'].forEach(x=>document.getElementById('m-'+x).classList.toggle('active',x===m));
   document.getElementById('gcpPresetBox').classList.toggle('hidden', m!=='gcp');
+  draw();
 }
 
 // ── 填充 GCP 预设下拉框 ──
@@ -763,6 +789,8 @@ document.getElementById('m-seat').onclick=()=>setMode('seat');
 // ── 画布事件 ──
 cv.addEventListener('click',e=>{
   if(spaceDown) return;
+  // 框选拖拽结束后触发的 click / Shift+单击：不打点
+  if(e.shiftKey || didBoxSelect){ didBoxSelect=false; return; }
   const r=cv.getBoundingClientRect();
   const sx=e.clientX-r.left, sy=e.clientY-r.top;
   const px=Math.round((sx-offX)/scale), py=Math.round((sy-offY)/scale);
@@ -825,6 +853,8 @@ cv.addEventListener('wheel',e=>{
 window.addEventListener('keydown',e=>{
   if(e.code==='Space'){spaceDown=true;cv.style.cursor='grab';}
   if(e.ctrlKey&&e.key==='z'){ undoLast(); }
+  if(e.key==='Delete'||e.key==='Backspace'){ if(selSet.size>0){ e.preventDefault(); deleteSelected(); } }
+  if(e.key==='Escape'){ clearSelection(); draw(); }
   // 缩放快捷键
   if(e.key==='f'||e.key==='F'){ fitToWindow(); }
   if(e.key==='+'||e.key==='='){ zoomBy(1.25); }
@@ -835,6 +865,53 @@ window.addEventListener('keyup',e=>{if(e.code==='Space'){spaceDown=false;cv.styl
 let dragging=false,lx=0,ly=0;
 // ── 边界锚点：拖拽 + 线段插入 ──
 let dragIdx=-1, didDragBnd=false, hoverIdx=-1, hoverInsert=null;
+
+// ── 框选批量删除 ──
+// selBox: 正在拖的选框（图像坐标）；selSet: 已选中点的索引集合（针对当前模式的数组）
+let selBox=null, selStart=null, selSet=new Set(), didBoxSelect=false;
+
+function clearSelection(){
+  selBox=null; selStart=null; selSet.clear();
+  updateSelUI();
+}
+function updateSelUI(){
+  const btn=document.getElementById('delSelBtn');
+  document.getElementById('selCount').textContent=selSet.size;
+  btn.style.display = selSet.size>0 ? '' : 'none';
+}
+// 当前模式对应的点数组访问器：返回 {get(i):[x,y], len}
+function modePoints(){
+  const D=data[curState];
+  if(curMode==='bnd')  return {arr:D.bnd,  xy:v=>v};
+  if(curMode==='gcp')  return {arr:D.gcps, xy:v=>[v.px,v.py]};
+  if(curMode==='seat') return {arr:D.seats,xy:v=>[v.px,v.py]};
+  return {arr:[], xy:v=>v};
+}
+function applyBoxSelection(){
+  if(!selBox) return;
+  const x0=Math.min(selBox.x0,selBox.x1), x1=Math.max(selBox.x0,selBox.x1);
+  const y0=Math.min(selBox.y0,selBox.y1), y1=Math.max(selBox.y0,selBox.y1);
+  const {arr,xy}=modePoints();
+  arr.forEach((v,i)=>{
+    const p=xy(v);
+    if(p[0]>=x0&&p[0]<=x1&&p[1]>=y0&&p[1]<=y1) selSet.add(i);  // 累加：多次 Shift 框选可叠加
+  });
+  updateSelUI();
+}
+function deleteSelected(){
+  if(selSet.size===0) return;
+  const D=data[curState];
+  const idxs=[...selSet].sort((a,b)=>b-a);  // 从大到小删，避免索引移位
+  const label = curMode==='bnd'?'州界顶点':curMode==='gcp'?'GCP 锚点':'郡治';
+  if(!confirm(`删除选中的 ${idxs.length} 个${label}？`)) return;
+  const {arr}=modePoints();
+  idxs.forEach(i=>arr.splice(i,1));
+  if(curMode==='bnd') D.bndFromFeatures=false;
+  if(curMode==='gcp') populateGcpPreset();
+  clearSelection();
+  refreshLists(); draw();
+}
+document.getElementById('delSelBtn').onclick=deleteSelected;
 
 // 点到线段距离 + 投影参数 t
 function pointSegDist(px,py,ax,ay,bx,by){
@@ -864,6 +941,16 @@ function pickBnd(px,py){
 
 cv.addEventListener('mousedown',e=>{
   if(spaceDown){dragging=true;lx=e.clientX;ly=e.clientY;return;}
+  // Shift+拖拽 = 框选（三种模式通用，优先级高于拖点）
+  if(e.shiftKey){
+    const r=cv.getBoundingClientRect();
+    const px=(e.clientX-r.left-offX)/scale, py=(e.clientY-r.top-offY)/scale;
+    selStart={px,py};
+    selBox={x0:px,y0:py,x1:px,y1:py};
+    didBoxSelect=false;
+    e.preventDefault();
+    return;
+  }
   if(curMode==='bnd'){
     const r=cv.getBoundingClientRect();
     const sx=e.clientX-r.left, sy=e.clientY-r.top;
@@ -875,6 +962,13 @@ cv.addEventListener('mousedown',e=>{
 });
 window.addEventListener('mousemove',e=>{
   if(dragging){offX+=e.clientX-lx;offY+=e.clientY-ly;lx=e.clientX;ly=e.clientY;draw();return;}
+  if(selStart){
+    const r=cv.getBoundingClientRect();
+    const px=(e.clientX-r.left-offX)/scale, py=(e.clientY-r.top-offY)/scale;
+    selBox={x0:selStart.px,y0:selStart.py,x1:px,y1:py};
+    didBoxSelect=true;
+    draw(); return;
+  }
   if(dragIdx>=0){
     const r=cv.getBoundingClientRect();
     const sx=e.clientX-r.left, sy=e.clientY-r.top;
@@ -897,6 +991,12 @@ window.addEventListener('mousemove',e=>{
   }
 });
 window.addEventListener('mouseup',()=>{
+  if(selStart){
+    applyBoxSelection();
+    selStart=null; selBox=null;
+    draw();
+    return;
+  }
   if(dragIdx>=0){ dragIdx=-1; cv.style.cursor='crosshair'; refreshLists(); }
   dragging=false;
 });
@@ -907,6 +1007,7 @@ function undoLast(){
   if(curMode==='gcp') D.gcps.pop();
   else if(curMode==='bnd') D.bnd.pop();
   else if(curMode==='seat') D.seats.pop();
+  clearSelection();
   refreshLists(); draw();
 }
 document.getElementById('undoBtn').onclick=undoLast;
@@ -916,6 +1017,7 @@ document.getElementById('clearModeBtn').onclick=()=>{
   if(curMode==='gcp') D.gcps=[];
   else if(curMode==='bnd'){ D.bnd=[]; D.bndFromFeatures=false; }
   else if(curMode==='seat') D.seats=[];
+  clearSelection();
   refreshLists(); draw();
 };
 
