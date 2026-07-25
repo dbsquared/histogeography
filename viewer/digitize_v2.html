@@ -41,6 +41,7 @@
   #gcpPreset{width:100%;background:#0e1116;color:#e8edf3;border:1px solid #3a4152;border-radius:4px;
     font-size:12px;padding:4px}
   #gcpPreset option{padding:2px 4px}
+  #gcpPreset optgroup{color:#7fa3cc;font-style:normal;font-size:11px;background:#151a22}
   #gcpPreset option:hover{background:#2c313c}
   /* ── 缩放导航按钮 ── */
   #navBtns{position:absolute;top:10px;right:10px;z-index:10;display:flex;gap:4px;align-items:center;
@@ -135,7 +136,7 @@ const STATES = [
   {name:'交州', img:'ref_imgs/交州.png', color:'#EC407A'},
 ];
 // 工具版本（用于 geojson 缓存失效；每次改结构时 +1）
-const TOOL_VERSION='20260725b';
+const TOOL_VERSION='20260725c';
 
 // ── 各州 GCP 预设库（现代城市 → 经纬度）──
 // GCP = 地理配准锚点，必须是「能查到坐标」的现代城市（如石家庄/北京/武汉…），
@@ -770,13 +771,25 @@ function populateGcpPreset(){
   sel.innerHTML='';
   // 本州已选过的 GCP 名称集合
   const used=new Set(data[curState].gcps.map(g=>g.name));
-  gcpsForState(curState).forEach(c=>{
-    const o=document.createElement('option');
-    o.value='p:'+c.name;
-    const isUsed=used.has(c.name);
-    o.textContent=(isUsed?'✓ ':'')+c.name+'  ('+c.lon+', '+c.lat+')'+(c.owner!==curState?'  ['+c.owner+']':'');
-    if(isUsed){ o.disabled=true; o.style.color='#6f8f6f'; }
-    sel.appendChild(o);
+  // 按州分组：本州置顶，相邻州各自成组；同名城市只保留最先出现的一组（去重）。
+  // 注意：GCP 像素坐标严格按州独立存储（data[州].gcps）——同一城市在不同州地图里像素不同，互不共享。
+  const groups=[curState].concat(STATE_NEIGHBORS[curState]||[]);
+  const seen=new Set();
+  groups.forEach(st=>{
+    const cities=(GCP_DB[st]||[]).filter(c=>!seen.has(c.name));
+    if(!cities.length) return;
+    const og=document.createElement('optgroup');
+    og.label = (st===curState) ? ('▍'+st+'（本州）') : ('▏相邻 · '+st);
+    cities.forEach(c=>{
+      seen.add(c.name);
+      const o=document.createElement('option');
+      o.value='p:'+c.name;
+      const isUsed=used.has(c.name);
+      o.textContent=(isUsed?'✓ ':'')+c.name+'  ('+c.lon+', '+c.lat+')';
+      if(isUsed){ o.disabled=true; o.style.color='#6f8f6f'; }
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
   });
   const o=document.createElement('option');
   o.value='custom'; o.textContent='✎ 自定义…（点击后手动输入）';

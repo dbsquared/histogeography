@@ -240,17 +240,10 @@ def generate_state(state, color, db, diag_dir=None):
     a, e, c, f = estimate_affine(cities)
     # 轮廓（像素坐标）
     bnd_px, _ = segment_state_contour(state, diag_dir=diag_dir)
-    # GCPs：所有 GCP_DB 城市投影到像素
+    # GCPs：不再预填！
+    # 教训（2026-07-25 豫州）：用估计仿射投影出的 GCP 像素不属于该州参考图的真实位置，
+    # 会混进用户导出数据造成残差 200km+ 级污染。GCP 必须由用户在该州地图上亲手打点。
     gcps = []
-    for city in cities:
-        px, py = px_from_lonlat(a, e, c, f, city['lon'], city['lat'])
-        gcps.append({
-            'px': round(px, 1),
-            'py': round(py, 1),
-            'lon': city['lon'],
-            'lat': city['lat'],
-            'name': city['name'],
-        })
     # 轮廓转经纬度（features）
     ring = []
     for px, py in bnd_px:
