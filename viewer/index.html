@@ -487,8 +487,8 @@ function computeLabelPoint(ring){
       const [jun, zhi] = splitSeat(seat.name);
       const dotColor = isCap ? '#ffd24d' : (seat.role==='commandery' ? '#ffb870' : '#c8c8c8');
       const dot = L.circleMarker([seat.lat,seat.lon],{
-        radius: isCap?6:4,
-        color:'#fff', weight:1.2, opacity:0.95,
+        radius: isCap?4:2.5,
+        color:'#fff', weight:1, opacity:0.95,
         fillColor:dotColor, fillOpacity:0.92,
       });
       dot.bindTooltip(`<b>${seat.name}</b><br/>${st.name} · ${isCap?'州府':seat.role==='commandery'?'郡治':seat.role}`,
@@ -505,7 +505,7 @@ function computeLabelPoint(ring){
       // 州界模式：仅州府（显示治所名，不带郡名）+ 黄点定位
       if(isCap){
         hanCapitalLayer.addLayer(L.circleMarker([seat.lat,seat.lon],{
-          radius:6, color:'#fff', weight:1.2, opacity:0.95,
+          radius:4, color:'#fff', weight:1, opacity:0.95,
           fillColor:'#ffd24d', fillOpacity:0.92,
         }));
         hanCapitalLayer.addLayer(L.marker([seat.lat,seat.lon],{
