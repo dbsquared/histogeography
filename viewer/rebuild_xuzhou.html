@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>徐州 geojson 重建工具（文件直读版）</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  html,body{margin:0;height:100%;font-family:Microsoft YaHei,sans-serif;}
+  #map{height:58vh;width:100%;}
+  #panel{height:42vh;overflow:auto;padding:10px 14px;background:#1b1d23;color:#e6e6e6;font-size:13px;box-sizing:border-box;}
+  h3{margin:6px 0;color:#ffd54f;}
+  .stat{font-family:Consolas,monospace;white-space:pre-wrap;margin-top:6px;}
+  button{margin:4px 4px 4px 0;padding:6px 12px;background:#D81B60;color:#fff;border:0;border-radius:4px;cursor:pointer;}
+  button.b2{background:#455a64;}
+  #out{width:100%;height:110px;font-family:Consolas,monospace;font-size:11px;box-sizing:border-box;margin-top:6px;}
+  .legend span{display:inline-block;margin-right:14px;}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;margin-right:4px;}
+  .row{margin:6px 0;}
+  input[type=file]{color:#ccc;}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <h3>徐州 geojson 重建工具（文件直读版）</h3>
+  <div class="row">
+    <label>① 选择 徐州.geojson：</label>
+    <input type="file" id="xzFile" accept=".geojson,.json">
+  </div>
+  <div class="row">
+    <label>② 选择 青州.geojson（可选，用于参照）：</label>
+    <input type="file" id="qzFile" accept=".geojson,.json">
+  </div>
+  <div class="row">
+    <button id="go">重新计算并渲染</button>
+    <button id="dl" class="b2">下载重建后的 徐州.geojson</button>
+    <button id="copy" class="b2">复制 JSON 到剪贴板</button>
+  </div>
+  <div class="legend">
+    <span><i class="sw" style="background:#A8C070"></i>青州(参照)</span>
+    <span><i class="sw" style="background:#D81B60"></i>徐州(新)</span>
+    <span><i class="sw" style="background:#42a5f5"></i>GCP声明位置</span>
+  </div>
+  <div id="status">请先选择 ① 徐州.geojson，可再选 ② 青州，然后点“重新计算并渲染”。</div>
+  <div id="stats" class="stat"></div>
+  <textarea id="out" placeholder="重建结果 JSON 将显示在此"></textarea>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SHIFT = 0.17117; // 19km 南移（度）
+let map = L.map('map').setView([34.5,118.5],6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:10}).addTo(map);
+
+let XZ=null, QZ=null, LAST=null;
+
+function readFile(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{ try{ res(JSON.parse(r.result)); }catch(e){ rej(new Error(file.name+' 不是合法 JSON: '+e.message)); } };
+    r.onerror=()=>rej(new Error('读取 '+file.name+' 失败'));
+    r.readAsText(file);
+  });
+}
+
+// 3×3 线性方程组（Gauss-Jordan）
+function solve3(A,b){
+  const M=[[...A[0],b[0]],[...A[1],b[1]],[...A[2],b[2]]];
+  for(let c=0;c<3;c++){
+    let p=c; for(let r=c+1;r<3;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
+    [M[c],M[p]]=[M[p],M[c]];
+    const d=M[c][c]||1e-12;
+    for(let j=0;j<4;j++) M[c][j]/=d;
+    for(let r=0;r<3;r++){ if(r===c) continue; const f=M[r][c]; for(let j=0;j<4;j++) M[r][j]-=f*M[c][j]; }
+  }
+  return [M[0][3],M[1][3],M[2][3]];
+}
+
+// 仿射： lon=a*px+b*py+c, lat=d*px+e*py+f
+function fitAffine(gcps){
+  let Sx2=0,Sy2=0,Sxy=0,Sx=0,Sy=0,n=gcps.length;
+  gcps.forEach(g=>{ Sx2+=g.px*g.px; Sy2+=g.py*g.py; Sxy+=g.px*g.py; Sx+=g.px; Sy+=g.py; });
+  let bx=0,by=0,bc=0; gcps.forEach(g=>{ bx+=g.px*g.lon; by+=g.py*g.lon; bc+=g.lon; });
+  const A=[[Sx2,Sxy,Sx],[Sxy,Sy2,Sy],[Sx,Sy,n]];
+  const [a,b,c]=solve3(A,[bx,by,bc]);
+  let lx=0,ly=0,lc=0; gcps.forEach(g=>{ lx+=g.px*g.lat; ly+=g.py*g.lat; lc+=g.lat; });
+  const [d,e,f]=solve3(A,[lx,ly,lc]);
+  return {a,b,c,d,e,f};
+}
+const lonA=(a,p)=>a.a*p[0]+a.b*p[1]+a.c;
+const latA=(a,p)=>a.d*p[0]+a.e*p[1]+a.f;
+function distKm(lon1,lat1,lon2,lat2){
+  const dx=(lon2-lon1)*111.0*Math.cos((lat1+lat2)/2*Math.PI/180);
+  const dy=(lat2-lat1)*111.0;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+document.getElementById('xzFile').addEventListener('change',async e=>{
+  if(!e.target.files[0]) return;
+  try{ XZ=await readFile(e.target.files[0]); document.getElementById('status').textContent='已读取 徐州.geojson（GCP '+XZ.pixels.gcps.length+' 个，边界像素 '+XZ.pixels.bnd.length+' 点）'; }
+  catch(err){ document.getElementById('status').textContent='错误: '+err.message; }
+});
+document.getElementById('qzFile').addEventListener('change',async e=>{
+  if(!e.target.files[0]) return;
+  try{ QZ=await readFile(e.target.files[0]); document.getElementById('status').textContent='已读取 青州.geojson'; }
+  catch(err){ document.getElementById('status').textContent='错误: '+err.message; }
+});
+
+document.getElementById('go').addEventListener('click',()=>{
+  const status=document.getElementById('status');
+  const stats=document.getElementById('stats');
+  try{
+    if(!XZ){ status.textContent='请先选择 ① 徐州.geojson'; return; }
+    if(!XZ.pixels||!XZ.pixels.gcps||!XZ.pixels.bnd){ status.textContent='徐州.geojson 缺少 pixels.gcps / pixels.bnd，结构不对'; return; }
+    const gcps=XZ.pixels.gcps, bnd=XZ.pixels.bnd, seats=XZ.pixels.seats||[];
+    const aff=fitAffine(gcps);
+
+    const ring=bnd.map(p=>[+lonA(aff,p).toFixed(5), +latA(aff,p).toFixed(5)]);
+    if(ring.length && (ring[0][0]!==ring[ring.length-1][0]||ring[0][1]!==ring[ring.length-1][1])) ring.push(ring[0]);
+
+    const newSeats=seats.map(s=>({name:s.name,role:s.role,
+      lon:+lonA(aff,[s.px,s.py]).toFixed(5), lat:+latA(aff,[s.px,s.py]).toFixed(5), px:s.px, py:s.py}));
+
+    let maxE=0,sumE=0;
+    gcps.forEach(g=>{ const e=distKm(g.lon,g.lat,lonA(aff,[g.px,g.py]),latA(aff,[g.px,g.py])); maxE=Math.max(maxE,e); sumE+=e; });
+    const avgE=sumE/gcps.length;
+
+    const features=[{type:'Feature',properties:{kind:'state_boundary',state:XZ.metadata.state,color:XZ.metadata.color},
+      geometry:{type:'Polygon',coordinates:[ring]}}];
+    newSeats.forEach(s=>features.push({type:'Feature',
+      properties:{kind:'commandery_seat',state:XZ.metadata.state,name:s.name,role:s.role,lon:s.lon,lat:s.lat},
+      geometry:{type:'Point',coordinates:[s.lon,s.lat]}}));
+
+    const out={type:'FeatureCollection',
+      metadata:{...XZ.metadata,gcps:gcps.length,max_err_km:+maxE.toFixed(1),avg_err_km:+avgE.toFixed(1),verified:true},
+      pixels:XZ.pixels, features};
+    LAST=out;
+
+    // 渲染
+    map.eachLayer(l=>{ if(l instanceof L.TileLayer) return; map.removeLayer(l); });
+    const xzL=L.geoJSON({type:'FeatureCollection',features:[features[0]]},{style:{color:'#D81B60',weight:2,fillColor:'#D81B60',fillOpacity:0.2}}).addTo(map);
+    const bounds=[xzL.getBounds()];
+    if(QZ){
+      const qf=QZ.features.find(f=>f.properties&&f.properties.kind==='state_boundary');
+      if(qf){ L.geoJSON(qf,{style:{color:'#A8C070',weight:2,fillColor:'#A8C070',fillOpacity:0.08}}).addTo(map);
+        try{ bounds.push(L.geoJSON(qf).getBounds()); }catch(_){} }
+    }
+    gcps.forEach(g=>L.circleMarker([g.lat,g.lon],{radius:5,color:'#42a5f5',fillColor:'#42a5f5',fillOpacity:1})
+      .addTo(map).bindTooltip(`${g.name} (${g.lat.toFixed(3)},${g.lon.toFixed(3)})`));
+    newSeats.forEach(s=>L.circleMarker([s.lat,s.lon],{radius:4,color:'#fff',fillColor:'#D81B60',fillOpacity:1})
+      .addTo(map).bindTooltip(`${s.name} (${s.lat.toFixed(3)},${s.lon.toFixed(3)})`));
+    map.fitBounds(bounds, {padding:[20,20]});
+
+    const lats=ring.map(p=>p[1]), lons=ring.map(p=>p[0]);
+    stats.textContent =
+`GCP 数量      : ${gcps.length}
+南移量        : 19 km (lat -${SHIFT}°)
+最大残差      : ${maxE.toFixed(1)} km
+平均残差      : ${avgE.toFixed(1)} km
+边界顶点数    : ${ring.length}
+郡治数        : ${newSeats.length}
+边界纬度范围  : ${Math.min(...lats).toFixed(2)}°N ~ ${Math.max(...lats).toFixed(2)}°N
+边界经度范围  : ${Math.min(...lons).toFixed(2)}°E ~ ${Math.max(...lons).toFixed(2)}°E`;
+    document.getElementById('out').value=JSON.stringify(out,null,2);
+    status.textContent='✓ 重建完成。可在地图上看到徐州(粉)与青州(绿)范围。点“下载”覆盖原文件后运行 build_han_states.py。';
+  }catch(err){
+    status.textContent='计算错误: '+err.message;
+    console.error(err);
+  }
+});
+
+document.getElementById('dl').addEventListener('click',()=>{
+  if(!LAST){ alert('请先点“重新计算并渲染”'); return; }
+  const blob=new Blob([JSON.stringify(LAST,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='徐州.geojson'; a.click();
+});
+document.getElementById('copy').addEventListener('click',async()=>{
+  if(!LAST){ alert('请先点“重新计算并渲染”'); return; }
+  await navigator.clipboard.writeText(JSON.stringify(LAST,null,2));
+  document.getElementById('status').textContent='已复制 JSON 到剪贴板';
+});
+</script>
+</body>
+</html>
