@@ -96,6 +96,15 @@
       <button class="act" id="exportAllBtn">导出全部 13 州</button>
     </div>
 
+    <h2>本地文件兜底（预览/离线时用）</h2>
+    <div class="hint">若底图或预打点自动加载失败（如预览代理/离线打开），用下面两个按钮手动选文件：</div>
+    <div class="row">
+      <input type="file" id="imgInput" accept="image/*" style="font-size:11px;color:#ccc;width:100%">
+    </div>
+    <div class="row">
+      <input type="file" id="gjInput" accept=".geojson,application/json" style="font-size:11px;color:#ccc;width:100%">
+    </div>
+
     <div id="status">就绪。先在图上点 ≥4 个现代同名城市作为 GCP 锚点。</div>
 
     <h2>GCP 锚点列表 (<span id="gcpCount">0</span>) <span id="affineInfo" style="color:#8a94a3"></span></h2>
@@ -136,7 +145,7 @@ const STATES = [
   {name:'交州', img:'ref_imgs/交州.png', color:'#EC407A'},
 ];
 // 工具版本（用于 geojson 缓存失效；每次改结构时 +1）
-const TOOL_VERSION='20260725e';
+const TOOL_VERSION='20260730a';
 
 // ── 各州 GCP 预设库（现代城市 → 经纬度）──
 // GCP = 地理配准锚点，必须是「能查到坐标」的现代城市（如石家庄/北京/武汉…），
@@ -516,12 +525,13 @@ function loadState(name){
     draw();
     refreshLists();
   };
+  img.onerror = ()=>{ statusEl.textContent='⚠ 底图自动加载失败，请用侧栏「选择底图」按钮手动选 PNG'; };
   img.src = STATES.find(s=>s.name===name).img;
   // 异步回读已有 GeoJSON（含像素坐标），实现"补 GCP 即自动重投影"
   fetch(`han_states_raw/${encodeURIComponent(name)}.geojson?v=${TOOL_VERSION}`)
     .then(r=>r.ok?r.json():null)
     .then(gj=>{ if(gj){ if(gj.pixels) hydrateFromPixels(gj,name); else if(gj.features) hydrateFromFeatures(gj,name); } })
-    .catch(()=>{});
+    .catch(()=>{ statusEl.textContent='⚠ 预打点自动加载失败，请用侧栏「加载本州GeoJSON」按钮手动选文件'; });
 }
 
 // 用已有像素坐标回填 data[name]，computeAffine 随后自动重投影所有点
@@ -1089,6 +1099,33 @@ document.getElementById('exportAllBtn').onclick=()=>{
   if(all.features.length===0){ alert('没有任何州可导出'); return; }
   downloadJSON(all,'han_13states_all.geojson');
 };
+
+// ── 本地文件兜底：预览代理/离线时手动选底图与 GeoJSON（含预打点）──
+document.getElementById('imgInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    img=new Image();
+    img.onload=()=>{ resizeCanvas(); fitToWindow(); draw(); refreshLists(); };
+    img.src=ev.target.result;
+    statusEl.textContent='已手动载入底图：'+f.name;
+  };
+  rd.readAsDataURL(f);
+});
+document.getElementById('gjInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try{
+      const gj=JSON.parse(ev.target.result);
+      if(gj.pixels) hydrateFromPixels(gj,curState);
+      else if(gj.features) hydrateFromFeatures(gj,curState);
+      else { alert('该文件既无 pixels 也无 features 块'); return; }
+      statusEl.textContent=`已手动载入「${curState}」预打点（来自 ${f.name}）`;
+    }catch(err){ alert('解析失败：'+err.message); }
+  };
+  rd.readAsText(f);
+});
 function downloadJSON(obj,fn){
   const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
   const a=document.createElement('a');
