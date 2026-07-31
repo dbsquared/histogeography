@@ -41,7 +41,7 @@
 <div id="panel">
   <h3>十三州边界校正器</h3>
   <div class="hint">底图为 SRTM 晕渲。点左侧州名进入编辑，拖白色顶点微调边界、拖黄色点移动郡治；
-  <b>Shift+点</b>多选顶点/郡治，拖任一选中点可<b>整体平移</b>；拖边界顶点靠近他州边界会自动<b>磁吸</b>——被拖顶点会贴到参考州边界并沿边滑动，它连接的边会自然贴合参考边（相邻顶点保持原位）。改完点「导出」给我订正数据。</div>
+  <b>Shift+点</b>多选顶点/郡治，拖任一选中点可<b>整体平移</b>（多选平移时每个被拖顶点仍各自吸附附近边界）；<b>Delete 键 / 删除选中点</b>可删除选中顶点（州至少保留 3 个）。拖边界顶点靠近他州边界会自动<b>磁吸</b>——被拖顶点会贴到参考州边界并沿边滑动，它连接的边会自然贴合参考边（相邻顶点保持原位）。改完点「导出」给我订正数据。</div>
   <div id="stateList"></div>
   <div class="row">
     <button class="act primary" id="btnExport">导出当前州</button>
@@ -54,6 +54,9 @@
   <div class="row">
     <button class="act" id="btnSelAll">全选顶点</button>
     <button class="act" id="btnClearSel">清除选择</button>
+  </div>
+  <div class="row">
+    <button class="act" id="btnDel">删除选中点（Delete键）</button>
   </div>
   <label class="chk"><input type="checkbox" id="chkSnap" checked> 磁吸吸附（拖点靠近边界自动吸附）</label>
   <label class="chk"><input type="checkbox" id="chkIssues"> 显示问题区（<span style="color:#ff5a5a">■</span>重叠 <span style="color:#ffd54a">■</span>缝隙）</label>
@@ -162,6 +165,7 @@ function makeHandle(ll, kind, idx){
     dragSel=[...selected];
     dragStartMouse=m.getLatLng();
     dragStartPos=dragSel.map(h=> (h._kind==='vertex'? current.bnd[h._vi].slice() : current.seats[h._si].ll.slice()));
+    dragSel.forEach(h=> h._snapState=null);
     snapState=null;
     current.edited=true;
   });
@@ -194,13 +198,24 @@ function makeHandle(ll, kind, idx){
       showSnap(null);
     } else {
       const dLat=mouse.lat-dragStartMouse.lat, dLng=mouse.lng-dragStartMouse.lng;
-      dragSel.forEach((h,k)=>{ const np=[dragStartPos[k][0]+dLat, dragStartPos[k][1]+dLng];
-        if(h._kind==='vertex') current.bnd[h._vi]=np; else current.seats[h._si].ll=np; h.setLatLng(np); });
+      dragSel.forEach((h,k)=>{
+        const free=[dragStartPos[k][0]+dLat, dragStartPos[k][1]+dLng];
+        let np=free;
+        // 多选平移时，每个被拖拽的顶点仍各自检测磁吸（靠近参考州边界则吸上并沿边滑动）
+        if(h._kind==='vertex' && document.getElementById('chkSnap').checked){
+          let snap=null;
+          if(h._snapState){ snap={ll:snapToStateRing(free, h._snapState), state:h._snapState, seg:null}; }
+          else { snap=snapPoint(free, current.name); if(snap) h._snapState=snap.state; }
+          if(snap) np=snap.ll;
+        }
+        if(h._kind==='vertex') current.bnd[h._vi]=np; else current.seats[h._si].ll=np;
+        h.setLatLng(np);
+      });
       polyLayers[current.name].setLatLngs(current.bnd);
       showSnap(null);
     }
   });
-  m.on('dragend', ()=>{ showSnap(null); snapState=null; });
+  m.on('dragend', ()=>{ showSnap(null); snapState=null; dragSel.forEach(h=>h._snapState=null); });
   m.addTo(map); handles.push(m);
   return m;
 }
@@ -275,6 +290,24 @@ document.getElementById('btnReset').onclick=resetState;
 document.getElementById('btnFit').onclick=fitCurrent;
 document.getElementById('btnSelAll').onclick=()=>{ clearSel(); handles.forEach(h=>setSel(h,true)); updateSelStatus(); };
 document.getElementById('btnClearSel').onclick=()=>{ clearSel(); setStatus('已清除选择'+(current?('（'+current.name+'）'):'')); };
+// 删除选中顶点/郡治（Delete 键亦可）
+function deleteSelected(){
+  if(!current || selected.size===0){ setStatus('请先选中要删除的点（Shift+点 多选）'); return; }
+  const vs=[...selected].filter(m=>m._kind==='vertex').map(m=>m._vi).sort((a,b)=>b-a);
+  const ss=[...selected].filter(m=>m._kind==='seat').map(m=>m._si).sort((a,b)=>b-a);
+  if(current.bnd.length - vs.length < 3){ setStatus('不能删：州至少需要 3 个顶点（删后剩 '+(current.bnd.length-vs.length)+' 个）'); return; }
+  vs.forEach(i=> current.bnd.splice(i,1));
+  ss.forEach(i=> current.seats.splice(i,1));
+  current.edited=true;
+  setStatus('已删除 '+vs.length+' 个顶点'+(ss.length?('、'+ss.length+' 个郡治'):'')+'，已重建顶点索引');
+  selectState(current.name);  // 重建 handles（索引变化）
+}
+document.getElementById('btnDel').onclick=deleteSelected;
+document.addEventListener('keydown', e=>{
+  if((e.key==='Delete'||e.key==='Backspace') && selected.size && !(e.target && /INPUT|TEXTAREA/.test(e.target.tagName))){
+    e.preventDefault(); deleteSelected();
+  }
+});
 // 点空白处清除选择
 map.on('click', ()=>{ if(selected.size){ clearSel(); if(current) setStatus('编辑中：'+current.name); } });
 
