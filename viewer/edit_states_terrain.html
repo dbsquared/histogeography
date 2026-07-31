@@ -41,7 +41,7 @@
 <div id="panel">
   <h3>十三州边界校正器</h3>
   <div class="hint">底图为 SRTM 晕渲。点左侧州名进入编辑，拖白色顶点微调边界、拖黄色点移动郡治；
-  <b>Shift+点</b>多选顶点/郡治，拖任一选中点可<b>整体平移</b>；拖边界顶点靠近他州边界会自动<b>磁吸</b>——该顶点<b>及左右相邻顶点一起吸到参考州的整条边界上</b>，即你拖动的是"这条相连的边"，它会整体贴合参考边并沿边滑动。改完点「导出」给我订正数据。</div>
+  <b>Shift+点</b>多选顶点/郡治，拖任一选中点可<b>整体平移</b>；拖边界顶点靠近他州边界会自动<b>磁吸</b>——被拖顶点会贴到参考州边界并沿边滑动，它连接的边会自然贴合参考边（相邻顶点保持原位）。改完点「导出」给我订正数据。</div>
   <div id="stateList"></div>
   <div class="row">
     <button class="act primary" id="btnExport">导出当前州</button>
@@ -92,6 +92,7 @@ const selected=new Set(); // 多选集合
 let dragSel=[], dragStartMouse=null, dragStartPos=[];
 let snapLine=null;
 const SNAP_PX=16;         // 磁吸触发像素距离
+let snapState=null;       // 当前吸附到的参考州名
 
 function setStatus(t){ document.getElementById('status').textContent=t; }
 function clearSel(){ selected.forEach(m=>setSel(m,false)); selected.clear(); updateSelStatus(); }
@@ -122,7 +123,7 @@ function projectOnRing(P, ring){
   }
   return best;
 }
-function snapPoint(P, exState, exVi){
+function snapPoint(P, exState){
   const mp=map.latLngToContainerPoint(L.latLng(P[0],P[1]));
   let best=null,bestD=SNAP_PX,bestSeg=null;
   for(const s of allSegments){
@@ -133,6 +134,11 @@ function snapPoint(P, exState, exVi){
     if(d<bestD){ bestD=d; best=proj; bestSeg=s; }
   }
   return best?{ll:best,seg:bestSeg,state:bestSeg.state}:null;
+}
+// 投影到指定州的整条边界环上（用于已锁定参考州后沿边滑动）
+function snapToStateRing(P, stateName){
+  const ring=byName[stateName].bnd;
+  return projectOnRing(P, ring);
 }
 function showSnap(seg){
   if(snapLine){ map.removeLayer(snapLine); snapLine=null; }
@@ -156,31 +162,31 @@ function makeHandle(ll, kind, idx){
     dragSel=[...selected];
     dragStartMouse=m.getLatLng();
     dragStartPos=dragSel.map(h=> (h._kind==='vertex'? current.bnd[h._vi].slice() : current.seats[h._si].ll.slice()));
+    snapState=null;
     current.edited=true;
   });
   m.on('drag', e=>{
     const mouse=map.mouseEventToLatLng(e.originalEvent);
     if(dragSel.length<=1){
       if(m._kind==='vertex' && document.getElementById('chkSnap').checked){
-        const snap=snapPoint(mouse, current.name, m._vi);
+        let snap=null;
+        if(snapState){
+          // 已锁定参考州：把鼠标位置投影到该州整条边界环上，实现沿边滑动
+          const locked=snapToStateRing([mouse.lat,mouse.lng], snapState);
+          snap={ll:locked, state:snapState, seg:null};
+        } else {
+          snap=snapPoint([mouse.lat,mouse.lng], current.name);
+          if(snap) snapState=snap.state;
+        }
         if(snap){
-          const n=current.bnd.length;
-          const prev=(m._vi-1+n)%n, next=(m._vi+1)%n;
           current.bnd[m._vi]=snap.ll.slice();
-          // 把相邻两顶点吸到参考州的整条边界上（使相连的整条边贴合参考边，而非只动一个顶点）
-          const refRing=byName[snap.state].bnd;
-          [prev,next].forEach(vi=>{
-            const proj=projectOnRing(current.bnd[vi], refRing);
-            current.bnd[vi]=proj.slice();
-            const h=handles.find(h=>h._kind==='vertex'&&h._vi===vi);
-            if(h) h.setLatLng(proj);
-          });
           m.setLatLng(snap.ll);
           polyLayers[current.name].setLatLngs(current.bnd);
-          showSnap(snap.seg);
+          showSnap(snap.seg || {state:snap.state, a:snap.ll, b:snap.ll});
           return;
         }
       }
+      snapState=null;
       const tgt=[mouse.lat,mouse.lng];
       m.setLatLng(tgt);
       if(m._kind==='vertex') current.bnd[m._vi]=tgt; else current.seats[m._si].ll=tgt;
@@ -194,7 +200,7 @@ function makeHandle(ll, kind, idx){
       showSnap(null);
     }
   });
-  m.on('dragend', ()=> showSnap(null));
+  m.on('dragend', ()=>{ showSnap(null); snapState=null; });
   m.addTo(map); handles.push(m);
   return m;
 }
