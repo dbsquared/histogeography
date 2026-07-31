@@ -29,6 +29,11 @@
   .vertex-dot{background:#fff;border:2px solid #111;border-radius:50%;width:12px;height:12px;box-sizing:border-box;cursor:grab}
   .seat-dot{background:#ffd54a;border:2px solid #111;border-radius:50%;width:12px;height:12px;box-sizing:border-box;cursor:grab}
   .vertex-dot.sel,.seat-dot.sel{background:#ff7a18;border-color:#fff;box-shadow:0 0 0 2px #ff7a18}
+  #issueList{margin-top:6px;max-height:180px;overflow:auto;display:none}
+  .iss{display:block;width:100%;text-align:left;margin:2px 0;padding:3px 6px;border:1px solid #2b3a4d;
+       border-radius:4px;background:#16202c;color:#cfe0ee;cursor:pointer;font-size:11px;line-height:1.4}
+  .iss:hover{background:#1f2d3d}
+  .iss .tag{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
 </style>
 </head>
 <body>
@@ -51,12 +56,15 @@
     <button class="act" id="btnClearSel">清除选择</button>
   </div>
   <label class="chk"><input type="checkbox" id="chkSnap" checked> 磁吸吸附（拖点靠近边界自动吸附）</label>
+  <label class="chk"><input type="checkbox" id="chkIssues"> 显示问题区（<span style="color:#ff5a5a">■</span>重叠 <span style="color:#ffd54a">■</span>缝隙）</label>
+  <div id="issueList"></div>
   <div id="status"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="han_states.js"></script>
+<script src="seam_issues.js"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -264,8 +272,42 @@ document.getElementById('btnClearSel').onclick=()=>{ clearSel(); setStatus('已�
 // 点空白处清除选择
 map.on('click', ()=>{ if(selected.size){ clearSel(); if(current) setStatus('编辑中：'+current.name); } });
 
+// ---------- 问题区图层（州际重叠 / 缝隙）----------
+const issueGroup=L.layerGroup();
+const issueLayers=[];
+function buildIssues(){
+  const S=window.SEAM_ISSUES;
+  const box=document.getElementById('issueList');
+  if(!S){ box.innerHTML='<div class="hint">seam_issues.js 未加载</div>'; return; }
+  const mk=(item,type)=>{
+    const color = type==='overlap' ? '#ff5a5a' : '#ffd54a';
+    const poly=L.polygon(item.ring,{color:color,weight:2,opacity:0.95,fillColor:color,fillOpacity:0.45,interactive:true});
+    poly.bindTooltip((type==='overlap'?'重叠 ':'缝隙 ')+Math.round(item.km2).toLocaleString()+' km² · '+item.states.join(' / '),{sticky:true});
+    poly.addTo(issueGroup);
+    issueLayers.push(poly);
+    const b=document.createElement('button'); b.className='iss';
+    b.innerHTML='<span class="tag" style="background:'+color+'"></span>'+
+      Math.round(item.km2).toLocaleString()+' km² · '+item.states.join('/');
+    b.onclick=()=>{ map.fitBounds(poly.getBounds().pad(1.2));
+      setStatus((type==='overlap'?'重叠区 ':'缝隙区 ')+Math.round(item.km2).toLocaleString()+' km²，涉及 '+item.states.join('、')); };
+    box.appendChild(b);
+  };
+  S.overlaps.forEach(o=>mk(o,'overlap'));
+  S.gaps.forEach(g=>mk(g,'gap'));
+  const s=S.summary;
+  setStatus('已加载 '+states.length+' 州｜问题区：重叠 '+s.overlap_count+' 处 '+
+            Math.round(s.overlap_km2).toLocaleString()+' km²，缝隙 '+s.gap_count+' 处 '+
+            Math.round(s.gap_km2).toLocaleString()+' km²');
+}
+document.getElementById('chkIssues').onchange=e=>{
+  const box=document.getElementById('issueList');
+  if(e.target.checked){ issueGroup.addTo(map); box.style.display='block'; issueGroup.eachLayer(l=>l.bringToFront()); }
+  else { map.removeLayer(issueGroup); box.style.display='none'; }
+};
+
 renderBase();
-setStatus('已加载 '+states.length+' 州。点左侧州名开始校正；Shift+点多选可整体平移。');
+buildIssues();
+setStatus('已加载 '+states.length+' 州。点左侧州名开始校正；Shift+点多选可整体平移；勾选「显示问题区」查看重叠/缝隙。');
 </script>
 </body>
 </html>
