@@ -65,3 +65,18 @@ jizhou_step1*/
 *_overlay_step1/
 *_overlay_v*/
 *_step1/
+
+# ===== 单州探索诊断/备份产物（徐州/扬州/交州等，非最终交付） =====
+auto_seg_diag/
+*.bak
+*_bak*/
+*_refine_bak
+xuzhou_*.py
+xuzhou_*.svg
+xuzhou_*_diag.html
+xuzhou_qingzhou_overlap.py
+yangzhou_view.html
+extract_yangzhou_view.py
+refine_jiaozhou.py
+viewer/fill_seats.py
+viewer/update_gcp_db.py
