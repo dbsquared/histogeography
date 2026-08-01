@@ -24,6 +24,7 @@
              background:#16202c;color:#e6e6e6;cursor:pointer;font-size:12px}
   button.act:hover{background:#1f2d3d}
   button.primary{background:#1f4d6b;border-color:#4aa3df;color:#fff}
+  button.act.on{background:#1f4d6b;border-color:#4aa3df;color:#fff}
   .chk{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:#cfe0ee}
   #status{margin-top:8px;font-size:11px;color:#9fb0c0;min-height:16px;white-space:pre-line}
   .vertex-dot{background:#fff;border:2px solid #111;border-radius:50%;width:12px;height:12px;box-sizing:border-box;cursor:grab}
@@ -57,6 +58,9 @@
   </div>
   <div class="row">
     <button class="act" id="btnDel">删除选中点（Delete键）</button>
+  </div>
+  <div class="row">
+    <button class="act" id="btnAddVertex">添加顶点模式</button>
   </div>
   <label class="chk"><input type="checkbox" id="chkSnap" checked> 磁吸吸附（拖点靠近边界自动吸附）</label>
   <label class="chk"><input type="checkbox" id="chkIssues"> 显示问题区（<span style="color:#ff5a5a">■</span>重叠 <span style="color:#ffd54a">■</span>缝隙）</label>
@@ -97,6 +101,7 @@ let snapLine=null;
 const SNAP_PX=16;         // 磁吸触发像素距离（吸到线段）
 const SNAP_VERTEX_PX=24;  // 顶点吸附优先阈值（更大，使靠近角点时优先对齐顶点）
 let snapState=null;       // 当前吸附到的参考州名
+let addMode=false;       // 添加顶点模式（单击边界插入顶点）
 
 function setStatus(t){ document.getElementById('status').textContent=t; }
 function clearSel(){ selected.forEach(m=>setSel(m,false)); selected.clear(); updateSelStatus(); }
@@ -330,9 +335,34 @@ document.addEventListener('keydown', e=>{
   if((e.key==='Delete'||e.key==='Backspace') && selected.size && !(e.target && /INPUT|TEXTAREA/.test(e.target.tagName))){
     e.preventDefault(); deleteSelected();
   }
+  if(e.key==='Escape' && addMode){ document.getElementById('btnAddVertex').click(); }
 });
-// 点空白处清除选择
-map.on('click', ()=>{ if(selected.size){ clearSel(); if(current) setStatus('编辑中：'+current.name); } });
+// 在边界线段上插入新顶点（thr: 单击点与最近边界的像素容差）
+function tryInsertVertex(latlng, thr){
+  if(!current) return false;
+  const P=[latlng.lat, latlng.lng];
+  const r=current.bnd, n=r.length; if(n<3) return false;
+  let bi=-1, bproj=null, bd=Infinity;
+  for(let i=0;i<n;i++){ const proj=projectOnSeg(P, r[i], r[(i+1)%n]); const d=(proj[0]-P[0])**2+(proj[1]-P[1])**2; if(d<bd){ bd=d; bi=i; bproj=proj; } }
+  if(bi<0) return false;
+  const mp=map.latLngToContainerPoint(latlng), dp=map.latLngToContainerPoint(L.latLng(bproj[0],bproj[1]));
+  if(Math.hypot(mp.x-dp.x, mp.y-dp.y) > thr){ setStatus('离边界太远（>'+thr+'px），未插入顶点'); return false; }
+  current.bnd.splice(bi+1, 0, bproj.slice());
+  current.edited=true;
+  setStatus('已在第 '+bi+' 条边插入顶点（共 '+current.bnd.length+' 个）；可继续拖/框选/删除');
+  selectState(current.name);
+  return true;
+}
+document.getElementById('btnAddVertex').onclick=function(){
+  addMode=!addMode; this.classList.toggle('on',addMode);
+  document.getElementById('map').style.cursor=addMode?'crosshair':'';
+  setStatus(addMode?'添加顶点模式：点击边界线段即插入顶点（Esc 退出）':'已退出添加顶点模式');
+};
+// 点空白处清除选择（添加顶点模式下则插入顶点）
+map.on('click', e=>{
+  if(addMode){ tryInsertVertex(e.latlng, 40); return; }
+  if(selected.size){ clearSel(); if(current) setStatus('编辑中：'+current.name); }
+});
 
 // ---------- Shift 拖拽框选顶点 ----------
 let boxSel=false, boxStartPt=null, boxRect=null;
@@ -364,65 +394,113 @@ map.on('mouseup', ()=>{
   }
 });
 
-// ---------- 双击边界线段插入顶点 ----------
+// ---------- 双击边界线段插入顶点（也可开启"添加顶点模式"后单击）----------
 map.on('dblclick', e=>{
   if(!current) return;
   const t=e.originalEvent.target;
   if(t && t.closest && t.closest('.vertex-dot,.seat-dot')) return; // 点在图标上不插入
-  const P=[e.latlng.lat, e.latlng.lng];
-  const r=current.bnd, n=r.length;
-  let bi=-1, bproj=null, bd=Infinity;
-  for(let i=0;i<n;i++){
-    const proj=projectOnSeg(P, r[i], r[(i+1)%n]);
-    const d=(proj[0]-P[0])**2+(proj[1]-P[1])**2;
-    if(d<bd){ bd=d; bi=i; bproj=proj; }
-  }
-  if(bi<0) return;
-  const mp=map.latLngToContainerPoint(e.latlng);
-  const dp=map.latLngToContainerPoint(L.latLng(bproj[0],bproj[1]));
-  if(Math.hypot(mp.x-dp.x, mp.y-dp.y) > 30){ setStatus('双击位置离边界太远（>30px），未插入'); return; }
-  current.bnd.splice(bi+1, 0, bproj.slice());
-  current.edited=true;
-  setStatus('已在第 '+bi+' 条边插入顶点（共 '+current.bnd.length+' 个）；可继续拖/框选/删除');
-  selectState(current.name);
+  tryInsertVertex(e.latlng, 40);
 });
 
-// ---------- 问题区图层（州际重叠 / 缝隙）----------
+// ---------- 问题区：实时演算（纯前端栅格化，勾选即算）----------
 const issueGroup=L.layerGroup();
 const issueLayers=[];
-function buildIssues(){
-  const S=window.SEAM_ISSUES;
-  const box=document.getElementById('issueList');
-  if(!S){ box.innerHTML='<div class="hint">seam_issues.js 未加载</div>'; return; }
-  const mk=(item,type)=>{
-    const color = type==='overlap' ? '#ff5a5a' : '#ffd54a';
-    const poly=L.polygon(item.ring,{color:color,weight:2,opacity:0.95,fillColor:color,fillOpacity:0.45,interactive:true});
-    poly.bindTooltip((type==='overlap'?'重叠 ':'缝隙 ')+Math.round(item.km2).toLocaleString()+' km² · '+item.states.join(' / '),{sticky:true});
-    poly.addTo(issueGroup);
-    issueLayers.push(poly);
+const STEP=0.18;                          // 栅格分辨率（度）
+const GX0=LON_MIN, GY0=LAT_MIN;
+const GCOLS=Math.ceil((LON_MAX-LON_MIN)/STEP)+1;
+const GROWS=Math.ceil((LAT_MAX-LAT_MIN)/STEP)+1;
+const DEGKM=111.32;
+function convexHull(p){
+  if(p.length<3) return p;
+  const pts=p.slice().sort((a,b)=>a[1]-b[1]||a[0]-b[0]);
+  const cr=(o,a,b)=>(a[1]-o[1])*(b[0]-o[0])-(a[0]-o[0])*(b[1]-o[1]);
+  const lo=[]; for(const q of pts){ while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0) lo.pop(); lo.push(q); }
+  const up=[]; for(let i=pts.length-1;i>=0;i--){ const q=pts[i]; while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0) up.pop(); up.push(q); }
+  lo.pop(); up.pop(); return lo.concat(up);
+}
+// 用当前所有州的实时边界，栅格化算出重叠/缝隙，返回问题区数组
+function computeSeams(){
+  const N=states.length;
+  const cov=new Int16Array(GCOLS*GROWS);
+  const masks=states.map(()=>new Uint8Array(GCOLS*GROWS));
+  states.forEach((st,si)=>{               // 每州扫描线填充
+    const ring=st.bnd, n=ring.length; if(n<3) return;
+    const m=masks[si];
+    for(let r=0;r<GROWS;r++){
+      const y=GY0+r*STEP; const xs=[];
+      for(let i=0;i<n;i++){
+        const a=ring[i], b=ring[(i+1)%n];
+        const ya=a[0],yb=b[0],xa=a[1],xb=b[1];
+        if((ya<=y&&yb>y)||(yb<=y&&ya>y)){ const t=(y-ya)/(yb-ya); xs.push(xa+t*(xb-xa)); }
+      }
+      xs.sort((p,q)=>p-q);
+      for(let k=0;k+1<xs.length;k+=2){
+        let c0=Math.floor((xs[k]-GX0)/STEP), c1=Math.floor((xs[k+1]-GX0)/STEP);
+        if(c1<0||c0>=GCOLS) continue;
+        if(c0<0)c0=0; if(c1>=GCOLS)c1=GCOLS-1;
+        for(let c=c0;c<=c1;c++){ const idx=r*GCOLS+c; cov[idx]++; m[idx]=1; }
+      }
+    }
+  });
+  // 从边界洪水填充，标记"外部"空地（外部不算州际缝隙）
+  const outside=new Uint8Array(GCOLS*GROWS); const stk=[];
+  const pushO=i=>{ if(outside[i]||cov[i]>0) return; outside[i]=1; stk.push(i); };
+  for(let c=0;c<GCOLS;c++){ pushO(c); pushO((GROWS-1)*GCOLS+c); }
+  for(let r=0;r<GROWS;r++){ pushO(r*GCOLS); pushO(r*GCOLS+GCOLS-1); }
+  while(stk.length){ const i=stk.pop(); const r=(i/GCOLS)|0,c=i%GCOLS;
+    if(r>0)pushO(i-GCOLS); if(r<GROWS-1)pushO(i+GCOLS); if(c>0)pushO(i-1); if(c<GCOLS-1)pushO(i+1); }
+  const visited=new Uint8Array(GCOLS*GROWS); const issues=[];
+  function collect(test,type){
+    for(let i=0;i<cov.length;i++){
+      if(visited[i]||!test(i)) continue;
+      const cells=[]; const q=[i]; visited[i]=1;
+      while(q.length){ const idx=q.pop(); cells.push(idx); const r=(idx/GCOLS)|0,c=idx%GCOLS;
+        const nb=[]; if(r>0)nb.push(idx-GCOLS); if(r<GROWS-1)nb.push(idx+GCOLS); if(c>0)nb.push(idx-1); if(c<GCOLS-1)nb.push(idx+1);
+        for(const j of nb){ if(!visited[j]&&test(j)){ visited[j]=1; q.push(j);} } }
+      const pts=cells.map(idx=>[GY0+((idx/GCOLS)|0)*STEP+STEP/2, GX0+(idx%GCOLS)*STEP+STEP/2]);
+      let sy=0; for(const p of pts) sy+=p[0]; const clat=sy/pts.length;
+      const cellKm=STEP*DEGKM*(STEP*DEGKM*Math.cos(clat*Math.PI/180));
+      const stSet=new Set();
+      if(type==='overlap'){ for(let si=0;si<N;si++) if(masks[si][i]) stSet.add(states[si].name); }
+      else { for(const idx of cells){ const r=(idx/GCOLS)|0,c=idx%GCOLS;
+        const nb=[]; if(r>0)nb.push(idx-GCOLS); if(r<GROWS-1)nb.push(idx+GCOLS); if(c>0)nb.push(idx-1); if(c<GCOLS-1)nb.push(idx+1);
+        for(const j of nb){ if(cov[j]>0) for(let si=0;si<N;si++) if(masks[si][j]) stSet.add(states[si].name); } } }
+      issues.push({type, km2:pts.length*cellKm, states:[...stSet], ring:convexHull(pts)});
+    }
+  }
+  collect(i=>cov[i]>=2,'overlap');
+  collect(i=>cov[i]===0&&!outside[i],'gap');
+  return issues;
+}
+function renderIssues(){
+  issueGroup.clearLayers(); issueLayers.length=0;
+  const box=document.getElementById('issueList'); box.innerHTML='';
+  const t0=performance.now();
+  const issues=computeSeams();
+  const t1=performance.now();
+  let ov=0, ovk=0, gpk=0;
+  issues.forEach(it=>{
+    if(it.type==='overlap'){ ov++; ovk+=it.km2; } else { gpk+=it.km2; }
+    const color=it.type==='overlap'?'#ff5a5a':'#ffd54a';
+    const poly=L.polygon(it.ring,{color,weight:2,opacity:0.95,fillColor:color,fillOpacity:0.45,interactive:true});
+    poly.bindTooltip((it.type==='overlap'?'重叠 ':'缝隙 ')+Math.round(it.km2).toLocaleString()+' km² · '+(it.states.join(' / ')||'多州'),{sticky:true});
+    poly.addTo(issueGroup); issueLayers.push(poly);
     const b=document.createElement('button'); b.className='iss';
-    b.innerHTML='<span class="tag" style="background:'+color+'"></span>'+
-      Math.round(item.km2).toLocaleString()+' km² · '+item.states.join('/');
-    b.onclick=()=>{ map.fitBounds(poly.getBounds().pad(1.2));
-      setStatus((type==='overlap'?'重叠区 ':'缝隙区 ')+Math.round(item.km2).toLocaleString()+' km²，涉及 '+item.states.join('、')); };
+    b.innerHTML='<span class="tag" style="background:'+color+'"></span>'+Math.round(it.km2).toLocaleString()+' km² · '+(it.states.join('/')||'多州');
+    b.onclick=()=>{ map.fitBounds(poly.getBounds().pad(1.2)); setStatus((it.type==='overlap'?'重叠区 ':'缝隙区 ')+Math.round(it.km2).toLocaleString()+' km²，涉及 '+it.states.join('、')); };
     box.appendChild(b);
-  };
-  S.overlaps.forEach(o=>mk(o,'overlap'));
-  S.gaps.forEach(g=>mk(g,'gap'));
-  const s=S.summary;
-  setStatus('已加载 '+states.length+' 州｜问题区：重叠 '+s.overlap_count+' 处 '+
-            Math.round(s.overlap_km2).toLocaleString()+' km²，缝隙 '+s.gap_count+' 处 '+
-            Math.round(s.gap_km2).toLocaleString()+' km²');
+  });
+  const gapN=issues.length-ov;
+  setStatus('问题区实时演算完成（'+(t1-t0).toFixed(0)+'ms）｜重叠 '+ov+' 处 '+Math.round(ovk).toLocaleString()+' km²，缝隙 '+gapN+' 处 '+Math.round(gpk).toLocaleString()+' km²');
 }
 document.getElementById('chkIssues').onchange=e=>{
   const box=document.getElementById('issueList');
-  if(e.target.checked){ issueGroup.addTo(map); box.style.display='block'; issueGroup.eachLayer(l=>l.bringToFront()); }
+  if(e.target.checked){ renderIssues(); issueGroup.addTo(map); box.style.display='block'; issueGroup.eachLayer(l=>l.bringToFront()); }
   else { map.removeLayer(issueGroup); box.style.display='none'; }
 };
 
 renderBase();
-buildIssues();
-setStatus('已加载 '+states.length+' 州。点左侧州名开始校正；Shift+点多选可整体平移；勾选「显示问题区」查看重叠/缝隙。');
+setStatus('已加载 '+states.length+' 州。点左侧州名进入编辑；勾选「显示问题区」将用当前边界实时演算重叠/缝隙（每次勾选重算）。');
 </script>
 </body>
 </html>
