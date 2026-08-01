@@ -41,7 +41,7 @@
 <div id="panel">
   <h3>十三州边界校正器</h3>
   <div class="hint">底图为 SRTM 晕渲。点左侧州名进入编辑，拖白色顶点微调边界、拖黄色点移动郡治；
-  <b>Shift+点</b>多选顶点/郡治，<b>Shift+拖拽空白处框选</b>多个顶点，拖任一选中点可<b>整体平移</b>（多选平移时每个被拖顶点仍各自吸附附近边界）；<b>Delete 键 / 删除选中点</b>删除选中顶点（州至少保留 3 个）；<b>双击边界线段</b>在该边插入新顶点细化边界。拖边界顶点靠近他州边界会<b>优先吸附其顶点（角点）</b>、其次吸到边并沿边滑动，相连边自然贴合（相邻顶点保持原位）。改完点「导出」给我订正数据。</div>
+  <b>Shift+点</b>多选顶点/郡治，<b>Shift+拖拽空白处框选</b>多个州界顶点（不含郡治/GCP），拖任一选中点可<b>整体平移</b>（多选平移时每个被拖顶点仍各自吸附附近边界）；<b>Delete 键 / 删除选中点</b>删除选中顶点（州至少保留 3 个）；<b>双击边界线段</b>在该边插入新顶点细化边界。拖边界顶点靠近他州边界会<b>优先吸附其顶点（角点）</b>、其次吸到边并沿边滑动，相连边自然贴合（相邻顶点保持原位）。改完点「导出」给我订正数据。</div>
   <div id="stateList"></div>
   <div class="row">
     <button class="act primary" id="btnExport">导出当前州</button>
@@ -339,7 +339,7 @@ let boxSel=false, boxStartPt=null, boxRect=null;
 map.on('mousedown', e=>{
   if(!e.originalEvent.shiftKey || !current) return;
   const t=e.originalEvent.target;
-  if(t && t.closest && t.closest('.vertex-dot,.seat-dot')) return; // 点在图标上交给 marker 拖拽
+  if(t && t.closest && t.closest('.vertex-dot,.seat-dot')) return; // 点在图标上交给 marker 拖拽；框选只针对当前州边界顶点，无需判州属
   boxSel=true; boxStartPt=e.containerPoint;
   map.dragging.disable();
   const ll0=map.containerPointToLatLng(boxStartPt);
@@ -355,10 +355,12 @@ map.on('mouseup', ()=>{
   boxSel=false; map.dragging.enable();
   if(boxRect){
     const b=boxRect.getBounds(); let cnt=0;
-    handles.forEach(h=>{ if(b.contains(h.getLatLng())){ setSel(h,true); cnt++; } });
+    // 框选仅作用于当前州（已单选）的州界顶点：handles 只含当前州，无需判断是否落到别州；只选顶点，不动郡治/GCP
+    handles.forEach(h=>{ if(h._kind==='vertex' && b.contains(h.getLatLng())){ setSel(h,true); cnt++; } });
     map.removeLayer(boxRect); boxRect=null;
     updateSelStatus();
-    if(cnt===0) setStatus('框选：无顶点落入框内');
+    if(cnt===0) setStatus('框选：框内无州界顶点（仅州界顶点入选，郡治不入选）');
+    else setStatus('框选：选中 '+cnt+' 个「'+current.name+'」州界顶点');
   }
 });
 
