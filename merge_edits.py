@@ -3,11 +3,11 @@
 保留原文件的 pixels / metadata（含 verified、color、err），仅用导出的 features 覆盖 state_boundary 与 commandery_seat。
 按"state_boundary 之后紧跟其 commandery_seat"的顺序把 seat 关联到所属州。
 """
-import json, os, copy
+import json, os, copy, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RAW = os.path.join(HERE, 'viewer', 'han_states_raw')
-EXP = 'D:/downloads/all_states_edit.json'
+EXP = sys.argv[1] if len(sys.argv) > 1 else 'D:/downloads/all_states_edit.json'
 
 exp = json.load(open(EXP, encoding='utf-8'))
 feats = exp['features']
