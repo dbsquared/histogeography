@@ -200,7 +200,7 @@
 <script src="data.js?v=2026070803"></script>
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
-<script src="han_states.js?v=2026080123"></script>
+<script src="han_states.js?v=2026080124"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -446,20 +446,18 @@ function computeLabelPoint(ring){
   visibleStates.forEach(st=>{
     // 1) 州界多边形
     const ring = st.boundary.map(p=>[p[1],p[0]]);  // [lon,lat]→[lat,lon]
-    const fillOpacity = 0.24;  // 统一半透明填充，保证地形底图可见；边界 0.92 不透明承担识别任务
+    const fillOpacity = 0.15;  // 统一更低填充透明度，地形底图更清晰；边界 0.92 不透明承担识别任务
     const baseStyle = {color:st.color, weight:2.6, opacity:0.92, fillColor:st.color, fillOpacity};
     const poly = L.polygon(ring, baseStyle);
-    // hover 高亮：颜色加深（降低透明度→更实）+ 加粗描边 + 置顶
+    // hover 高亮：加粗描边 + 轻微加深填充 + 置顶（不显示文字，用户要求）
     poly.on('mouseover', function(){
-      this.setStyle({ weight:3.4, opacity:1, fillOpacity:0.58 });
+      this.setStyle({ weight:3.4, opacity:1, fillOpacity:0.22 });
       this.bringToFront();
     });
     poly.on('mouseout', function(){
       this.setStyle(baseStyle);
     });
-    const capital = st.seats.find(s => s.role === 'capital');
-    poly.bindTooltip(`<b>${st.name}</b><br/>州府：${capital ? capital.name : '—'}`,
-      {sticky:true, opacity:0.95});
+    // 悬停不再显示文字（用户要求：hover 不显示任何文字）
     hanBoundaryLayer.addLayer(poly);
 
     // 2) 州名标签（默认落在州境内：质心在境内则用之，否则取最内点；

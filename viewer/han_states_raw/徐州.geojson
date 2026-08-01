@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "metadata": {
     "state": "徐州",
-    "color": "#9575CD",
+    "color": "#9E9E9E",
     "gcps": 6,
     "max_err_km": 15.8,
     "avg_err_km": 9.9,
@@ -1058,7 +1058,7 @@
       "properties": {
         "kind": "state_boundary",
         "state": "徐州",
-        "color": "#9575CD"
+        "color": "#9E9E9E"
       },
       "geometry": {
         "type": "Polygon",

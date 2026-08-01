@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "metadata": {
     "state": "交州",
-    "color": "#CE93D8",
+    "color": "#616161",
     "gcps": 16,
     "max_err_km": 11.5,
     "avg_err_km": 3.5,
@@ -1800,7 +1800,7 @@
       "properties": {
         "kind": "state_boundary",
         "state": "交州",
-        "color": "#CE93D8"
+        "color": "#616161"
       },
       "geometry": {
         "type": "Polygon",

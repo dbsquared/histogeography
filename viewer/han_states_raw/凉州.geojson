@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "metadata": {
     "state": "凉州",
-    "color": "#B388FF",
+    "color": "#212121",
     "gcps": 6,
     "max_err_km": 4,
     "avg_err_km": 2.6,
@@ -1358,7 +1358,7 @@
       "properties": {
         "kind": "state_boundary",
         "state": "凉州",
-        "color": "#B388FF"
+        "color": "#212121"
       },
       "geometry": {
         "type": "Polygon",

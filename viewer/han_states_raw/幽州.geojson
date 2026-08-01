@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "metadata": {
     "state": "幽州",
-    "color": "#B71C1C",
+    "color": "#FFFFFF",
     "gcps": 12,
     "max_err_km": 13,
     "avg_err_km": 5.6,
@@ -1248,7 +1248,7 @@
       "properties": {
         "kind": "state_boundary",
         "state": "幽州",
-        "color": "#B71C1C"
+        "color": "#FFFFFF"
       },
       "geometry": {
         "type": "Polygon",
