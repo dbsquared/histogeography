@@ -41,7 +41,7 @@
 <div id="panel">
   <h3>十三州边界校正器</h3>
   <div class="hint">底图为 SRTM 晕渲。点左侧州名进入编辑，拖白色顶点微调边界、拖黄色点移动郡治；
-  <b>Shift+点</b>多选顶点/郡治，拖任一选中点可<b>整体平移</b>（多选平移时每个被拖顶点仍各自吸附附近边界）；<b>Delete 键 / 删除选中点</b>可删除选中顶点（州至少保留 3 个）。拖边界顶点靠近他州边界会自动<b>磁吸</b>——被拖顶点会贴到参考州边界并沿边滑动，它连接的边会自然贴合参考边（相邻顶点保持原位）。改完点「导出」给我订正数据。</div>
+  <b>Shift+点</b>多选顶点/郡治，<b>Shift+拖拽空白处框选</b>多个顶点，拖任一选中点可<b>整体平移</b>（多选平移时每个被拖顶点仍各自吸附附近边界）；<b>Delete 键 / 删除选中点</b>删除选中顶点（州至少保留 3 个）；<b>双击边界线段</b>在该边插入新顶点细化边界。拖边界顶点靠近他州边界会<b>优先吸附其顶点（角点）</b>、其次吸到边并沿边滑动，相连边自然贴合（相邻顶点保持原位）。改完点「导出」给我订正数据。</div>
   <div id="stateList"></div>
   <div class="row">
     <button class="act primary" id="btnExport">导出当前州</button>
@@ -72,7 +72,7 @@
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
 // 放大再扩大一点：提高 maxZoom 上限，允许更精细缩放
-const map=L.map('map',{crs:L.CRS.Simple,center:[32,108],minZoom:-2,maxZoom:18,zoomSnap:0.1,zoomDelta:0.5,scrollWheelZoom:true,attributionControl:false});
+const map=L.map('map',{crs:L.CRS.Simple,center:[32,108],minZoom:-2,maxZoom:18,zoomSnap:0.1,zoomDelta:0.5,scrollWheelZoom:true,attributionControl:false,boxZoom:false,doubleClickZoom:false});
 L.control.scale({imperial:false,position:'bottomleft'}).addTo(map);
 map.fitBounds(BOUNDS);
 L.imageOverlay('base_terrain.png', BOUNDS, {opacity:0.92}).addTo(map);
@@ -94,7 +94,8 @@ let handles=[];           // 当前州可拖拽顶点/郡治 markers
 const selected=new Set(); // 多选集合
 let dragSel=[], dragStartMouse=null, dragStartPos=[];
 let snapLine=null;
-const SNAP_PX=16;         // 磁吸触发像素距离
+const SNAP_PX=16;         // 磁吸触发像素距离（吸到线段）
+const SNAP_VERTEX_PX=24;  // 顶点吸附优先阈值（更大，使靠近角点时优先对齐顶点）
 let snapState=null;       // 当前吸附到的参考州名
 
 function setStatus(t){ document.getElementById('status').textContent=t; }
@@ -128,6 +129,19 @@ function projectOnRing(P, ring){
 }
 function snapPoint(P, exState){
   const mp=map.latLngToContainerPoint(L.latLng(P[0],P[1]));
+  // 优先：吸附到他州边界顶点（角点），对齐角点对角点
+  let bestV=null, bestVD=SNAP_VERTEX_PX;
+  for(const st of states){
+    if(st.name===exState) continue;
+    const ring=st.bnd, n=ring.length;
+    for(let i=0;i<n;i++){
+      const dp=map.latLngToContainerPoint(L.latLng(ring[i][0],ring[i][1]));
+      const d=Math.hypot(mp.x-dp.x, mp.y-dp.y);
+      if(d<bestVD){ bestVD=d; bestV={ll:ring[i].slice(), state:st.name, vi:i}; }
+    }
+  }
+  if(bestV) return {ll:bestV.ll, seg:null, state:bestV.state, isVertex:true};
+  // 次选：吸附到他州边界线段
   let best=null,bestD=SNAP_PX,bestSeg=null;
   for(const s of allSegments){
     if(s.state===exState) continue;   // 只吸附到其他州的边界，不自吸
@@ -138,10 +152,18 @@ function snapPoint(P, exState){
   }
   return best?{ll:best,seg:bestSeg,state:bestSeg.state}:null;
 }
-// 投影到指定州的整条边界环上（用于已锁定参考州后沿边滑动）
+// 投影到指定州的整条边界环上（用于已锁定参考州后沿边滑动）；若投影点附近有该州顶点则吸附到顶点
 function snapToStateRing(P, stateName){
   const ring=byName[stateName].bnd;
-  return projectOnRing(P, ring);
+  const proj=projectOnRing(P, ring);
+  const mp=map.latLngToContainerPoint(L.latLng(proj[0],proj[1]));
+  let bestV=null, bestVD=SNAP_VERTEX_PX;
+  for(let i=0;i<ring.length;i++){
+    const dp=map.latLngToContainerPoint(L.latLng(ring[i][0],ring[i][1]));
+    const d=Math.hypot(mp.x-dp.x, mp.y-dp.y);
+    if(d<bestVD){ bestVD=d; bestV=ring[i]; }
+  }
+  return bestV ? bestV.slice() : proj;
 }
 function showSnap(seg){
   if(snapLine){ map.removeLayer(snapLine); snapLine=null; }
@@ -187,6 +209,7 @@ function makeHandle(ll, kind, idx){
           m.setLatLng(snap.ll);
           polyLayers[current.name].setLatLngs(current.bnd);
           showSnap(snap.seg || {state:snap.state, a:snap.ll, b:snap.ll});
+          if(snap.isVertex) setStatus('已磁吸到「'+snap.state+'」的顶点（角点），拖动沿其边界滑动');
           return;
         }
       }
@@ -310,6 +333,57 @@ document.addEventListener('keydown', e=>{
 });
 // 点空白处清除选择
 map.on('click', ()=>{ if(selected.size){ clearSel(); if(current) setStatus('编辑中：'+current.name); } });
+
+// ---------- Shift 拖拽框选顶点 ----------
+let boxSel=false, boxStartPt=null, boxRect=null;
+map.on('mousedown', e=>{
+  if(!e.originalEvent.shiftKey || !current) return;
+  const t=e.originalEvent.target;
+  if(t && t.closest && t.closest('.vertex-dot,.seat-dot')) return; // 点在图标上交给 marker 拖拽
+  boxSel=true; boxStartPt=e.containerPoint;
+  map.dragging.disable();
+  const ll0=map.containerPointToLatLng(boxStartPt);
+  boxRect=L.rectangle([ll0,ll0],{color:'#4aa3df',weight:1,opacity:0.9,fillOpacity:0.08,dashArray:'4,3'}).addTo(map);
+  e.originalEvent.preventDefault();
+});
+map.on('mousemove', e=>{
+  if(!boxSel||!boxRect) return;
+  boxRect.setBounds(L.latLngBounds(map.containerPointToLatLng(boxStartPt), map.containerPointToLatLng(e.containerPoint)));
+});
+map.on('mouseup', ()=>{
+  if(!boxSel) return;
+  boxSel=false; map.dragging.enable();
+  if(boxRect){
+    const b=boxRect.getBounds(); let cnt=0;
+    handles.forEach(h=>{ if(b.contains(h.getLatLng())){ setSel(h,true); cnt++; } });
+    map.removeLayer(boxRect); boxRect=null;
+    updateSelStatus();
+    if(cnt===0) setStatus('框选：无顶点落入框内');
+  }
+});
+
+// ---------- 双击边界线段插入顶点 ----------
+map.on('dblclick', e=>{
+  if(!current) return;
+  const t=e.originalEvent.target;
+  if(t && t.closest && t.closest('.vertex-dot,.seat-dot')) return; // 点在图标上不插入
+  const P=[e.latlng.lat, e.latlng.lng];
+  const r=current.bnd, n=r.length;
+  let bi=-1, bproj=null, bd=Infinity;
+  for(let i=0;i<n;i++){
+    const proj=projectOnSeg(P, r[i], r[(i+1)%n]);
+    const d=(proj[0]-P[0])**2+(proj[1]-P[1])**2;
+    if(d<bd){ bd=d; bi=i; bproj=proj; }
+  }
+  if(bi<0) return;
+  const mp=map.latLngToContainerPoint(e.latlng);
+  const dp=map.latLngToContainerPoint(L.latLng(bproj[0],bproj[1]));
+  if(Math.hypot(mp.x-dp.x, mp.y-dp.y) > 30){ setStatus('双击位置离边界太远（>30px），未插入'); return; }
+  current.bnd.splice(bi+1, 0, bproj.slice());
+  current.edited=true;
+  setStatus('已在第 '+bi+' 条边插入顶点（共 '+current.bnd.length+' 个）；可继续拖/框选/删除');
+  selectState(current.name);
+});
 
 // ---------- 问题区图层（州际重叠 / 缝隙）----------
 const issueGroup=L.layerGroup();
