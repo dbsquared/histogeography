@@ -243,7 +243,7 @@ function makeHandle(ll, kind, idx){
       showSnap(null);
     }
   });
-  m.on('dragend', ()=>{ showSnap(null); snapState=null; dragSel.forEach(h=>h._snapState=null); });
+  m.on('dragend', ()=>{ showSnap(null); snapState=null; dragSel.forEach(h=>h._snapState=null); afterEdit(); });
   m.addTo(map); handles.push(m);
   return m;
 }
@@ -282,7 +282,7 @@ function resetState(){
   current.edited=false;
   polyLayers[current.name].setLatLngs(current.bnd);
   selectState(current.name);
-  setStatus('已重置：'+current.name);
+  setStatus('已重置：'+current.name); afterEdit();
 }
 
 function stateToFC(st){
@@ -328,7 +328,7 @@ function deleteSelected(){
   ss.forEach(i=> current.seats.splice(i,1));
   current.edited=true;
   setStatus('已删除 '+vs.length+' 个顶点'+(ss.length?('、'+ss.length+' 个郡治'):'')+'，已重建顶点索引');
-  selectState(current.name);  // 重建 handles（索引变化）
+  selectState(current.name); afterEdit();  // 重建 handles（索引变化）
 }
 document.getElementById('btnDel').onclick=deleteSelected;
 document.addEventListener('keydown', e=>{
@@ -350,7 +350,7 @@ function tryInsertVertex(latlng, thr){
   current.bnd.splice(bi+1, 0, bproj.slice());
   current.edited=true;
   setStatus('已在第 '+bi+' 条边插入顶点（共 '+current.bnd.length+' 个）；可继续拖/框选/删除');
-  selectState(current.name);
+  selectState(current.name); afterEdit();
   return true;
 }
 document.getElementById('btnAddVertex').onclick=function(){
@@ -405,11 +405,12 @@ map.on('dblclick', e=>{
 // ---------- 问题区：实时演算（纯前端栅格化，勾选即算）----------
 const issueGroup=L.layerGroup();
 const issueLayers=[];
-const STEP=0.18;                          // 栅格分辨率（度）
+const STEP=0.15;                          // 栅格分辨率（度）
 const GX0=LON_MIN, GY0=LAT_MIN;
 const GCOLS=Math.ceil((LON_MAX-LON_MIN)/STEP)+1;
 const GROWS=Math.ceil((LAT_MAX-LAT_MIN)/STEP)+1;
 const DEGKM=111.32;
+const MIN_AREA_KM2=200;   // 小于此面积的问题区视为噪声，不显示
 function convexHull(p){
   if(p.length<3) return p;
   const pts=p.slice().sort((a,b)=>a[1]-b[1]||a[0]-b[0]);
@@ -418,59 +419,85 @@ function convexHull(p){
   const up=[]; for(let i=pts.length-1;i>=0;i--){ const q=pts[i]; while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0) up.pop(); up.push(q); }
   lo.pop(); up.pop(); return lo.concat(up);
 }
+// 网格单元集合 → 可绘制环：正常取凸包；若退化成线段/单点则退化为包围盒矩形（保证有面积，点击不会缩放成空白）
+function cellsToRing(cells){
+  if(cells.length===0) return null;
+  const pts=cells.map(idx=>[GY0+((idx/GCOLS)|0)*STEP+STEP/2, GX0+(idx%GCOLS)*STEP+STEP/2]);
+  let ring=convexHull(pts);
+  if(ring.length>=3) return ring;
+  let minLat=Infinity,maxLat=-Infinity,minLng=Infinity,maxLng=-Infinity;
+  for(const p of pts){ if(p[0]<minLat)minLat=p[0]; if(p[0]>maxLat)maxLat=p[0]; if(p[1]<minLng)minLng=p[1]; if(p[1]>maxLng)maxLng=p[1]; }
+  const pad=STEP;
+  return [[maxLat+pad,minLng-pad],[maxLat+pad,maxLng+pad],[minLat-pad,maxLng+pad],[minLat-pad,minLng-pad]];
+}
 // 用当前所有州的实时边界，栅格化算出重叠/缝隙，返回问题区数组
 function computeSeams(){
   const N=states.length;
   const cov=new Int16Array(GCOLS*GROWS);
   const masks=states.map(()=>new Uint8Array(GCOLS*GROWS));
-  states.forEach((st,si)=>{               // 每州扫描线填充
+  // 1) 各州扫描线填充
+  states.forEach((st,si)=>{
     const ring=st.bnd, n=ring.length; if(n<3) return;
     const m=masks[si];
     for(let r=0;r<GROWS;r++){
       const y=GY0+r*STEP; const xs=[];
-      for(let i=0;i<n;i++){
-        const a=ring[i], b=ring[(i+1)%n];
-        const ya=a[0],yb=b[0],xa=a[1],xb=b[1];
-        if((ya<=y&&yb>y)||(yb<=y&&ya>y)){ const t=(y-ya)/(yb-ya); xs.push(xa+t*(xb-xa)); }
-      }
+      for(let i=0;i<n;i++){ const a=ring[i], b=ring[(i+1)%n]; const ya=a[0],yb=b[0],xa=a[1],xb=b[1];
+        if((ya<=y&&yb>y)||(yb<=y&&ya>y)){ const t=(y-ya)/(yb-ya); xs.push(xa+t*(xb-xa)); } }
       xs.sort((p,q)=>p-q);
-      for(let k=0;k+1<xs.length;k+=2){
-        let c0=Math.floor((xs[k]-GX0)/STEP), c1=Math.floor((xs[k+1]-GX0)/STEP);
-        if(c1<0||c0>=GCOLS) continue;
-        if(c0<0)c0=0; if(c1>=GCOLS)c1=GCOLS-1;
-        for(let c=c0;c<=c1;c++){ const idx=r*GCOLS+c; cov[idx]++; m[idx]=1; }
-      }
+      for(let k=0;k+1<xs.length;k+=2){ let c0=Math.floor((xs[k]-GX0)/STEP), c1=Math.floor((xs[k+1]-GX0)/STEP);
+        if(c1<0||c0>=GCOLS) continue; if(c0<0)c0=0; if(c1>=GCOLS)c1=GCOLS-1;
+        for(let c=c0;c<=c1;c++){ const idx=r*GCOLS+c; cov[idx]++; m[idx]=1; } }
     }
   });
-  // 从边界洪水填充，标记"外部"空地（外部不算州际缝隙）
+  // 2) 从边界洪水填充，标记"外部"空地（外部不算州际缝隙）
   const outside=new Uint8Array(GCOLS*GROWS); const stk=[];
   const pushO=i=>{ if(outside[i]||cov[i]>0) return; outside[i]=1; stk.push(i); };
   for(let c=0;c<GCOLS;c++){ pushO(c); pushO((GROWS-1)*GCOLS+c); }
   for(let r=0;r<GROWS;r++){ pushO(r*GCOLS); pushO(r*GCOLS+GCOLS-1); }
   while(stk.length){ const i=stk.pop(); const r=(i/GCOLS)|0,c=i%GCOLS;
     if(r>0)pushO(i-GCOLS); if(r<GROWS-1)pushO(i+GCOLS); if(c>0)pushO(i-1); if(c<GCOLS-1)pushO(i+1); }
-  const visited=new Uint8Array(GCOLS*GROWS); const issues=[];
-  function collect(test,type){
+  // 3) 侵蚀（开运算的"腐"）滤掉 1 格 / 1 格宽的虚假重叠与缝隙条纹；
+  //    再从保留的"种子"在原始掩膜上洪水填充，得到真实问题区（避免误删真实宽重叠/缝隙）
+  function erodeMask(isOn){
+    const er=new Uint8Array(GCOLS*GROWS);
+    for(let i=0;i<cov.length;i++){ if(!isOn(i)) continue; const r=(i/GCOLS)|0,c=i%GCOLS;
+      if(r>0&&r<GROWS-1&&c>0&&c<GCOLS-1 && isOn(i-GCOLS)&&isOn(i+GCOLS)&&isOn(i-1)&&isOn(i+1)) er[i]=1; }
+    return er;
+  }
+  const overlapSeed=erodeMask(i=>cov[i]>=2);
+  const gapSeed=erodeMask(i=>cov[i]===0&&!outside[i]);
+  function floodFromSeed(seed, isOn, type){
+    const visited=new Uint8Array(GCOLS*GROWS); const out=[];
     for(let i=0;i<cov.length;i++){
-      if(visited[i]||!test(i)) continue;
+      if(visited[i]||!seed[i]) continue;
       const cells=[]; const q=[i]; visited[i]=1;
-      while(q.length){ const idx=q.pop(); cells.push(idx); const r=(idx/GCOLS)|0,c=idx%GCOLS;
+      while(q.length){ const idx=q.pop(); cells.push(idx);
+        const r=(idx/GCOLS)|0,c=idx%GCOLS;
         const nb=[]; if(r>0)nb.push(idx-GCOLS); if(r<GROWS-1)nb.push(idx+GCOLS); if(c>0)nb.push(idx-1); if(c<GCOLS-1)nb.push(idx+1);
-        for(const j of nb){ if(!visited[j]&&test(j)){ visited[j]=1; q.push(j);} } }
-      const pts=cells.map(idx=>[GY0+((idx/GCOLS)|0)*STEP+STEP/2, GX0+(idx%GCOLS)*STEP+STEP/2]);
-      let sy=0; for(const p of pts) sy+=p[0]; const clat=sy/pts.length;
+        for(const j of nb){ if(!visited[j]&&isOn(j)){ visited[j]=1; q.push(j); } } }
+      const ring=cellsToRing(cells); if(!ring) continue;
+      let sy=0; for(const idx of cells) sy+=(GY0+((idx/GCOLS)|0)*STEP+STEP/2); const clat=sy/cells.length;
       const cellKm=STEP*DEGKM*(STEP*DEGKM*Math.cos(clat*Math.PI/180));
+      const km2=cells.length*cellKm;
       const stSet=new Set();
       if(type==='overlap'){ for(let si=0;si<N;si++) if(masks[si][i]) stSet.add(states[si].name); }
       else { for(const idx of cells){ const r=(idx/GCOLS)|0,c=idx%GCOLS;
         const nb=[]; if(r>0)nb.push(idx-GCOLS); if(r<GROWS-1)nb.push(idx+GCOLS); if(c>0)nb.push(idx-1); if(c<GCOLS-1)nb.push(idx+1);
-        for(const j of nb){ if(cov[j]>0) for(let si=0;si<N;si++) if(masks[si][j]) stSet.add(states[si].name); } } }
-      issues.push({type, km2:pts.length*cellKm, states:[...stSet], ring:convexHull(pts)});
+        for(const j of nb){ if(j>=0&&j<cov.length && cov[j]>0) for(let si=0;si<N;si++) if(masks[si][j]) stSet.add(states[si].name); } } }
+      out.push({type, km2, states:[...stSet], ring});
     }
+    return out;
   }
-  collect(i=>cov[i]>=2,'overlap');
-  collect(i=>cov[i]===0&&!outside[i],'gap');
+  const overlaps=floodFromSeed(overlapSeed, i=>cov[i]>=2, 'overlap');
+  const gaps=floodFromSeed(gapSeed, i=>cov[i]===0&&!outside[i], 'gap');
+  const issues=overlaps.concat(gaps).filter(it=> it.km2>=MIN_AREA_KM2).sort((a,b)=>b.km2-a.km2);
   return issues;
+}
+function fitIssue(ring){
+  let b=L.latLngBounds(ring);
+  const mz=b.getNorth()-b.getSouth(), mx=b.getEast()-b.getWest(), MIN=0.6;
+  if(mz<MIN||mx<MIN){ const c=b.getCenter(); b=L.latLngBounds([c.lat-MIN/2,c.lng-MIN/2],[c.lat+MIN/2,c.lng+MIN/2]); }
+  map.fitBounds(b.pad(1.3));
 }
 function renderIssues(){
   issueGroup.clearLayers(); issueLayers.length=0;
@@ -487,11 +514,19 @@ function renderIssues(){
     poly.addTo(issueGroup); issueLayers.push(poly);
     const b=document.createElement('button'); b.className='iss';
     b.innerHTML='<span class="tag" style="background:'+color+'"></span>'+Math.round(it.km2).toLocaleString()+' km² · '+(it.states.join('/')||'多州');
-    b.onclick=()=>{ map.fitBounds(poly.getBounds().pad(1.2)); setStatus((it.type==='overlap'?'重叠区 ':'缝隙区 ')+Math.round(it.km2).toLocaleString()+' km²，涉及 '+it.states.join('、')); };
+    b.onclick=()=>{ fitIssue(it.ring); setStatus((it.type==='overlap'?'重叠区 ':'缝隙区 ')+Math.round(it.km2).toLocaleString()+' km²，涉及 '+it.states.join('、')); };
     box.appendChild(b);
   });
   const gapN=issues.length-ov;
   setStatus('问题区实时演算完成（'+(t1-t0).toFixed(0)+'ms）｜重叠 '+ov+' 处 '+Math.round(ovk).toLocaleString()+' km²，缝隙 '+gapN+' 处 '+Math.round(gpk).toLocaleString()+' km²');
+}
+// 编辑后若已勾选"显示问题区"，自动防抖重算
+let issueTimer=null;
+function afterEdit(){
+  if(document.getElementById('chkIssues').checked){
+    clearTimeout(issueTimer);
+    issueTimer=setTimeout(()=>{ if(document.getElementById('chkIssues').checked) renderIssues(); }, 200);
+  }
 }
 document.getElementById('chkIssues').onchange=e=>{
   const box=document.getElementById('issueList');
