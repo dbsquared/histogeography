@@ -70,7 +70,7 @@ jizhou_step1*/
 auto_seg_diag/
 *.bak
 *_bak*/
-*_refine_bak
+*refine_bak
 xuzhou_*.py
 xuzhou_*.svg
 xuzhou_*_diag.html
