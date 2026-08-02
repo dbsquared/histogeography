@@ -44,12 +44,14 @@
     background:rgba(30,20,10,0.72); color:#ffe7c2; border:1px solid #7a5230;
     border-radius:3px; padding:0 3px; font-size:11px; font-weight:bold;
     white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
   }
   .plabel {
     color:#fff; font-weight:bold;
     font-size:calc(8px * var(--lscale,1));
     text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000;
     white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
     display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:100%; box-sizing:border-box;
   }
@@ -58,6 +60,7 @@
     font-size:calc(9px * var(--lscale,1));
     text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000;
     white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
     display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:100%; box-sizing:border-box;
   }
@@ -66,6 +69,7 @@
     font-size:calc(8px * var(--lscale,1));
     text-shadow:0 0 3px #06203f,0 0 3px #06203f,1px 1px 2px #06203f;
     white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
     display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:100%; box-sizing:border-box;
   }
@@ -83,7 +87,7 @@
     -1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;
   white-space:nowrap; pointer-events:none;
   display:inline-block; line-height:18px;
-  transform:translate(-50%,-50%);
+  transform:translate(calc(-50% + var(--lx,0px)), calc(-50% + var(--ly,0px)));
   letter-spacing:2px;
   opacity:0.85;
 }
@@ -94,7 +98,7 @@
     -1px -1px 1px #000,1px -1px 1px #000,-1px 1px 1px #000;
   white-space:nowrap; pointer-events:none;
   display:inline-block; line-height:9px;
-  transform:translate(8px,-50%);
+  transform:translate(calc(8px + var(--lx,0px)), calc(-50% + var(--ly,0px)));
 }
 .hanseat-label.capital {
   color:#ffd24d;
@@ -106,14 +110,13 @@
 }
 /* ── 主要城市图层 ── */
 .citypt { pointer-events:auto; cursor:help; }
-.citypt svg { display:block; overflow:visible; }.tk-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(13px,-50%);text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.tk-label.city{color:#ffd479;}.tk-label.pass{color:#cfd8dc;}.tk-label.ford{color:#90caf9;}.tk-label.battle{color:#ffd24d;}
-.lbl-collided{display:none !important;}
+.citypt svg { display:block; overflow:visible; }.tk-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.tk-label.city{color:#ffd479;}.tk-label.pass{color:#cfd8dc;}.tk-label.ford{color:#90caf9;}.tk-label.battle{color:#ffd24d;}
 .citylabel {
   font-weight:bold; white-space:nowrap; pointer-events:none;
   font-size:calc(10px * var(--lscale,1));
   line-height:14px;
   display:inline-block;
-  transform:translate(8px, -50%);
+  transform:translate(calc(8px + var(--lx,0px)), calc(-50% + var(--ly,0px)));
   transform-origin:left center;
 }
 .citylabel.capital         { color:#9fe5f5; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
@@ -241,11 +244,27 @@ function updateLabelScale(){
 map.on('zoomend', updateLabelScale);
 updateLabelScale();
 
-// ── 全局标签自动防重叠（贪心算法：按优先级保留重要标签，重叠者隐藏）──
+// ── 全局标签自动防重叠（重叠的标签自动挪到附近空白处，绝不隐藏）──
 const _LBL_SEL  = '.clabel,.plabel,.rlabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label';
 const _LBL_PAD  = 2;                           // 像素间距，避免贴边
 const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
+// 候选偏移：从“原位”开始，按半径递增向 8 个方向扇形展开（重叠标签挪到附近空白，绝不隐藏）
+const _DIRS = [
+  [0,0],
+  [12,0],[-12,0],[0,-11],[0,11],
+  [12,-11],[-12,-11],[12,11],[-12,11],
+  [24,0],[-24,0],
+  [24,-16],[-24,-16],[24,16],[-24,16],
+  [0,-22],[0,22],
+  [36,0],[-36,0],
+  [36,-20],[-36,-20],[36,20],[-36,20],
+  [0,-34],[0,34],
+  [48,0],[-48,0],
+  [48,-26],[-48,-26],[48,26],[-48,26],
+  [0,-46],[0,46],
+  [60,0],[-60,0]
+];
 function _lblPriority(el){
   const c = el.className || '';
   if(c.indexOf('hanstate-label')>=0) return 92;
@@ -273,41 +292,49 @@ function _labelBox(el){
   const fs = parseFloat(cs.fontSize)||12;
   _LBL_CTX.font = (cs.fontWeight||'400')+' '+fs+'px '+(cs.fontFamily||'sans-serif');
   const tw = _LBL_CTX.measureText(text).width;
-  const w = Math.min(rb.width, tw+4);
-  const h = Math.min(rb.height, fs*1.25+4);
+  const w = tw + 4;                 // 用文字实测宽（省名/河流/海拔等图标盒溢出的也准）
+  const h = Math.ceil(fs*1.25) + 4; // 用字号实测高
   const cx = rb.left + rb.width/2, cy = rb.top + rb.height/2;
   return { left:cx-w/2, right:cx+w/2, top:cy-h/2, bottom:cy+h/2 };
+}
+function _lblOverlap(a,b,pad){
+  return !(a.right+pad <= b.left-pad || a.left-pad >= b.right+pad ||
+           a.bottom+pad <= b.top-pad || a.top-pad >= b.bottom+pad);
 }
 function applyLabelCollision(){
   if(!map || !map._loaded) return;
   const mapEl = map.getContainer();
   const all = Array.prototype.slice.call(mapEl.querySelectorAll(_LBL_SEL));
-  for(let i=0;i<all.length;i++) all[i].classList.remove('lbl-collided');  // 先全部显示
-  // 防重叠策略：仅当某标签会压住“更高优先级”标签时才隐藏它；
-  // 同优先级/低优先级之间的重叠允许共存 —— 否则放大后地理相近的标签会成批改被隐藏。
+  for(let i=0;i<all.length;i++){ all[i].style.setProperty('--lx','0px'); all[i].style.setProperty('--ly','0px'); }
   const items = [];
   for(let i=0;i<all.length;i++){
     const box = _labelBox(all[i]);
     if(!box) continue;
     items.push({ el:all[i], box:box, prio:_lblPriority(all[i]) });
   }
-  const placed = [];                                     // {box,prio} 已保留标签
-  items.sort((a,b)=> b.prio - a.prio);
+  items.sort((a,b)=> b.prio - a.prio);   // 高优先级先落位（占原位），低优先级让位挪走
+  const placed = [];
   for(let i=0;i<items.length;i++){
     const a = items[i].box;
-    let hit = false;
-    for(let j=0;j<placed.length;j++){
-      const pp = placed[j];
-      if(pp.prio <= items[i].prio) continue;             // 仅遮挡更高优先级时才隐藏
-      if(!(a.right+_LBL_PAD <= pp.box.left-_LBL_PAD ||
-           a.left -_LBL_PAD >= pp.box.right+_LBL_PAD ||
-           a.bottom+_LBL_PAD <= pp.box.top -_LBL_PAD ||
-           a.top  -_LBL_PAD >= pp.box.bottom+_LBL_PAD)){ hit=true; break; }
+    let chosen = null;
+    for(let k=0;k<_DIRS.length;k++){
+      const dx=_DIRS[k][0], dy=_DIRS[k][1];
+      const cand = { left:a.left+dx, right:a.right+dx, top:a.top+dy, bottom:a.bottom+dy };
+      let ok=true;
+      for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)){ ok=false; break; } }
+      if(ok){ chosen=[dx,dy]; break; }
     }
-    if(hit) items[i].el.classList.add('lbl-collided');
-    else placed.push({ box:a, prio:items[i].prio });
+    if(chosen){
+      items[i].el.style.setProperty('--lx', chosen[0]+'px');
+      items[i].el.style.setProperty('--ly', chosen[1]+'px');
+      placed.push({ box:{left:a.left+chosen[0],right:a.right+chosen[0],top:a.top+chosen[1],bottom:a.bottom+chosen[1]}, prio:items[i].prio });
+    } else {
+      // 实在找不到空位：留在原位（宁可轻微重叠，也绝不消失）
+      placed.push({ box:a, prio:items[i].prio });
+    }
   }
-}let _collideScheduled = false;
+}
+let _collideScheduled = false;
 function scheduleCollision(){
   if(_collideScheduled) return;
   _collideScheduled = true;
@@ -317,6 +344,7 @@ map.on('moveend', scheduleCollision);
 map.on('zoomend', scheduleCollision);
 map.on('layeradd', scheduleCollision);
 map.on('layerremove', scheduleCollision);
+scheduleCollision();   // 初始整理一次
 
 // 1) 地形底图
 const baseLayer=L.imageOverlay('base_terrain.png', BOUNDS, {opacity:1});
