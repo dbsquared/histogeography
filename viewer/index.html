@@ -661,6 +661,7 @@ function tkIconSVG(category, size){
     '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>' + glyph + '</svg>';
 }
 const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
+const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
 (function(){
   const D = window.THREE_KINGDOM_SITES;
   if(!D){ console.warn('三国地标数据未加载'); return; }
@@ -681,14 +682,20 @@ const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(),
       } else {
         tip='<b>'+f.name+'</b> · '+tkMeta[cat].label+'<br/>今址：'+f.modern+'（'+f.zhou+'）<br/>'+(f.desc||'');
       }
-      marker.bindTooltip(tip,{direction:'top', offset:[0,-s/2], opacity:0.95});
+      marker.bindPopup(tip,{className:'tk-popup', maxWidth:260});   // 仅点选时弹出详情
       tkLayer[cat].addLayer(marker);
+      // 常驻名称标签（图标右侧，随图层开关；nudge 让标签跟随图标偏移对齐）
+      tkLabelLayer[cat].addLayer(L.marker(ll,{
+        icon:L.divIcon({ className:'', html:'<div class="tk-label '+cat+'">'+f.name+'</div>',
+          iconSize:[0,0], iconAnchor:[nudge[0], nudge[1]] }),
+        interactive:false, keyboard:false
+      }));
     });
   });
   console.log('三国地标已加载：城池'+D.city.length+' 关隘'+D.pass.length+' 津渡'+D.ford.length+' 战役'+D.battle.length);
 })();
-function showTK(cat){ tkLayer[cat].addTo(map); }
-function hideTK(cat){ map.removeLayer(tkLayer[cat]); }
+function showTK(cat){ tkLayer[cat].addTo(map); tkLabelLayer[cat].addTo(map); }
+function hideTK(cat){ map.removeLayer(tkLayer[cat]); map.removeLayer(tkLabelLayer[cat]); }
 ['city','pass','ford','battle'].forEach(cat=>{
   const cb=document.getElementById('cb-tk-'+cat);
   if(cb){
