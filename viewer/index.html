@@ -251,27 +251,49 @@ const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
 // 候选偏移：从“原位”开始，按半径递增向 8 个方向扇形展开（重叠标签挪到附近空白，绝不隐藏）
 // 螺旋候选位：360°均匀采样，按距原点距离排序，重叠时可向任意方向找空地
+// 螺旋候选位：360°均匀采样，按距原点距离排序，重叠时可向任意方向找空地
 const _DIRS = (function(){
   const dirs = [[0,0]];
   const seen = new Set(['0,0']);
   const add = (x,y)=>{ const k=Math.round(x)+','+Math.round(y); if(!seen.has(k)){seen.add(k); dirs.push([Math.round(x),Math.round(y)]);} };
   for(let r=14; r<=90; r+=14){
-    const n = Math.max(8, Math.round(2*Math.PI*r/18)); // 周长越大采样越密
-    for(let i=0;i<n;i++){
-      const a = (i/n)*Math.PI*2;
-      add(r*Math.cos(a), r*Math.sin(a));
-    }
+    const n = Math.max(8, Math.round(2*Math.PI*r/18));
+    for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2; add(r*Math.cos(a), r*Math.sin(a)); }
   }
-  // 额外补一些更远方向，保证大标签也能找到空地
   for(let r=100; r<=140; r+=20){
     const n = Math.max(12, Math.round(2*Math.PI*r/22));
-    for(let i=0;i<n;i++){
-      const a = (i/n)*Math.PI*2;
-      add(r*Math.cos(a), r*Math.sin(a));
-    }
+    for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2; add(r*Math.cos(a), r*Math.sin(a)); }
   }
   return dirs;
 })();
+// 图标关联标签的候选位：以图标中心为圆心，从“自然位（默认在图标右侧）”开始，
+// 按角度远近+半径递增 360° 找最近空地，优先保持与图标的距离不变，只转方向。
+function _iconCandidates(baseDx, baseDy){
+  const baseR = Math.hypot(baseDx, baseDy) || 18;
+  const baseAng = Math.atan2(baseDy, baseDx);
+  const radii = [baseR, baseR+12, baseR+24, baseR+40, baseR+58, baseR+80];
+  const list = [];
+  const seen = new Set();
+  for(let ri=0; ri<radii.length; ri++){
+    const r = radii[ri];
+    const n = Math.max(8, Math.round(2*Math.PI*r/16));
+    const angs = [];
+    for(let i=0;i<n;i++) angs.push(baseAng + (i/n)*Math.PI*2);
+    // 按与自然位的角度差排序（先试左右，再试背后）
+    angs.sort((a,b)=>{
+      const da = Math.abs(((a-baseAng+Math.PI)%(Math.PI*2))-Math.PI);
+      const db = Math.abs(((b-baseAng+Math.PI)%(Math.PI*2))-Math.PI);
+      return da-db;
+    });
+    for(let a of angs){
+      const dx = Math.round(r*Math.cos(a));
+      const dy = Math.round(r*Math.sin(a));
+      const k = dx+','+dy;
+      if(!seen.has(k)){ seen.add(k); list.push([dx,dy]); }
+    }
+  }
+  return list;
+}
 function _lblPriority(el){
   const c = el.className || '';
   if(c.indexOf('hanstate-label')>=0) return 92;
@@ -313,10 +335,10 @@ function applyLabelCollision(){
   const mapEl = map.getContainer();
   const all = Array.prototype.slice.call(mapEl.querySelectorAll(_LBL_SEL));
   for(let i=0;i<all.length;i++){ all[i].style.setProperty('--lx','0px'); all[i].style.setProperty('--ly','0px'); }
-  // 图标障碍（三国徽章 + 城市点）：标签不得压住图标；用 data-tkid 让标签避开“自己的”图标
+  // 图标障碍
   const obstacles = Array.prototype.slice.call(mapEl.querySelectorAll('.tkpt svg[data-tkid], .citypt svg[data-tkid]')).map(sv=>{
     const r = sv.getBoundingClientRect();
-    return { tid: sv.getAttribute('data-tkid'), box:{left:r.left,right:r.right,top:r.top,bottom:r.bottom} };
+    return { tid: sv.getAttribute('data-tkid'), box:{left:r.left,right:r.right,top:r.top,bottom:r.bottom}, cx:(r.left+r.right)/2, cy:(r.top+r.bottom)/2 };
   });
   const items = [];
   for(let i=0;i<all.length;i++){
@@ -324,34 +346,60 @@ function applyLabelCollision(){
     if(!box) continue;
     items.push({ el:all[i], box:box, prio:_lblPriority(all[i]), tid:all[i].getAttribute('data-tkid') });
   }
-  items.sort((a,b)=> b.prio - a.prio);   // 高优先级先落位（占原位），低优先级让位挪走
+  items.sort((a,b)=> b.prio - a.prio);
   const placed = [];
   for(let i=0;i<items.length;i++){
     const a = items[i].box;
     const ownTid = items[i].tid;
-    // 只保留与本标签可能相交的图标障碍（±90px 窗口），减少运算
-    const nearObs = obstacles.filter(ob => !(ob.box.right < a.left-90 || ob.box.left > a.right+90 || ob.box.bottom < a.top-90 || ob.box.top > a.bottom+90));
+    const ownIcon = ownTid ? obstacles.find(ob=>ob.tid===ownTid) : null;
+    const nearObs = obstacles.filter(ob => !(ob.box.right < a.left-120 || ob.box.left > a.right+120 || ob.box.bottom < a.top-120 || ob.box.top > a.bottom+120));
     let chosen = null;
-    for(let k=0;k<_DIRS.length;k++){
-      const dx=_DIRS[k][0], dy=_DIRS[k][1];
-      const cand = { left:a.left+dx, right:a.right+dx, top:a.top+dy, bottom:a.bottom+dy };
-      let ok=true;
-      for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)){ ok=false; break; } }
-      if(ok){
-        for(let j=0;j<nearObs.length;j++){
-          const ob=nearObs[j];
-          if(ob.tid===ownTid) continue;          // 自己的图标不算障碍
-          if(_lblOverlap(cand, ob.box, _LBL_PAD)){ ok=false; break; }
+
+    // 有专属图标的标签：以图标中心为基准 360° 找最近空地
+    if(ownIcon){
+      const cx = (a.left+a.right)/2, cy = (a.top+a.bottom)/2;
+      const baseDx = cx - ownIcon.cx, baseDy = cy - ownIcon.cy; // 自然位相对图标中心的偏移
+      const candidates = _iconCandidates(baseDx, baseDy);
+      for(let k=0;k<candidates.length;k++){
+        const [dx,dy] = candidates[k];
+        const shiftX = dx - baseDx, shiftY = dy - baseDy;
+        const cand = { left:a.left+shiftX, right:a.right+shiftX, top:a.top+shiftY, bottom:a.bottom+shiftY };
+        let ok=true;
+        for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)){ ok=false; break; } }
+        if(ok){
+          for(let j=0;j<nearObs.length;j++){
+            const ob=nearObs[j];
+            if(ob.tid===ownTid) continue;
+            if(_lblOverlap(cand, ob.box, _LBL_PAD)){ ok=false; break; }
+          }
         }
+        if(ok){ chosen=[shiftX,shiftY]; break; }
       }
-      if(ok){ chosen=[dx,dy]; break; }
     }
+
+    // 无图标或图标周围没空位：退化为通用螺旋
+    if(!chosen){
+      for(let k=0;k<_DIRS.length;k++){
+        const dx=_DIRS[k][0], dy=_DIRS[k][1];
+        const cand = { left:a.left+dx, right:a.right+dx, top:a.top+dy, bottom:a.bottom+dy };
+        let ok=true;
+        for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)){ ok=false; break; } }
+        if(ok){
+          for(let j=0;j<nearObs.length;j++){
+            const ob=nearObs[j];
+            if(ob.tid===ownTid) continue;
+            if(_lblOverlap(cand, ob.box, _LBL_PAD)){ ok=false; break; }
+          }
+        }
+        if(ok){ chosen=[dx,dy]; break; }
+      }
+    }
+
     if(chosen){
       items[i].el.style.setProperty('--lx', chosen[0]+'px');
       items[i].el.style.setProperty('--ly', chosen[1]+'px');
       placed.push({ box:{left:a.left+chosen[0],right:a.right+chosen[0],top:a.top+chosen[1],bottom:a.bottom+chosen[1]}, prio:items[i].prio });
     } else {
-      // 实在找不到空位：留在原位（宁可轻微重叠，也绝不消失）
       placed.push({ box:a, prio:items[i].prio });
     }
   }
