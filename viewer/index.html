@@ -833,7 +833,7 @@ function tkFusedIcon(mainCat, badges, size, tid){
     if(bc==='battle'){                 // 战役：两把交叉的刀直接叠在城池上方，不再做小角标
       if(battleDone) return; battleDone=true;
       const buid = Math.random().toString(36).slice(2,8);
-      inner += '<g transform="translate(0,-11) scale(0.9)">'+tkGlyph('battle',buid)+'</g>';
+      inner += '<g transform="translate(0,-10) scale(1.0)">'+tkGlyph('battle',buid)+'</g>';
       return;
     }
     if(seen[bc]) return; seen[bc]=1;
@@ -847,7 +847,7 @@ const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(),
 const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
 
 const TK_FUSE_DEG = 0.25;            // 融合半径（度）：距离小于此值的地标合成一个标记
-const tkTypeOrder = { city:0, battle:1, pass:2, ford:3 };
+const tkTypeOrder = { city:0, pass:1, ford:2, battle:3 };
 const tkMergeLayer = L.layerGroup();
 const tkMergeLabelLayer = L.layerGroup();
 const _tkD = window.THREE_KINGDOM_SITES;
