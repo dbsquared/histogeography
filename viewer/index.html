@@ -250,20 +250,28 @@ const _LBL_PAD  = 2;                           // 像素间距，避免贴边
 const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
 // 候选偏移：从“原位”开始，按半径递增向 8 个方向扇形展开（重叠标签挪到附近空白，绝不隐藏）
-const _DIRS = [
-  [0,0],
-  [14,0],[-14,0],[0,-12],[0,12],
-  [16,-12],[-16,-12],[16,12],[-16,12],
-  [28,0],[-28,0],[28,-18],[-28,-18],[28,18],[-28,18],
-  [0,-24],[0,24],
-  [42,0],[-42,0],[42,-22],[-42,-22],[42,22],[-42,22],
-  [0,-36],[0,36],
-  [56,0],[-56,0],[56,-28],[-56,-28],[56,28],[-56,28],
-  [0,-50],[0,50],
-  [70,0],[-70,0],[70,-34],[-70,-34],[70,34],[-70,34],
-  [0,-64],[0,64],
-  [84,0],[-84,0],[84,-40],[-84,-40],[84,40],[-84,40]
-];
+// 螺旋候选位：360°均匀采样，按距原点距离排序，重叠时可向任意方向找空地
+const _DIRS = (function(){
+  const dirs = [[0,0]];
+  const seen = new Set(['0,0']);
+  const add = (x,y)=>{ const k=Math.round(x)+','+Math.round(y); if(!seen.has(k)){seen.add(k); dirs.push([Math.round(x),Math.round(y)]);} };
+  for(let r=14; r<=90; r+=14){
+    const n = Math.max(8, Math.round(2*Math.PI*r/18)); // 周长越大采样越密
+    for(let i=0;i<n;i++){
+      const a = (i/n)*Math.PI*2;
+      add(r*Math.cos(a), r*Math.sin(a));
+    }
+  }
+  // 额外补一些更远方向，保证大标签也能找到空地
+  for(let r=100; r<=140; r+=20){
+    const n = Math.max(12, Math.round(2*Math.PI*r/22));
+    for(let i=0;i<n;i++){
+      const a = (i/n)*Math.PI*2;
+      add(r*Math.cos(a), r*Math.sin(a));
+    }
+  }
+  return dirs;
+})();
 function _lblPriority(el){
   const c = el.className || '';
   if(c.indexOf('hanstate-label')>=0) return 92;
