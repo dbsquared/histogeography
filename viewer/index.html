@@ -694,15 +694,29 @@ const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGro
   });
   console.log('三国地标已加载：城池'+D.city.length+' 关隘'+D.pass.length+' 津渡'+D.ford.length+' 战役'+D.battle.length);
 })();
-function showTK(cat){ tkLayer[cat].addTo(map); tkLabelLayer[cat].addTo(map); }
-function hideTK(cat){ map.removeLayer(tkLayer[cat]); map.removeLayer(tkLabelLayer[cat]); }
+// 三国地标：图标层随复选框常显；名称标签仅在放大到省/州级(可见经度跨度<=阈值)时显示，避免全国视图约90个标签糊成一团
+const TK_LABEL_LON = 22;                 // 可见经度跨度阈值(度)：>此值=全国视图，隐藏标签
+const tkChecked = { city:true, pass:true, ford:true, battle:true };
+function tkLabelsVisible(){ const b=map.getBounds(); return (b.getEast()-b.getWest()) <= TK_LABEL_LON; }
+function refreshTKLabels(){
+  const show = tkLabelsVisible();
+  ['city','pass','ford','battle'].forEach(cat=>{
+    const onMap = map.hasLayer(tkLabelLayer[cat]);
+    if(tkChecked[cat] && show && !onMap) tkLabelLayer[cat].addTo(map);
+    else if((!tkChecked[cat] || !show) && onMap) map.removeLayer(tkLabelLayer[cat]);
+  });
+}
+function showTK(cat){ tkLayer[cat].addTo(map); tkChecked[cat]=true; refreshTKLabels(); }
+function hideTK(cat){ map.removeLayer(tkLayer[cat]); tkChecked[cat]=false; refreshTKLabels(); }
 ['city','pass','ford','battle'].forEach(cat=>{
   const cb=document.getElementById('cb-tk-'+cat);
   if(cb){
     cb.onchange = e => e.target.checked ? showTK(cat) : hideTK(cat);
-    if(cb.checked) showTK(cat);   // 默认全开
+    if(cb.checked) showTK(cat);   // 默认全开；标签是否显示由 refreshTKLabels 按缩放决定
   }
 });
+map.on('zoomend', refreshTKLabels);   // 缩放时按级别显隐名称标签
+refreshTKLabels();                    // 初始(全图视图)隐藏标签
 
 // 3) 悬停查海拔 (数据已通过 data.js 注入 window.APP_DATA)
 let elevData=null, elevMeta=null;
