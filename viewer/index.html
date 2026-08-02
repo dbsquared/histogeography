@@ -266,30 +266,28 @@ const _DIRS = (function(){
   }
   return dirs;
 })();
-// 图标关联标签的候选位：以图标中心为圆心，从“自然位（默认在图标右侧）”开始，
-// 按角度远近+半径递增 360° 找最近空地，优先保持与图标的距离不变，只转方向。
-function _iconCandidates(baseDx, baseDy){
-  const baseR = Math.hypot(baseDx, baseDy) || 18;
+// 图标关联标签的候选位：先尝试自然位(默认右侧)，然后从图标中心由近到远 360° 找空地。
+// 方向偏好：右 → 上 → 下 → 右上 → 右下 → 左上 → 左下 → 左，再扩半径。
+function _iconCandidates(baseDx, baseDy, iconR, labelW, labelH){
   const baseAng = Math.atan2(baseDy, baseDx);
-  const radii = [baseR, baseR+12, baseR+24, baseR+40, baseR+58, baseR+80];
+  const minR = Math.max(iconR + Math.max(labelW,labelH)/2 + 4, 14);
+  const radii = [];
+  for(let r=minR; r<=110; r += (r<45 ? 10 : 16)) radii.push(r);
+  const pref = [0, -Math.PI/2, Math.PI/2, -Math.PI/4, Math.PI/4, -3*Math.PI/4, 3*Math.PI/4, Math.PI];
   const list = [];
   const seen = new Set();
+  // 0) 自然位优先
+  const natK = Math.round(baseDx)+','+Math.round(baseDy);
+  seen.add(natK); list.push([Math.round(baseDx), Math.round(baseDy)]);
+  // 1) 由近到远，按固定方向偏好
   for(let ri=0; ri<radii.length; ri++){
     const r = radii[ri];
-    const n = Math.max(8, Math.round(2*Math.PI*r/16));
-    const angs = [];
-    for(let i=0;i<n;i++) angs.push(baseAng + (i/n)*Math.PI*2);
-    // 按与自然位的角度差排序（先试左右，再试背后）
-    angs.sort((a,b)=>{
-      const da = Math.abs(((a-baseAng+Math.PI)%(Math.PI*2))-Math.PI);
-      const db = Math.abs(((b-baseAng+Math.PI)%(Math.PI*2))-Math.PI);
-      return da-db;
-    });
-    for(let a of angs){
+    for(let k=0;k<pref.length;k++){
+      const a = baseAng + pref[k];
       const dx = Math.round(r*Math.cos(a));
       const dy = Math.round(r*Math.sin(a));
-      const k = dx+','+dy;
-      if(!seen.has(k)){ seen.add(k); list.push([dx,dy]); }
+      const key = dx+','+dy;
+      if(!seen.has(key)){ seen.add(key); list.push([dx,dy]); }
     }
   }
   return list;
@@ -344,9 +342,9 @@ function applyLabelCollision(){
   for(let i=0;i<all.length;i++){
     const box = _labelBox(all[i]);
     if(!box) continue;
-    items.push({ el:all[i], box:box, prio:_lblPriority(all[i]), tid:all[i].getAttribute('data-tkid') });
+    items.push({ el:all[i], box:box, prio:_lblPriority(all[i]), tid:all[i].getAttribute('data-tkid') , idx:i });
   }
-  items.sort((a,b)=> b.prio - a.prio);
+  items.sort((a,b)=> b.prio - a.prio || a.idx - b.idx);
   const placed = [];
   for(let i=0;i<items.length;i++){
     const a = items[i].box;
@@ -359,7 +357,8 @@ function applyLabelCollision(){
     if(ownIcon){
       const cx = (a.left+a.right)/2, cy = (a.top+a.bottom)/2;
       const baseDx = cx - ownIcon.cx, baseDy = cy - ownIcon.cy; // 自然位相对图标中心的偏移
-      const candidates = _iconCandidates(baseDx, baseDy);
+      const lw = a.right-a.left, lh = a.bottom-a.top;
+      const candidates = _iconCandidates(baseDx, baseDy, Math.max(ownIcon.box.right-ownIcon.box.left, ownIcon.box.bottom-ownIcon.box.top)/2, lw, lh);
       for(let k=0;k<candidates.length;k++){
         const [dx,dy] = candidates[k];
         const shiftX = dx - baseDx, shiftY = dy - baseDy;
