@@ -107,6 +107,7 @@
 /* ── 主要城市图层 ── */
 .citypt { pointer-events:auto; cursor:help; }
 .citypt svg { display:block; overflow:visible; }.tk-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(13px,-50%);text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.tk-label.city{color:#ffd479;}.tk-label.pass{color:#cfd8dc;}.tk-label.ford{color:#90caf9;}.tk-label.battle{color:#ffd24d;}
+.lbl-collided{display:none !important;}
 .citylabel {
   font-weight:bold; white-space:nowrap; pointer-events:none;
   font-size:calc(10px * var(--lscale,1));
@@ -239,6 +240,87 @@ function updateLabelScale(){
 }
 map.on('zoomend', updateLabelScale);
 updateLabelScale();
+
+// ── 全局标签自动防重叠（贪心算法：按优先级保留重要标签，重叠者隐藏）──
+const _LBL_SEL  = '.clabel,.plabel,.rlabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label';
+const _LBL_OBST = '.tkpt,.citypt';            // 图标也作为障碍，标签不得压住图标
+const _LBL_PAD  = 2;                           // 像素间距，避免贴边
+const _LBL_CANVAS = document.createElement('canvas');
+const _LBL_CTX = _LBL_CANVAS.getContext('2d');
+function _lblPriority(el){
+  const c = el.className || '';
+  if(c.indexOf('hanstate-label')>=0) return 92;
+  if(c.indexOf('citylabel')>=0 && c.indexOf('ancient_capital')>=0) return 82;
+  if(c.indexOf('citylabel')>=0 && c.indexOf('capital')>=0) return 90;
+  if(c.indexOf('plabel')>=0) return 84;
+  if(c.indexOf('hanseat-label')>=0 && c.indexOf('capital')>=0) return 78;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('battle')>=0) return 72;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('city')>=0) return 70;
+  if(c.indexOf('citylabel')>=0 && c.indexOf('battle')>=0) return 66;
+  if(c.indexOf('hanseat-label')>=0) return 46;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('pass')>=0) return 44;
+  if(c.indexOf('rlabel')>=0) return 40;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('ford')>=0) return 36;
+  if(c.indexOf('clabel')>=0) return 20;
+  return 30;
+}
+function _labelBox(el){
+  const rb = el.getBoundingClientRect();
+  if(rb.width<2 || rb.height<2) return null;
+  if(el.querySelector('br')) return rb;                 // 多行：用元素盒
+  const text = (el.textContent||'').trim();
+  if(!text) return rb;
+  const cs = getComputedStyle(el);
+  const fs = parseFloat(cs.fontSize)||12;
+  _LBL_CTX.font = (cs.fontWeight||'400')+' '+fs+'px '+(cs.fontFamily||'sans-serif');
+  const tw = _LBL_CTX.measureText(text).width;
+  const w = Math.min(rb.width, tw+4);
+  const h = Math.min(rb.height, fs*1.25+4);
+  const cx = rb.left + rb.width/2, cy = rb.top + rb.height/2;
+  return { left:cx-w/2, right:cx+w/2, top:cy-h/2, bottom:cy+h/2 };
+}
+function applyLabelCollision(){
+  if(!map || !map._loaded) return;
+  const mapEl = map.getContainer();
+  const all = Array.prototype.slice.call(mapEl.querySelectorAll(_LBL_SEL));
+  for(let i=0;i<all.length;i++) all[i].classList.remove('lbl-collided');
+  const items = [];
+  for(let i=0;i<all.length;i++){
+    const box = _labelBox(all[i]);
+    if(!box) continue;
+    items.push({ el:all[i], box:box, prio:_lblPriority(all[i]) });
+  }
+  const placed = [];                                     // 已保留标签 + 图标障碍
+  const obs = mapEl.querySelectorAll(_LBL_OBST);
+  for(let i=0;i<obs.length;i++){
+    const rb = obs[i].getBoundingClientRect();
+    if(rb.width>=2 && rb.height>=2) placed.push(rb);
+  }
+  items.sort((a,b)=> b.prio - a.prio);
+  for(let i=0;i<items.length;i++){
+    const a = items[i].box;
+    let hit = false;
+    for(let j=0;j<placed.length;j++){
+      const b = placed[j];
+      if(!(a.right+_LBL_PAD <= b.left-_LBL_PAD ||
+           a.left -_LBL_PAD >= b.right+_LBL_PAD ||
+           a.bottom+_LBL_PAD <= b.top -_LBL_PAD ||
+           a.top  -_LBL_PAD >= b.bottom+_LBL_PAD)){ hit=true; break; }
+    }
+    if(hit) items[i].el.classList.add('lbl-collided');
+    else placed.push(a);
+  }
+}
+let _collideScheduled = false;
+function scheduleCollision(){
+  if(_collideScheduled) return;
+  _collideScheduled = true;
+  requestAnimationFrame(()=>{ _collideScheduled=false; applyLabelCollision(); });
+}
+map.on('moveend', scheduleCollision);
+map.on('zoomend', scheduleCollision);
+map.on('layeradd', scheduleCollision);
+map.on('layerremove', scheduleCollision);
 
 // 1) 地形底图
 const baseLayer=L.imageOverlay('base_terrain.png', BOUNDS, {opacity:1});
@@ -789,8 +871,9 @@ document.addEventListener('keydown',e=>{
 const ticks=[[0,5.4],[1000,16.0],[2000,26.7],[4000,48.1],[6000,69.5],[8000,91.0]];
 const box=document.getElementById('legend-ticks');
 ticks.forEach(([v,p])=>{
-  const s=document.createElement('span'); s.style.left=p+'%'; s.textContent=v; box.appendChild(s);
+  const s=document.createElement('span'); s.style.left=p+'%'; s.textContent=v;   box.appendChild(s);
 });
+scheduleCollision();
 </script>
 </body>
 </html>
