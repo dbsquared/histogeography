@@ -833,7 +833,7 @@ function tkFusedIcon(mainCat, badges, size, tid){
     if(bc==='battle'){                 // 战役：两把交叉的刀直接叠在城池上方，不再做小角标
       if(battleDone) return; battleDone=true;
       const buid = Math.random().toString(36).slice(2,8);
-      inner += '<g transform="translate(0,-13) scale(0.55)">'+tkGlyph('battle',buid)+'</g>';
+      inner += '<g transform="translate(0,-12) scale(0.78)">'+tkGlyph('battle',buid)+'</g>';
       return;
     }
     if(seen[bc]) return; seen[bc]=1;
