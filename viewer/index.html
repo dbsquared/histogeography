@@ -106,7 +106,7 @@
 }
 /* ── 主要城市图层 ── */
 .citypt { pointer-events:auto; cursor:help; }
-.citypt svg { display:block; overflow:visible; }.tk-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--lscale,1));letter-spacing:0;line-height:1;transform:translate(13px,-50%);text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.tk-label.city{color:#ffd479;}.tk-label.pass{color:#cfd8dc;}.tk-label.ford{color:#90caf9;}.tk-label.battle{color:#ffd24d;}
+.citypt svg { display:block; overflow:visible; }.tk-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(13px,-50%);text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.tk-label.city{color:#ffd479;}.tk-label.pass{color:#cfd8dc;}.tk-label.ford{color:#90caf9;}.tk-label.battle{color:#ffd24d;}
 .citylabel {
   font-weight:bold; white-space:nowrap; pointer-events:none;
   font-size:calc(10px * var(--lscale,1));
@@ -232,6 +232,10 @@ function updateLabelScale(){
   let s = Math.pow(1.28, map.getZoom() - baseZoom);
   s = Math.max(0.7, Math.min(2.4, s));
   document.documentElement.style.setProperty('--lscale', s);
+  // 三国地标标签字号随缩放：全图(大尺度)用小字、放大后相应变大；基准0.62使 overview 不糊
+  let ts = 0.62 * Math.pow(1.3, map.getZoom() - baseZoom);
+  ts = Math.max(0.5, Math.min(3.0, ts));
+  document.documentElement.style.setProperty('--tk-lscale', ts);
 }
 map.on('zoomend', updateLabelScale);
 updateLabelScale();
@@ -694,29 +698,16 @@ const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGro
   });
   console.log('三国地标已加载：城池'+D.city.length+' 关隘'+D.pass.length+' 津渡'+D.ford.length+' 战役'+D.battle.length);
 })();
-// 三国地标：图标层随复选框常显；名称标签仅在放大到省/州级(可见经度跨度<=阈值)时显示，避免全国视图约90个标签糊成一团
-const TK_LABEL_LON = 22;                 // 可见经度跨度阈值(度)：>此值=全国视图，隐藏标签
-const tkChecked = { city:true, pass:true, ford:true, battle:true };
-function tkLabelsVisible(){ const b=map.getBounds(); return (b.getEast()-b.getWest()) <= TK_LABEL_LON; }
-function refreshTKLabels(){
-  const show = tkLabelsVisible();
-  ['city','pass','ford','battle'].forEach(cat=>{
-    const onMap = map.hasLayer(tkLabelLayer[cat]);
-    if(tkChecked[cat] && show && !onMap) tkLabelLayer[cat].addTo(map);
-    else if((!tkChecked[cat] || !show) && onMap) map.removeLayer(tkLabelLayer[cat]);
-  });
-}
-function showTK(cat){ tkLayer[cat].addTo(map); tkChecked[cat]=true; refreshTKLabels(); }
-function hideTK(cat){ map.removeLayer(tkLayer[cat]); tkChecked[cat]=false; refreshTKLabels(); }
+// 三国地标：图标层与名称标签均随复选框常显；标签字号随缩放变化(全图小、放大变大), 由 --tk-lscale 控制
+function showTK(cat){ tkLayer[cat].addTo(map); tkLabelLayer[cat].addTo(map); }
+function hideTK(cat){ map.removeLayer(tkLayer[cat]); map.removeLayer(tkLabelLayer[cat]); }
 ['city','pass','ford','battle'].forEach(cat=>{
   const cb=document.getElementById('cb-tk-'+cat);
   if(cb){
     cb.onchange = e => e.target.checked ? showTK(cat) : hideTK(cat);
-    if(cb.checked) showTK(cat);   // 默认全开；标签是否显示由 refreshTKLabels 按缩放决定
+    if(cb.checked) showTK(cat);   // 默认全开
   }
 });
-map.on('zoomend', refreshTKLabels);   // 缩放时按级别显隐名称标签
-refreshTKLabels();                    // 初始(全图视图)隐藏标签
 
 // 3) 悬停查海拔 (数据已通过 data.js 注入 window.APP_DATA)
 let elevData=null, elevMeta=null;
