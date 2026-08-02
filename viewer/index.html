@@ -252,18 +252,17 @@ const _LBL_CTX = _LBL_CANVAS.getContext('2d');
 // 候选偏移：从“原位”开始，按半径递增向 8 个方向扇形展开（重叠标签挪到附近空白，绝不隐藏）
 const _DIRS = [
   [0,0],
-  [12,0],[-12,0],[0,-11],[0,11],
-  [12,-11],[-12,-11],[12,11],[-12,11],
-  [24,0],[-24,0],
-  [24,-16],[-24,-16],[24,16],[-24,16],
-  [0,-22],[0,22],
-  [36,0],[-36,0],
-  [36,-20],[-36,-20],[36,20],[-36,20],
-  [0,-34],[0,34],
-  [48,0],[-48,0],
-  [48,-26],[-48,-26],[48,26],[-48,26],
-  [0,-46],[0,46],
-  [60,0],[-60,0]
+  [14,0],[-14,0],[0,-12],[0,12],
+  [16,-12],[-16,-12],[16,12],[-16,12],
+  [28,0],[-28,0],[28,-18],[-28,-18],[28,18],[-28,18],
+  [0,-24],[0,24],
+  [42,0],[-42,0],[42,-22],[-42,-22],[42,22],[-42,22],
+  [0,-36],[0,36],
+  [56,0],[-56,0],[56,-28],[-56,-28],[56,28],[-56,28],
+  [0,-50],[0,50],
+  [70,0],[-70,0],[70,-34],[-70,-34],[70,34],[-70,34],
+  [0,-64],[0,64],
+  [84,0],[-84,0],[84,-40],[-84,-40],[84,40],[-84,40]
 ];
 function _lblPriority(el){
   const c = el.className || '';
@@ -306,22 +305,37 @@ function applyLabelCollision(){
   const mapEl = map.getContainer();
   const all = Array.prototype.slice.call(mapEl.querySelectorAll(_LBL_SEL));
   for(let i=0;i<all.length;i++){ all[i].style.setProperty('--lx','0px'); all[i].style.setProperty('--ly','0px'); }
+  // 图标障碍（三国徽章 + 城市点）：标签不得压住图标；用 data-tkid 让标签避开“自己的”图标
+  const obstacles = Array.prototype.slice.call(mapEl.querySelectorAll('.tkpt svg[data-tkid], .citypt svg[data-tkid]')).map(sv=>{
+    const r = sv.getBoundingClientRect();
+    return { tid: sv.getAttribute('data-tkid'), box:{left:r.left,right:r.right,top:r.top,bottom:r.bottom} };
+  });
   const items = [];
   for(let i=0;i<all.length;i++){
     const box = _labelBox(all[i]);
     if(!box) continue;
-    items.push({ el:all[i], box:box, prio:_lblPriority(all[i]) });
+    items.push({ el:all[i], box:box, prio:_lblPriority(all[i]), tid:all[i].getAttribute('data-tkid') });
   }
   items.sort((a,b)=> b.prio - a.prio);   // 高优先级先落位（占原位），低优先级让位挪走
   const placed = [];
   for(let i=0;i<items.length;i++){
     const a = items[i].box;
+    const ownTid = items[i].tid;
+    // 只保留与本标签可能相交的图标障碍（±90px 窗口），减少运算
+    const nearObs = obstacles.filter(ob => !(ob.box.right < a.left-90 || ob.box.left > a.right+90 || ob.box.bottom < a.top-90 || ob.box.top > a.bottom+90));
     let chosen = null;
     for(let k=0;k<_DIRS.length;k++){
       const dx=_DIRS[k][0], dy=_DIRS[k][1];
       const cand = { left:a.left+dx, right:a.right+dx, top:a.top+dy, bottom:a.bottom+dy };
       let ok=true;
       for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)){ ok=false; break; } }
+      if(ok){
+        for(let j=0;j<nearObs.length;j++){
+          const ob=nearObs[j];
+          if(ob.tid===ownTid) continue;          // 自己的图标不算障碍
+          if(_lblOverlap(cand, ob.box, _LBL_PAD)){ ok=false; break; }
+        }
+      }
       if(ok){ chosen=[dx,dy]; break; }
     }
     if(chosen){
@@ -634,8 +648,8 @@ function computeLabelPoint(ring){
   });
   console.log(`汉末十三州: ${visibleStates.length} 州已叠加`);
 })();
-function showHanBnd(){ hanBoundaryLayer.addTo(map); hanStateLabelLayer.addTo(map); hanCapitalLayer.addTo(map); }
-function hideHanBnd(){ map.removeLayer(hanBoundaryLayer); map.removeLayer(hanStateLabelLayer); map.removeLayer(hanCapitalLayer); }
+function showHanBnd(){ hanBoundaryLayer.addTo(map); hanStateLabelLayer.addTo(map); }   // 州界不再显示州府（用户要求）
+function hideHanBnd(){ map.removeLayer(hanBoundaryLayer); map.removeLayer(hanStateLabelLayer); }
 function showHanSeat(){ hanSeatLayer.addTo(map); hanSeatLabelLayer.addTo(map); }
 function hideHanSeat(){ map.removeLayer(hanSeatLayer); map.removeLayer(hanSeatLabelLayer); }
 document.getElementById('cb-han-bnd').onchange = e => e.target.checked ? showHanBnd() : hideHanBnd();
@@ -652,22 +666,22 @@ const cityTypeMeta = {
   battle:           { color:'#ff6b6b', shape:'triangle'}
 };
 // 形状 SVG：circle 实心圆+白描边；star 五角星+红描边；triangle 等边三角+白描边
-function cityShapeSVG(type){
+function cityShapeSVG(type, tid){
   const m = cityTypeMeta[type];
   const c = m.color;
   if(m.shape==='star'){
     // 五角星 path（圆心 6,6 外径 6.5 内径 2.6）
-    return `<svg width="13" height="13" viewBox="0 0 13 13">
+    return `<svg data-tkid="${tid||''}" width="13" height="13" viewBox="0 0 13 13">
       <path d="M6.5 0.4 L8.05 4.4 L12.35 4.6 L8.95 7.3 L10.15 11.45 L6.5 9.0 L2.85 11.45 L4.05 7.3 L0.65 4.6 L4.95 4.4 Z"
         fill="${c}" stroke="#3a0d0d" stroke-width="0.9" stroke-linejoin="round"/></svg>`;
   }
   if(m.shape==='triangle'){
-    return `<svg width="12" height="12" viewBox="0 0 12 12">
+    return `<svg data-tkid="${tid||''}" width="12" height="12" viewBox="0 0 12 12">
       <path d="M6 0.6 L11.3 10.6 L0.7 10.6 Z"
         fill="${c}" stroke="#fff" stroke-width="1.0" stroke-linejoin="round"/></svg>`;
   }
   // circle
-  return `<svg width="12" height="12" viewBox="0 0 12 12">
+  return `<svg data-tkid="${tid||''}" width="12" height="12" viewBox="0 0 12 12">
     <circle cx="6" cy="6" r="4.5" fill="${c}" stroke="#fff" stroke-width="1.1"/></svg>`;
 }
 // 类别中文（用于 tooltip 头）
@@ -679,20 +693,21 @@ const cityLabelLayer  = { capital:L.layerGroup(), ancient_capital:L.layerGroup()
 (function(){
   const D = window.MAJOR_CITIES;
   if(!D || !D.features){ console.warn('主要城市数据未加载'); return; }
-  D.features.forEach(f=>{
+  D.features.forEach((f,idx)=>{
     const t = f.type;
+    const tid='ct_'+idx;
     if(!cityTypeMeta[t]) return;
     const ll = [f.lat, f.lon];
     // 点
     cityMarkerLayer[t].addLayer(L.marker(ll,{
-      icon: L.divIcon({ className:'citypt', html: cityShapeSVG(t),
+      icon: L.divIcon({ className:'citypt', html: cityShapeSVG(t, tid),
         iconSize:[13,13], iconAnchor:[6.5,6.5] }),
       keyboard:false
     }).bindTooltip(`<b>${f.name}</b> · ${cityTypeLabel[t]}<br/>${f.note||''}`,
       { direction:'top', offset:[0,-6], opacity:0.95 }));
     // 标签（锚点=点位置，文字用 CSS transform 偏移到点右侧 8px）
     cityLabelLayer[t].addLayer(L.marker(ll,{
-      icon: L.divIcon({ className:'', html:`<div class="citylabel ${t}">${f.name}</div>`,
+      icon: L.divIcon({ className:'', html:`<div class="citylabel ${t}" data-tkid="${tid}">${f.name}</div>`,
         iconSize:[0,0], iconAnchor:[0,0] }),
       interactive:false, keyboard:false
     }));
@@ -721,7 +736,7 @@ const tkMeta = {
   ford:   { color:'#1E88E5', label:'津渡' },
   battle: { color:'#1B1B1B', label:'战役' }
 };
-function tkIconSVG(category, size){
+function tkIconSVG(category, size, tid){
   const m = tkMeta[category];
   const ring = category==='battle' ? '#FFC107' : '#FFFFFF';
   const ringW = category==='battle' ? 2.2 : 1.8;
@@ -767,7 +782,7 @@ function tkIconSVG(category, size){
       '<circle cx="0" cy="-1" r="2.6" fill="#FFC107" stroke="#37474F" stroke-width="0.5"/>' +
       '</g>';
   }
-  return '<svg width="'+size+'" height="'+size+'" viewBox="-26 -26 52 52">' +
+  return '<svg data-tkid="'+(tid||'')+'" width="'+size+'" height="'+size+'" viewBox="-26 -26 52 52">' +
     '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>' + glyph + '</svg>';
 }
 const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
@@ -777,13 +792,14 @@ const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGro
   if(!D){ console.warn('三国地标数据未加载'); return; }
   const size = { city:22, pass:20, ford:20, battle:22 };
   ['city','pass','ford','battle'].forEach(cat=>{
-    (D[cat]||[]).forEach(f=>{
+    (D[cat]||[]).forEach((f,idx)=>{
       const ll=[f.lat, f.lon];
+      const tid='tk_'+cat+'_'+idx;
       const s=size[cat];
       const nudge=f.nudge||[0,0];
       const anchor=[s/2 - nudge[0], s/2 - nudge[1]];   // 像素微调，避免完全同坐标互遮
       const marker=L.marker(ll,{
-        icon:L.divIcon({ className:'tkpt', html:tkIconSVG(cat,s), iconSize:[s,s], iconAnchor:anchor }),
+        icon:L.divIcon({ className:'tkpt', html:tkIconSVG(cat,s,tid), iconSize:[s,s], iconAnchor:anchor }),
         keyboard:false
       });
       let tip;
@@ -796,7 +812,7 @@ const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGro
       tkLayer[cat].addLayer(marker);
       // 常驻名称标签（图标右侧，随图层开关；nudge 让标签跟随图标偏移对齐）
       tkLabelLayer[cat].addLayer(L.marker(ll,{
-        icon:L.divIcon({ className:'', html:'<div class="tk-label '+cat+'">'+f.name+'</div>',
+        icon:L.divIcon({ className:'', html:'<div class="tk-label '+cat+'" data-tkid="'+tid+'">'+f.name+'</div>',
           iconSize:[0,0], iconAnchor:[nudge[0], nudge[1]] }),
         interactive:false, keyboard:false
       }));
