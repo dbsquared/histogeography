@@ -243,7 +243,6 @@ updateLabelScale();
 
 // ── 全局标签自动防重叠（贪心算法：按优先级保留重要标签，重叠者隐藏）──
 const _LBL_SEL  = '.clabel,.plabel,.rlabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label';
-const _LBL_OBST = '.tkpt,.citypt';            // 图标也作为障碍，标签不得压住图标
 const _LBL_PAD  = 2;                           // 像素间距，避免贴边
 const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
@@ -283,35 +282,32 @@ function applyLabelCollision(){
   if(!map || !map._loaded) return;
   const mapEl = map.getContainer();
   const all = Array.prototype.slice.call(mapEl.querySelectorAll(_LBL_SEL));
-  for(let i=0;i<all.length;i++) all[i].classList.remove('lbl-collided');
+  for(let i=0;i<all.length;i++) all[i].classList.remove('lbl-collided');  // 先全部显示
+  // 防重叠策略：仅当某标签会压住“更高优先级”标签时才隐藏它；
+  // 同优先级/低优先级之间的重叠允许共存 —— 否则放大后地理相近的标签会成批改被隐藏。
   const items = [];
   for(let i=0;i<all.length;i++){
     const box = _labelBox(all[i]);
     if(!box) continue;
     items.push({ el:all[i], box:box, prio:_lblPriority(all[i]) });
   }
-  const placed = [];                                     // 已保留标签 + 图标障碍
-  const obs = mapEl.querySelectorAll(_LBL_OBST);
-  for(let i=0;i<obs.length;i++){
-    const rb = obs[i].getBoundingClientRect();
-    if(rb.width>=2 && rb.height>=2) placed.push(rb);
-  }
+  const placed = [];                                     // {box,prio} 已保留标签
   items.sort((a,b)=> b.prio - a.prio);
   for(let i=0;i<items.length;i++){
     const a = items[i].box;
     let hit = false;
     for(let j=0;j<placed.length;j++){
-      const b = placed[j];
-      if(!(a.right+_LBL_PAD <= b.left-_LBL_PAD ||
-           a.left -_LBL_PAD >= b.right+_LBL_PAD ||
-           a.bottom+_LBL_PAD <= b.top -_LBL_PAD ||
-           a.top  -_LBL_PAD >= b.bottom+_LBL_PAD)){ hit=true; break; }
+      const pp = placed[j];
+      if(pp.prio <= items[i].prio) continue;             // 仅遮挡更高优先级时才隐藏
+      if(!(a.right+_LBL_PAD <= pp.box.left-_LBL_PAD ||
+           a.left -_LBL_PAD >= pp.box.right+_LBL_PAD ||
+           a.bottom+_LBL_PAD <= pp.box.top -_LBL_PAD ||
+           a.top  -_LBL_PAD >= pp.box.bottom+_LBL_PAD)){ hit=true; break; }
     }
     if(hit) items[i].el.classList.add('lbl-collided');
-    else placed.push(a);
+    else placed.push({ box:a, prio:items[i].prio });
   }
-}
-let _collideScheduled = false;
+}let _collideScheduled = false;
 function scheduleCollision(){
   if(_collideScheduled) return;
   _collideScheduled = true;
