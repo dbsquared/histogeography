@@ -170,6 +170,13 @@
     <label><input type="checkbox" id="cb-city-ancap" checked> 古都</label>
     <label><input type="checkbox" id="cb-city-battle" checked> 古战场/重镇</label>
   </div>
+  <div class="citysep">
+    <div style="font-weight:bold;margin-bottom:2px;">三国地标</div>
+    <label><input type="checkbox" id="cb-tk-city" checked> 城池（29）</label>
+    <label><input type="checkbox" id="cb-tk-pass" checked> 关隘（19）</label>
+    <label><input type="checkbox" id="cb-tk-ford" checked> 津渡（12）</label>
+    <label><input type="checkbox" id="cb-tk-battle" checked> 战役（30）</label>
+  </div>
   <div class="btnbar">
     <button id="btn-all-on" class="btn" type="button">一键叠加全部</button>
     <button id="btn-all-off" class="btn" type="button">一键消除全部</button>
@@ -201,6 +208,7 @@
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
+    <script src="three_kingdoms_sites.js?v=2026080201"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -596,6 +604,99 @@ document.getElementById('cb-city-capital').onchange = e => e.target.checked ? sh
 document.getElementById('cb-city-ancap').onchange  = e => e.target.checked ? showCityType('ancient_capital') : hideCityType('ancient_capital');
 document.getElementById('cb-city-battle').onchange = e => e.target.checked ? showCityType('battle') : hideCityType('battle');
 
+// ── 2f) 三国关键地点（城池/关隘/津渡/战役），用自定义 SVG 徽章做 divIcon ──
+const tkMeta = {
+  city:   { color:'#FFB300', label:'城池' },
+  pass:   { color:'#546E7A', label:'关隘' },
+  ford:   { color:'#1E88E5', label:'津渡' },
+  battle: { color:'#1B1B1B', label:'战役' }
+};
+function tkIconSVG(category, size){
+  const m = tkMeta[category];
+  const ring = category==='battle' ? '#FFC107' : '#FFFFFF';
+  const ringW = category==='battle' ? 2.2 : 1.8;
+  const uid = Math.random().toString(36).slice(2,8);
+  let glyph = '';
+  if(category==='city'){
+    glyph = '<g fill="#FFFFFF" fill-rule="evenodd"><path d="M -22 16 L -22 -10 L -18 -10 L -18 -18 L -10 -18 L -10 -10 L -6 -10 L -6 -18 L 2 -18 L 2 -10 L 6 -10 L 6 -18 L 14 -18 L 14 -10 L 18 -10 L 18 16 Z M -7 16 L -7 2 A 7 7 0 0 1 7 2 L 7 16 Z"/></g>';
+  } else if(category==='pass'){
+    glyph = '<g transform="scale(0.62)">' +
+      '<path d="M -32 20 Q -16 5 0 16 Q 16 6 32 18 L 32 26 L -32 26 Z" fill="#FFFFFF" opacity="0.20"/>' +
+      '<path d="M -32 15 L -32 9 L -28 9 L -28 6 L -24 6 L -24 9 L -20 9 L -20 6 L -16 6 L -16 9 L -12 9 L -12 6 L -8 6 L -8 9 L -4 9 L -4 6 L 0 6 L 0 9 L 4 9 L 4 6 L 8 6 L 8 9 L 12 9 L 12 6 L 16 6 L 16 9 L 20 9 L 20 6 L 24 6 L 24 9 L 28 9 L 28 6 L 32 6 L 32 9 L 32 15 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7" stroke-linejoin="round"/>' +
+      '<path d="M -6 15 L -6 1 L -3 1 L -3 -3 L 3 -3 L 3 1 L 6 1 L 6 15 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7" stroke-linejoin="round"/>' +
+      '<path d="M -9 1 L 0 -7 L 9 1 Z" fill="#37474F"/>' +
+      '<path d="M -3 -3 L -3 -6 L 3 -6 L 3 -3 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7"/>' +
+      '<path d="M -2 15 L -2 8 A 2 2 0 0 1 2 8 L 2 15 Z" fill="#546E7A"/>' +
+      '</g>';
+  } else if(category==='ford'){
+    glyph = '<g transform="scale(0.62)">' +
+      '<path d="M -15 -2 L 15 -2 L 10 6 L -10 6 Z" fill="#FFFFFF"/>' +
+      '<path d="M 0 -2 L 0 -18 L 11 -2 Z" fill="#FFFFFF"/>' +
+      '<path d="M 0 -18 L 0 -2" stroke="#FFFFFF" stroke-width="2" fill="none"/>' +
+      '<path d="M -22 12 q 5.5 -6 11 0 q 5.5 6 11 0 q 5.5 -6 11 0 q 5.5 6 11 0" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+      '<path d="M -22 19 q 5.5 -6 11 0 q 5.5 6 11 0 q 5.5 -6 11 0 q 5.5 6 11 0" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+      '</g>';
+  } else { // battle
+    glyph = '<defs><linearGradient id="blade-'+uid+'" x1="0" y1="-22" x2="6" y2="-3" gradientUnits="userSpaceOnUse">' +
+      '<stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#CFD8DC"/><stop offset="1" stop-color="#78909C"/>' +
+      '</linearGradient></defs><g transform="scale(0.62)">' +
+      '<g transform="rotate(32)">' +
+        '<path d="M -2.5 -3 L -2.5 -19 Q -2.5 -23 1.8 -22.3 L 4.2 -18 Q 5.2 -11 2.8 -3 Z" fill="url(#blade-'+uid+')" stroke="#455A64" stroke-width="0.5"/>' +
+        '<rect x="-5" y="-3.2" width="11" height="2.6" rx="1.1" fill="#C9A227"/>' +
+        '<rect x="-2" y="-0.6" width="4" height="13" rx="1.6" fill="#4E342E"/>' +
+        '<circle cx="0" cy="13" r="2.2" fill="#C9A227"/>' +
+        '<path d="M 0 14 C -3.2 17 -2.2 21.5 0 23 C 2.2 21.5 3.2 17 0 14 Z" fill="#C62828"/>' +
+      '</g>' +
+      '<g transform="rotate(-32)">' +
+        '<path d="M -2.5 -3 L -2.5 -19 Q -2.5 -23 1.8 -22.3 L 4.2 -18 Q 5.2 -11 2.8 -3 Z" fill="url(#blade-'+uid+')" stroke="#455A64" stroke-width="0.5"/>' +
+        '<rect x="-5" y="-3.2" width="11" height="2.6" rx="1.1" fill="#C9A227"/>' +
+        '<rect x="-2" y="-0.6" width="4" height="13" rx="1.6" fill="#4E342E"/>' +
+        '<circle cx="0" cy="13" r="2.2" fill="#C9A227"/>' +
+        '<path d="M 0 14 C -3.2 17 -2.2 21.5 0 23 C 2.2 21.5 3.2 17 0 14 Z" fill="#C62828"/>' +
+      '</g>' +
+      '<circle cx="0" cy="-1" r="2.6" fill="#FFC107" stroke="#37474F" stroke-width="0.5"/>' +
+      '</g>';
+  }
+  return '<svg width="'+size+'" height="'+size+'" viewBox="-26 -26 52 52">' +
+    '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>' + glyph + '</svg>';
+}
+const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
+(function(){
+  const D = window.THREE_KINGDOM_SITES;
+  if(!D){ console.warn('三国地标数据未加载'); return; }
+  const size = { city:22, pass:20, ford:20, battle:22 };
+  ['city','pass','ford','battle'].forEach(cat=>{
+    (D[cat]||[]).forEach(f=>{
+      const ll=[f.lat, f.lon];
+      const s=size[cat];
+      const nudge=f.nudge||[0,0];
+      const anchor=[s/2 - nudge[0], s/2 - nudge[1]];   // 像素微调，避免完全同坐标互遮
+      const marker=L.marker(ll,{
+        icon:L.divIcon({ className:'tkpt', html:tkIconSVG(cat,s), iconSize:[s,s], iconAnchor:anchor }),
+        keyboard:false
+      });
+      let tip;
+      if(cat==='battle'){
+        tip='<b>'+f.name+'</b>（'+f.year+'）<br/>地点：'+f.place+'<br/>'+f.sides+'<br/><span style="color:#ffd479">'+f.result+'</span>';
+      } else {
+        tip='<b>'+f.name+'</b> · '+tkMeta[cat].label+'<br/>今址：'+f.modern+'（'+f.zhou+'）<br/>'+(f.desc||'');
+      }
+      marker.bindTooltip(tip,{direction:'top', offset:[0,-s/2], opacity:0.95});
+      tkLayer[cat].addLayer(marker);
+    });
+  });
+  console.log('三国地标已加载：城池'+D.city.length+' 关隘'+D.pass.length+' 津渡'+D.ford.length+' 战役'+D.battle.length);
+})();
+function showTK(cat){ tkLayer[cat].addTo(map); }
+function hideTK(cat){ map.removeLayer(tkLayer[cat]); }
+['city','pass','ford','battle'].forEach(cat=>{
+  const cb=document.getElementById('cb-tk-'+cat);
+  if(cb){
+    cb.onchange = e => e.target.checked ? showTK(cat) : hideTK(cat);
+    if(cb.checked) showTK(cat);   // 默认全开
+  }
+});
+
 // 3) 悬停查海拔 (数据已通过 data.js 注入 window.APP_DATA)
 let elevData=null, elevMeta=null;
 (()=>{
@@ -654,7 +755,8 @@ document.getElementById('cb-river').onchange=e=>{
 function setAll(on){
   ['cb-base','cb-contour','cb-label','cb-prov','cb-river',
    'cb-han-bnd','cb-han-seat',
-   'cb-city-capital','cb-city-ancap','cb-city-battle'].forEach(id=>{
+   'cb-city-capital','cb-city-ancap','cb-city-battle',
+   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle'].forEach(id=>{
     const cb=document.getElementById(id);
     if(cb.checked!==on){ cb.checked=on; cb.onchange({target:cb}); }
   });
