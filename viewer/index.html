@@ -266,28 +266,25 @@ const _DIRS = (function(){
   }
   return dirs;
 })();
-// 图标关联标签的候选位：先尝试自然位(默认右侧)，然后从图标中心由近到远 360° 找空地。
-// 方向偏好：右 → 上 → 下 → 右上 → 右下 → 左上 → 左下 → 左，再扩半径。
+// 图标关联标签的候选位：先尝试自然位，然后从图标中心由近到远生成 360° 均匀候选。
+// 打分选出「离自己图标最近」且「离其他标签/图标最远」的位置，避免互相挤兑。
 function _iconCandidates(baseDx, baseDy, iconR, labelW, labelH){
   const baseAng = Math.atan2(baseDy, baseDx);
-  const minR = Math.max(iconR + Math.max(labelW,labelH)/2 + 4, 14);
-  const radii = [];
-  for(let r=minR; r<=110; r += (r<45 ? 10 : 16)) radii.push(r);
-  const pref = [0, -Math.PI/2, Math.PI/2, -Math.PI/4, Math.PI/4, -3*Math.PI/4, 3*Math.PI/4, Math.PI];
+  const minR = Math.max(iconR + Math.max(labelW,labelH)/2 + 3, 14);
   const list = [];
   const seen = new Set();
-  // 0) 自然位优先
-  const natK = Math.round(baseDx)+','+Math.round(baseDy);
-  seen.add(natK); list.push([Math.round(baseDx), Math.round(baseDy)]);
-  // 1) 由近到远，按固定方向偏好
-  for(let ri=0; ri<radii.length; ri++){
-    const r = radii[ri];
-    for(let k=0;k<pref.length;k++){
-      const a = baseAng + pref[k];
+  // 0) 自然位
+  const nat = [Math.round(baseDx), Math.round(baseDy)];
+  seen.add(nat[0]+','+nat[1]); list.push(nat);
+  // 1) 由近到远，每圈均匀 16 方向
+  for(let r=minR; r<=80; r += (r<40 ? 8 : 12)){
+    const n = 16;
+    for(let i=0;i<n;i++){
+      const a = baseAng + (i/n)*Math.PI*2;
       const dx = Math.round(r*Math.cos(a));
       const dy = Math.round(r*Math.sin(a));
-      const key = dx+','+dy;
-      if(!seen.has(key)){ seen.add(key); list.push([dx,dy]); }
+      const k = dx+','+dy;
+      if(!seen.has(k)){ seen.add(k); list.push([dx,dy]); }
     }
   }
   return list;
@@ -328,6 +325,23 @@ function _lblOverlap(a,b,pad){
   return !(a.right+pad <= b.left-pad || a.left-pad >= b.right+pad ||
            a.bottom+pad <= b.top-pad || a.top-pad >= b.bottom+pad);
 }
+// 给候选位置打分：不碰撞前提下，离自己图标越近越好，离其他标签/图标越远越好
+function _labelCandidateScore(cand, ownIcon, placed, nearObs, ownTid){
+  for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)) return -Infinity; }
+  for(let j=0;j<nearObs.length;j++){ if(nearObs[j].tid!==ownTid && _lblOverlap(cand, nearObs[j].box, _LBL_PAD)) return -Infinity; }
+  const cx=(cand.left+cand.right)/2, cy=(cand.top+cand.bottom)/2;
+  const dOwn = Math.hypot(cx-ownIcon.cx, cy-ownIcon.cy);
+  let dOther = 300;
+  for(let j=0;j<placed.length;j++){
+    const b=placed[j].box;
+    dOther = Math.min(dOther, Math.hypot(cx-(b.left+b.right)/2, cy-(b.top+b.bottom)/2));
+  }
+  for(let j=0;j<nearObs.length;j++){
+    if(nearObs[j].tid===ownTid) continue;
+    dOther = Math.min(dOther, Math.hypot(cx-nearObs[j].cx, cy-nearObs[j].cy));
+  }
+  return -dOwn*3 + dOther*0.7;
+}
 function applyLabelCollision(){
   if(!map || !map._loaded) return;
   const mapEl = map.getContainer();
@@ -359,20 +373,13 @@ function applyLabelCollision(){
       const baseDx = cx - ownIcon.cx, baseDy = cy - ownIcon.cy; // 自然位相对图标中心的偏移
       const lw = a.right-a.left, lh = a.bottom-a.top;
       const candidates = _iconCandidates(baseDx, baseDy, Math.max(ownIcon.box.right-ownIcon.box.left, ownIcon.box.bottom-ownIcon.box.top)/2, lw, lh);
+      let bestScore = -Infinity;
       for(let k=0;k<candidates.length;k++){
         const [dx,dy] = candidates[k];
         const shiftX = dx - baseDx, shiftY = dy - baseDy;
         const cand = { left:a.left+shiftX, right:a.right+shiftX, top:a.top+shiftY, bottom:a.bottom+shiftY };
-        let ok=true;
-        for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)){ ok=false; break; } }
-        if(ok){
-          for(let j=0;j<nearObs.length;j++){
-            const ob=nearObs[j];
-            if(ob.tid===ownTid) continue;
-            if(_lblOverlap(cand, ob.box, _LBL_PAD)){ ok=false; break; }
-          }
-        }
-        if(ok){ chosen=[shiftX,shiftY]; break; }
+        const sc = _labelCandidateScore(cand, ownIcon, placed, nearObs, ownTid);
+        if(sc > bestScore){ bestScore=sc; chosen=[shiftX,shiftY]; }
       }
     }
 
