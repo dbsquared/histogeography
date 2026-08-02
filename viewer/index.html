@@ -823,10 +823,19 @@ function tkFusedIcon(mainCat, badges, size, tid){
   const ring = mainCat==='battle' ? '#FFC107' : '#FFFFFF';
   const ringW = mainCat==='battle' ? 2.2 : 1.8;
   const uid = Math.random().toString(36).slice(2,8);
-  let inner = '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>' + tkGlyph(mainCat, uid);
+  let inner = '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>';
+  // 主类型glyph略下移缩小，给"战役"叠加留出上方空间
+  inner += '<g transform="translate(0,6) scale(0.82)">'+tkGlyph(mainCat, uid)+'</g>';
   const pos=[[-12,-12],[12,-12],[-12,12],[12,12]];
   const seen={};
+  let battleDone=false;
   badges.forEach((bc,k)=>{
+    if(bc==='battle'){                 // 战役：两把交叉的刀直接叠在城池上方，不再做小角标
+      if(battleDone) return; battleDone=true;
+      const buid = Math.random().toString(36).slice(2,8);
+      inner += '<g transform="translate(0,-13) scale(0.55)">'+tkGlyph('battle',buid)+'</g>';
+      return;
+    }
     if(seen[bc]) return; seen[bc]=1;
     const [bx,by]=pos[k%4];
     const buid = Math.random().toString(36).slice(2,8);
