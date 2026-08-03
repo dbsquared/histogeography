@@ -32,7 +32,9 @@ window.THREE_KINGDOM_SITES = {
     {name:'敦煌', lon:94.66, lat:40.14, modern:'甘肃敦煌', zhou:'凉州', desc:'河西走廊西端'},
     {name:'江州', lon:106.55, lat:29.56, modern:'重庆', zhou:'益州', desc:'巴郡治，长江上游要津'},
     {name:'公安', lon:112.23, lat:30.05, modern:'湖北公安', zhou:'荆州', desc:'刘备荆南驻所，关羽后方'},
-    {name:'南皮', lon:116.70, lat:38.07, modern:'河北南皮', zhou:'冀州', desc:'袁谭据之，曹操破袁氏'}
+    {name:'南皮', lon:116.70, lat:38.07, modern:'河北南皮', zhou:'冀州', desc:'袁谭据之，曹操破袁氏'},
+    {name:'上洛', lon:109.95, lat:33.87, modern:'陕西商洛（商州）', zhou:'司隶', desc:'曹魏置上洛郡，武关道要冲，关中—荆州（襄阳）通道'},
+    {name:'西城', lon:109.02, lat:32.68, modern:'陕西安康', zhou:'益州', desc:'汉中郡治所西城县；曹魏置魏兴郡仍治此，汉江中游要地'}
   ],
   // ── 二、关隘 ──
   pass: [
