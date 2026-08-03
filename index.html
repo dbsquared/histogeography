@@ -635,9 +635,9 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
 
 // 2c) 南海诸岛附图 (完整十段线 + 主要岛礁，补全超出主图范围的南海部分)
 // ── 南海诸岛附图：作为地图图层（锚定海南以东开阔海域）──
-// 把 scs_inset_data.js 的南海诸岛小地图内容重投影到海南以东开阔海域的一个小框内，
+// 把 scs_inset_data.js 的南海诸岛小地图内容重投影到台岛以东开阔海域的一个小框内，
 // 用真实 Leaflet 图层绘制，随地图平移/缩放，不再依赖界面面板。
-const scsBox = { lon0:114.0, lon1:120.0, lat0:14.5, lat1:20.5 }; // 海南以东开阔海域
+const scsBox = { lon0:124.0, lon1:130.0, lat0:19.5, lat1:25.5 }; // 台岛以东开阔海域
 const scsLayer = L.layerGroup();
 (function buildScsLayer(){
   const D = window.SCS_INSET; if(!D) return;
