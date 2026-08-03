@@ -84,11 +84,11 @@
     width:100%; height:100%; box-sizing:border-box;
   }
   .leaflet-control-scale { background:rgba(20,28,40,0.7); }
-  #scs-inset { position:absolute; z-index:1000; width:160px; }
-  #scs-inset .hd { font-weight:bold; margin-bottom:4px; }
-  #scs-inset .note { font-size:10px; color:#9fb3c8; margin-top:3px; line-height:1.45; }
-.scslabel { fill:#ffe7c2; font-size:7px; font-weight:bold; paint-order:stroke;
-            stroke:#5a2a00; stroke-width:1.7px; stroke-linejoin:round; }
+.scs-title-wrap { background:none; border:none; }
+.scs-title { color:#ffe7c2; font-weight:bold; font-size:12px; white-space:nowrap;
+             text-shadow:0 0 3px #000,1px 1px 2px #000; transform:translateX(-50%); display:inline-block; }
+.scs-island-label { color:#ffe7c2; font-size:10px; font-weight:bold; white-space:nowrap;
+                    text-shadow:0 0 3px #000,1px 1px 2px #000; }
 /* ── 汉末十三州图层标签（HTML div 版，无背景、纯描边） ── */
 .hanstate-label {
   color:#ff6b35; font-weight:bold;
@@ -210,11 +210,6 @@
   <div class="ticks" id="legend-ticks"></div>
 </div>
 
-<div id="scs-inset" class="panel">
-  <div class="hd">南海诸岛</div>
-  <div id="scs-svg"></div>
-  <div class="note">十段线·geojson.cn(民政部) ｜ 岸线 Natural Earth ｜ 主要岛礁</div>
-</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -627,69 +622,52 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
 })();
 
 // 2c) 南海诸岛附图 (完整十段线 + 主要岛礁，补全超出主图范围的南海部分)
-function buildScsInset(){
+// ── 南海诸岛附图：作为地图图层（锚定海南以东开阔海域）──
+// 把 scs_inset_data.js 的南海诸岛小地图内容重投影到海南以东开阔海域的一个小框内，
+// 用真实 Leaflet 图层绘制，随地图平移/缩放，不再依赖界面面板。
+const scsBox = { lon0:114.0, lon1:120.0, lat0:14.5, lat1:20.5 }; // 海南以东开阔海域
+const scsLayer = L.layerGroup();
+(function buildScsLayer(){
   const D = window.SCS_INSET; if(!D) return;
-  const b = D.box, W = 160, midLat = (b.lat0 + b.lat1) / 2;
-  const H = Math.round(W * (b.lat1 - b.lat0) / (b.lon1 - b.lon0) * Math.cos(midLat * Math.PI / 180));
-  const px = (lon, lat) => [ (lon - b.lon0) / (b.lon1 - b.lon0) * W,
-                              (b.lat1 - lat) / (b.lat1 - b.lat0) * H ];
-  const pathOf = segs => {
-    let d = '';
-    segs.forEach(s => { s.forEach((p, i) => {
-      const [x, y] = px(p[0], p[1]);
-      d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
-    }); d += ' '; });
-    return d;
-  };
-  let grid = '';
-  for (let lon = Math.ceil(b.lon0 / 5) * 5; lon <= b.lon1; lon += 5) {
-    const [x0, y0] = px(lon, b.lat0), [x1, y1] = px(lon, b.lat1);
-    grid += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`;
-  }
-  for (let lat = Math.ceil(b.lat0 / 5) * 5; lat <= b.lat1; lat += 5) {
-    const [x0, y0] = px(b.lon0, lat), [x1, y1] = px(b.lon1, lat);
-    grid += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`;
-  }
-  const ne = pathOf(D.ne), coast = pathOf(D.coast), dash = pathOf(D.dash);
-  let marks = '';
+  const sb = D.box;
+  const remap = (lon, lat) => [
+    scsBox.lat0 + (lat - sb.lat0)/(sb.lat1 - sb.lat0)*(scsBox.lat1 - scsBox.lat0),
+    scsBox.lon0 + (lon - sb.lon0)/(sb.lon1 - sb.lon0)*(scsBox.lon1 - scsBox.lon0)
+  ];
+  const poly = (segs, opts) => segs.forEach(seg =>
+    scsLayer.addLayer(L.polyline(seg.map(p => remap(p[0], p[1])), opts)));
+  // 框底色 + 边框
+  scsLayer.addLayer(L.rectangle(
+    [[scsBox.lat0, scsBox.lon0], [scsBox.lat1, scsBox.lon1]],
+    { color:'#7fb2d6', weight:1.2, fillColor:'#0e3a52', fillOpacity:0.92 }));
+  // 经纬网（原附图 5° 间隔网格，重投影进小框）
+  const grat = [];
+  for(let lon=Math.ceil(sb.lon0/5)*5; lon<=sb.lon1; lon+=5) grat.push([[lon,sb.lat0],[lon,sb.lat1]]);
+  for(let lat=Math.ceil(sb.lat0/5)*5; lat<=sb.lat1; lat+=5) grat.push([[sb.lon0,lat],[sb.lon1,lat]]);
+  poly(grat, { color:'rgba(255,255,255,0.14)', weight:0.5 });
+  // 边界 / 岸线 / 十段线
+  poly(D.ne,    { color:'#5d7587', weight:0.7, opacity:0.85 });
+  poly(D.coast, { color:'#e0a06a', weight:1.5 });
+  poly(D.dash,  { color:'#c0392b', weight:2.3, dashArray:'6,4' });
+  // 主要岛礁 + 名称
   D.islands.forEach(([lon, lat, name]) => {
-    const [x, y] = px(lon, lat);
-    marks += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.2" fill="#fff" stroke="#c0392b" stroke-width="0.8"/>` +
-             `<text x="${(x + 3).toFixed(1)}" y="${(y + 3.2).toFixed(1)}" class="scslabel">${name}</text>`;
+    const [la, lo] = remap(lon, lat);
+    scsLayer.addLayer(L.circleMarker([la, lo],
+      { radius:3, color:'#c0392b', weight:1, fillColor:'#fff', fillOpacity:1 }));
+    scsLayer.addLayer(L.marker([la, lo], {
+      interactive:false,
+      icon: L.divIcon({ className:'scs-island-label', html:name, iconAnchor:[-4,6] })
+    }));
   });
-  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">
-    <rect x="0" y="0" width="${W}" height="${H}" fill="#0e3a52"/>
-    <g stroke="rgba(255,255,255,0.14)" stroke-width="0.5">${grid}</g>
-    <path d="${ne}" fill="none" stroke="#5d7587" stroke-width="0.7" stroke-linejoin="round" opacity="0.85"/>
-    <path d="${coast}" fill="none" stroke="#e0a06a" stroke-width="1.5" stroke-linejoin="round"/>
-    <path d="${dash}" fill="none" stroke="#c0392b" stroke-width="2.3" stroke-dasharray="6,4" stroke-linejoin="round"/>
-    ${marks}
-  </svg>`;
-  document.getElementById('scs-svg').innerHTML = svg;
-}
-function updateScs(){
-  // 附图只受自身开关控制，不依赖省界(cb-prov)——否则关掉省界会顺带隐藏附图
-  const show = document.getElementById('cb-scs').checked;
-  document.getElementById('scs-inset').style.display = show ? 'block' : 'none';
-  positionScsInset();
-}
-// 南海诸岛附图锚定到地图「海南以东开阔海域」，随地图平移/缩放移动，避免遮挡四角界面
-function positionScsInset(){
-  const el = document.getElementById('scs-inset');
-  if(el.style.display === 'none') return;
-  const pt = map.latLngToContainerPoint([19, 116]);   // [lat,lon]：海南以东、南海开阔处
-  let x = pt.x - el.offsetWidth / 2;
-  let y = pt.y - el.offsetHeight / 2;
-  // 限制在视口内，并给四角界面(标题/图层/海拔/图例)留出边距，避免遮挡
-  x = Math.max(8, Math.min(x, window.innerWidth  - el.offsetWidth  - 8));
-  y = Math.max(56, Math.min(y, window.innerHeight - el.offsetHeight - 8));
-  el.style.left = x + 'px';
-  el.style.top  = y + 'px';
-}
-map.on('move', positionScsInset);
-map.on('zoom', positionScsInset);
-buildScsInset(); updateScs();
-document.getElementById('cb-scs').onchange = updateScs;
+  // 标题
+  scsLayer.addLayer(L.marker([scsBox.lat1 - 0.35, (scsBox.lon0+scsBox.lon1)/2], {
+    interactive:false,
+    icon: L.divIcon({ className:'scs-title-wrap', html:'<span class="scs-title">南海诸岛</span>', iconAnchor:[0,0] })
+  }));
+})();
+// 附图只受自身开关控制（与省行政区开关独立）
+document.getElementById('cb-scs').onchange = e =>
+  e.target.checked ? scsLayer.addTo(map) : map.removeLayer(scsLayer);
 
 // ── 2d) 汉末十三州（基于交互式打点重建）──
 // 数据: window.HAN_STATES = {meta, states:[{name,color,boundary,seats,meta}]}
@@ -1102,7 +1080,6 @@ document.getElementById('cb-prov').onchange=e=>{
   const on=e.target.checked;
   if(on){ provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map); }
   else { map.removeLayer(provinceLayer); map.removeLayer(borderLayer); map.removeLayer(nineDashLayer); map.removeLayer(provLabelLayer); }
-  updateScs();
 };
 document.getElementById('cb-river').onchange=e=>{
   e.target.checked?(riverLayer.addTo(map), riverLabelLayer.addTo(map))
