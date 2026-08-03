@@ -84,7 +84,7 @@
     width:100%; height:100%; box-sizing:border-box;
   }
   .leaflet-control-scale { background:rgba(20,28,40,0.7); }
-  #scs-inset { position:absolute; bottom:135px; right:12px; z-index:1000; width:240px; }
+  #scs-inset { position:absolute; z-index:1000; width:160px; }
   #scs-inset .hd { font-weight:bold; margin-bottom:4px; }
   #scs-inset .note { font-size:10px; color:#9fb3c8; margin-top:3px; line-height:1.45; }
 .scslabel { fill:#ffe7c2; font-size:7px; font-weight:bold; paint-order:stroke;
@@ -168,27 +168,28 @@
 <div id="controls" class="panel">
   <div style="font-weight:bold;margin-bottom:4px;">图层</div>
   <label><input type="checkbox" id="cb-base" checked> 地形底图</label>
-  <label><input type="checkbox" id="cb-contour" checked> 矢量等高线</label>
-  <label><input type="checkbox" id="cb-label" checked> 海拔注记</label>
-  <label><input type="checkbox" id="cb-prov" checked> 省行政区</label>
+  <label><input type="checkbox" id="cb-contour"> 矢量等高线</label>
+  <label><input type="checkbox" id="cb-label"> 海拔注记</label>
+  <label><input type="checkbox" id="cb-prov"> 省行政区</label>
   <label><input type="checkbox" id="cb-river" checked> 主要河流</label>
   <label><input type="checkbox" id="cb-mtn" checked> 主要山脉</label>
-  <label><input type="checkbox" id="cb-scs" checked> 南海诸岛附图</label>
+  <label><input type="checkbox" id="cb-scs"> 南海诸岛附图</label>
+  <label><input type="checkbox" id="cb-city-capital"> 省会/直辖市</label>
   <div class="citysep">
     <div style="font-weight:bold;margin-bottom:2px;">汉末三国</div>
+    <label style="font-weight:bold;"><input type="checkbox" id="cb-han-all"> 汉末三国（全选）</label>
     <label><input type="checkbox" id="cb-han-bnd"> 州界</label>
     <label><input type="checkbox" id="cb-han-seat"> 郡</label>
-    <label><input type="checkbox" id="cb-tk-city" checked> 城池（31）</label>
-    <label><input type="checkbox" id="cb-tk-pass" checked> 关隘（19）</label>
-    <label><input type="checkbox" id="cb-tk-ford" checked> 津渡（12）</label>
-    <label><input type="checkbox" id="cb-tk-battle" checked> 战役（30）</label>
-    <label><input type="checkbox" id="cb-tk-merge" checked> 合并重合地标</label>
+    <label><input type="checkbox" id="cb-tk-city"> 城池（31）</label>
+    <label><input type="checkbox" id="cb-tk-pass"> 关隘（19）</label>
+    <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
+    <label><input type="checkbox" id="cb-tk-battle"> 战役（30）</label>
+    <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
   </div>
   <div class="citysep">
-    <div style="font-weight:bold;margin-bottom:2px;">主要城市</div>
-    <label><input type="checkbox" id="cb-city-capital" checked> 省会/直辖市</label>
-    <label><input type="checkbox" id="cb-city-ancap" checked> 古都</label>
-    <label><input type="checkbox" id="cb-city-battle" checked> 古战场/重镇</label>
+    <div style="font-weight:bold;margin-bottom:2px;">其他</div>
+    <label><input type="checkbox" id="cb-city-ancap"> 古都</label>
+    <label><input type="checkbox" id="cb-city-battle"> 古战场/重镇</label>
   </div>
   <div class="btnbar">
     <button id="btn-all-on" class="btn" type="button">一键叠加全部</button>
@@ -217,7 +218,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="data.js?v=2026080302"></script>
+<script src="data.js?v=2026080303"></script>
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
@@ -624,7 +625,7 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
 // 2c) 南海诸岛附图 (完整十段线 + 主要岛礁，补全超出主图范围的南海部分)
 function buildScsInset(){
   const D = window.SCS_INSET; if(!D) return;
-  const b = D.box, W = 240, midLat = (b.lat0 + b.lat1) / 2;
+  const b = D.box, W = 160, midLat = (b.lat0 + b.lat1) / 2;
   const H = Math.round(W * (b.lat1 - b.lat0) / (b.lon1 - b.lon0) * Math.cos(midLat * Math.PI / 180));
   const px = (lon, lat) => [ (lon - b.lon0) / (b.lon1 - b.lon0) * W,
                               (b.lat1 - lat) / (b.lat1 - b.lat0) * H ];
@@ -666,7 +667,23 @@ function updateScs(){
   // 附图只受自身开关控制，不依赖省界(cb-prov)——否则关掉省界会顺带隐藏附图
   const show = document.getElementById('cb-scs').checked;
   document.getElementById('scs-inset').style.display = show ? 'block' : 'none';
+  positionScsInset();
 }
+// 南海诸岛附图锚定到地图「海南以东开阔海域」，随地图平移/缩放移动，避免遮挡四角界面
+function positionScsInset(){
+  const el = document.getElementById('scs-inset');
+  if(el.style.display === 'none') return;
+  const pt = map.latLngToContainerPoint([19, 116]);   // [lat,lon]：海南以东、南海开阔处
+  let x = pt.x - el.offsetWidth / 2;
+  let y = pt.y - el.offsetHeight / 2;
+  // 限制在视口内，并给四角界面(标题/图层/海拔/图例)留出边距，避免遮挡
+  x = Math.max(8, Math.min(x, window.innerWidth  - el.offsetWidth  - 8));
+  y = Math.max(56, Math.min(y, window.innerHeight - el.offsetHeight - 8));
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+}
+map.on('move', positionScsInset);
+map.on('zoom', positionScsInset);
 buildScsInset(); updateScs();
 document.getElementById('cb-scs').onchange = updateScs;
 
@@ -1104,9 +1121,30 @@ function setAll(on){
     const cb=document.getElementById(id);
     if(cb.checked!==on){ cb.checked=on; cb.onchange({target:cb}); }
   });
+  const ha=document.getElementById('cb-han-all');
+  if(ha) ha.checked=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge']
+    .every(id=>document.getElementById(id).checked);
 }
 document.getElementById('btn-all-on').onclick=()=>setAll(true);
 document.getElementById('btn-all-off').onclick=()=>setAll(false);
+
+// 4c) 汉末三国「全选」主选项：勾选后联动该区块全部子选项；子项变更时回写主选项状态
+(function(){
+  const hanAll=document.getElementById('cb-han-all');
+  const hanSubs=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'];
+  function syncMaster(){ hanAll.checked=hanSubs.every(id=>document.getElementById(id).checked); }
+  hanAll.onchange=e=>{
+    hanSubs.forEach(id=>{
+      const cb=document.getElementById(id);
+      if(cb.checked!==e.target.checked){
+        cb.checked=e.target.checked;
+        if(typeof cb.onchange==='function') cb.onchange({target:cb});
+      }
+    });
+  };
+  hanSubs.forEach(id=>document.getElementById(id).addEventListener('change',syncMaster));
+  syncMaster();
+})();
 
 // 6) 截图模式：一键隐藏所有界面元素（地图内容保留）
 function toggleShot(){ document.body.classList.toggle('screenshot-mode'); }
