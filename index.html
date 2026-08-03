@@ -460,8 +460,10 @@ const labelLayer=L.geoJSON(null,{
 // 数据已通过 data.js 注入 window.APP_DATA (兼容 file:// 与 http://)
 (()=>{
   const gj=window.APP_DATA.contours;
-  contourLayer.addData(gj); contourLayer.addTo(map);
-  labelLayer.addData(gj);   labelLayer.addTo(map);
+  contourLayer.addData(gj);
+  labelLayer.addData(gj);
+  if(document.getElementById('cb-contour').checked) contourLayer.addTo(map);
+  if(document.getElementById('cb-label').checked)   labelLayer.addTo(map);
 })();
 
 // 2b) 省行政区图层 (Supeset China-GeoData，遵循自然资源部标准地图：含完整藏南·达旺/珞瑜/阿克赛钦)
@@ -487,7 +489,11 @@ const provLabelLayer=L.layerGroup();
       }));
     }
   });
-  provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map);
+  // 十段线(南海诸岛归属线)为地图合规要素，始终叠加显示；省界/省注记受 cb-prov 控制
+  nineDashLayer.addTo(map);
+  if(document.getElementById('cb-prov').checked){
+    provinceLayer.addTo(map); borderLayer.addTo(map); provLabelLayer.addTo(map);
+  }
 })();
 
 // 2b-2) 主要河流矢量图层 (Natural Earth 10m Rivers, public domain; 含国外主要河流)
@@ -1096,8 +1102,9 @@ document.getElementById('cb-label').onchange=e=>{
 };
 document.getElementById('cb-prov').onchange=e=>{
   const on=e.target.checked;
-  if(on){ provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map); }
-  else { map.removeLayer(provinceLayer); map.removeLayer(borderLayer); map.removeLayer(nineDashLayer); map.removeLayer(provLabelLayer); }
+  // 十段线始终显示，这里只切换省界/省注记
+  if(on){ provinceLayer.addTo(map); borderLayer.addTo(map); provLabelLayer.addTo(map); }
+  else { map.removeLayer(provinceLayer); map.removeLayer(borderLayer); map.removeLayer(provLabelLayer); }
   updateScs();
 };
 document.getElementById('cb-river').onchange=e=>{
