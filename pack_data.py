@@ -14,6 +14,10 @@ try:
     rivers = load('rivers.geojson')
 except FileNotFoundError:
     rivers = {'type': 'FeatureCollection', 'features': []}
+try:
+    mountains = load('mountains.geojson')
+except FileNotFoundError:
+    mountains = {'type': 'FeatureCollection', 'features': []}
 meta = load('elev_meta.json')
 with open(os.path.join(V, 'elev_grid.bin'), 'rb') as f:
     grid = f.read()
@@ -23,6 +27,7 @@ payload = {
     'contours': contours,
     'provinces': provinces,
     'rivers': rivers,
+    'mountains': mountains,
     'elevMeta': meta,
     'elevGridB64': g64,
 }
@@ -37,5 +42,6 @@ print('写入', out)
 print('contours 要素:', len(contours['features']))
 print('provinces 要素:', len(provinces['features']))
 print('rivers 要素:', len(rivers['features']))
+print('mountains 要素:', len(mountains['features']))
 print('elevGrid base64 长度:', len(g64))
 print('data.js 大小(MB): %.2f' % (os.path.getsize(out) / 1e6))

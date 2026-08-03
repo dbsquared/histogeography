@@ -73,6 +73,16 @@
     display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:100%; box-sizing:border-box;
   }
+  .mlabel {
+    color:#fff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,
+      -1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;
+    white-space:nowrap; pointer-events:auto; cursor:pointer;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
   .leaflet-control-scale { background:rgba(20,28,40,0.7); }
   #scs-inset { position:absolute; bottom:135px; right:12px; z-index:1000; width:240px; }
   #scs-inset .hd { font-weight:bold; margin-bottom:4px; }
@@ -152,7 +162,7 @@
 <div id="title" class="panel">
   <b>中国地形图</b><br/>
   <span style="font-size:12px;color:#bcd;">路线 A · 晕渲底图 + 矢量等高线</span>
-  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）</div>
+  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）<br/>主要山脉：Natural Earth 10m（Range/mtn，公有领域；含 9 条手工补绘中国山脉）</div>
 </div>
 
 <div id="controls" class="panel">
@@ -162,6 +172,7 @@
   <label><input type="checkbox" id="cb-label" checked> 海拔注记</label>
   <label><input type="checkbox" id="cb-prov" checked> 省行政区</label>
   <label><input type="checkbox" id="cb-river" checked> 主要河流</label>
+  <label><input type="checkbox" id="cb-mtn" checked> 主要山脉</label>
   <label><input type="checkbox" id="cb-scs" checked> 南海诸岛附图</label>
   <div class="citysep">
     <div style="font-weight:bold;margin-bottom:2px;">汉末三国</div>
@@ -206,7 +217,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="data.js?v=2026070803"></script>
+<script src="data.js?v=2026080302"></script>
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
@@ -243,7 +254,7 @@ map.on('zoomend', updateLabelScale);
 updateLabelScale();
 
 // ── 全局标签自动防重叠（重叠的标签自动挪到附近空白处，绝不隐藏）──
-const _LBL_SEL  = '.clabel,.plabel,.rlabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label';
+const _LBL_SEL  = '.clabel,.plabel,.rlabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel';
 const _LBL_PAD  = 2;                           // 像素间距，避免贴边
 const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
@@ -300,6 +311,7 @@ function _lblPriority(el){
   if(c.indexOf('hanseat-label')>=0) return 46;
   if(c.indexOf('tk-label')>=0 && c.indexOf('pass')>=0) return 44;
   if(c.indexOf('rlabel')>=0) return 40;
+  if(c.indexOf('mlabel')>=0) return 64;
   if(c.indexOf('tk-label')>=0 && c.indexOf('ford')>=0) return 36;
   if(c.indexOf('clabel')>=0) return 20;
   return 30;
@@ -346,7 +358,7 @@ function applyLabelCollision(){
   const all = Array.prototype.slice.call(mapEl.querySelectorAll(_LBL_SEL));
   for(let i=0;i<all.length;i++){ all[i].style.setProperty('--lx','0px'); all[i].style.setProperty('--ly','0px'); }
   // 图标障碍
-  const obstacles = Array.prototype.slice.call(mapEl.querySelectorAll('.tkpt svg[data-tkid], .citypt svg[data-tkid]')).map(sv=>{
+  const obstacles = Array.prototype.slice.call(mapEl.querySelectorAll('.tkpt svg[data-tkid], .citypt svg[data-tkid], .mtnpeak[data-tkid]')).map(sv=>{
     const r = sv.getBoundingClientRect();
     return { tid: sv.getAttribute('data-tkid'), box:{left:r.left,right:r.right,top:r.top,bottom:r.bottom}, cx:(r.left+r.right)/2, cy:(r.top+r.bottom)/2 };
   });
@@ -523,6 +535,90 @@ function riverMidpoint(geom){
     }
   });
   riverLayer.addTo(map); riverLabelLayer.addTo(map);
+})();
+
+// 2b-3) 主要山脉矢量图层 (Natural Earth 10m geography_regions_polys, public domain)
+// 走向表现: 面内"垂直于走向"的梳齿短线段(mountain_hachure) + 中心轴线/双向箭头(mountain_axis/arrow)
+// 大量梳齿线段用 canvas 渲染以保性能; CRS.Simple 下 经纬度几何的垂直即屏幕垂直, 走向随缩放保持正确
+// 山脉图层：仅显示「3 个山峰图标 + 名称」，不再显示阴影/梳齿纹理
+const mountainPeakLayer = L.layerGroup();   // 每条山脉 3 个山峰图标(沿走向排列)
+const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重叠引擎)
+(()=>{
+  const gj = window.APP_DATA.mountains;
+  if(!gj || !gj.features) return;
+  const axisByName = {}, ctrByName = {}, srcByName = {};
+  gj.features.forEach(f=>{
+    const p = f.properties || {};
+    if(p.kind==='mountain_axis' && p.name)        axisByName[p.name] = f.geometry.coordinates;
+    else if(p.kind==='mountain_label' && p.name){ ctrByName[p.name] = f.geometry.coordinates; if(p.source) srcByName[p.name]=p.source; }
+  });
+  const MTN_HAND = new Set(['横断山脉','巫山','雪峰山','贺兰山','长白山','台湾山脉','唐古拉山脉','念青唐古拉山脉','燕山']);
+  const MTN_SRC = n => srcByName[n] || (MTN_HAND.has(n) ? '手工补绘' : 'Natural Earth 10m');
+  // 走向描述 + 方位角(北为0,顺时针)
+  function mtnStrike(dx, dy){
+    const ang = Math.atan2(Math.abs(dx), Math.abs(dy)) * 180/Math.PI; // 0=南北, 90=东西
+    let dir;
+    if(ang < 22.5)       dir = '南北';
+    else if(ang < 67.5)  dir = (dx>=0 ? '北东—南西' : '北西—南东');
+    else if(ang < 112.5) dir = '东西';
+    else if(ang < 157.5) dir = (dx>=0 ? '南东—北西' : '南西—北东');
+    else                 dir = '南北';
+    const az = (Math.atan2(dx, dy) * 180/Math.PI + 360) % 360;
+    return { dir: dir + '走向', az: Math.round(az) };
+  }
+  function mtnTip(name){
+    const ax = axisByName[name]; let strike='—', len='—', src=MTN_SRC(name);
+    if(ax && ax.length===2){
+      const [x0,y0]=ax[0], [x1,y1]=ax[1];
+      const dx=x1-x0, dy=y1-y0, midLat=(y0+y1)/2;
+      const dxKm=dx*111.32*Math.cos(midLat*Math.PI/180), dyKm=dy*111.32;
+      len = Math.round(Math.hypot(dxKm,dyKm)).toLocaleString('en-US') + ' km';
+      const st = mtnStrike(dx, dy); strike = st.dir + '（方位角 ' + st.az + '°）';
+    }
+    return '<div style="min-width:190px">'
+      + '<div style="font-weight:bold;font-size:13px;color:#2faa46;margin-bottom:5px;'
+      + 'border-bottom:1px solid #ddd;padding-bottom:4px">'+name+'</div>'
+      + '<div style="font-size:12px;line-height:1.7">走向：'+strike+'<br/>规模：约 '+len
+      + '<br/>数据来源：'+src+'</div></div>';
+  }
+  // 绿色山体 + 白色雪顶；每个峰独立 tid，名称 tid 与峰不同 → 名称不会被自己的峰压住
+  const PEAK_SVG = '<svg class="mtnpeak" data-tkid="__TID__" width="16" height="15" viewBox="0 0 16 15" xmlns="http://www.w3.org/2000/svg">'
+    + '<path d="M1 15 L8 2 L15 15 Z" fill="#2faa46" stroke="#0b3d1c" stroke-width="1.1" stroke-linejoin="round"/>'
+    + '<path d="M8 2 L11 7.5 L8 9 L5 7.5 Z" fill="#ffffff"/></svg>';
+  Object.keys(ctrByName).forEach(name=>{
+    const ctr = ctrByName[name];
+    const ax = axisByName[name];
+    let majx=1, majy=0, axisLen=0.6;
+    if(ax && ax.length===2){
+      const dx=ax[1][0]-ax[0][0], dy=ax[1][1]-ax[0][1];
+      const L0=Math.hypot(dx,dy)||1; majx=dx/L0; majy=dy/L0; axisLen=L0;
+    }
+    const d = Math.max(0.16, Math.min(0.7, axisLen*0.22)); // 山峰间距(度)
+    const tip = mtnTip(name);
+    [-d,0,d].forEach((off,i)=>{
+      const lon = ctr[0] + majx*off, lat = ctr[1] + majy*off;
+      const tid = 'mtn-'+name+'-'+i;   // 每个峰独立 tid
+      const m = L.marker([lat,lon],{
+        icon:L.divIcon({className:'', html:PEAK_SVG.split('__TID__').join(tid),
+          iconSize:[16,15], iconAnchor:[8,14]}),
+        keyboard:false
+      });
+      m.bindPopup(tip, {className:'tk-popup', maxWidth:240});
+      mountainPeakLayer.addLayer(m);
+    });
+    // 名称置于走向法线一侧(初始位)；tid 与峰不同 → 引擎把所有峰当障碍，名称不会再压在自己峰上
+    const nx=-majy, ny=majx, side=(nx>=0?1:-1), off=0.55;
+    const nlon = ctr[0] + nx*off*side, nlat = ctr[1] + ny*off*side;
+    const nm = L.marker([nlat,nlon],{
+      icon:L.divIcon({className:'', html:'<div class="mlabel" data-tkid="mtnlabel-'+name+'">'+name+'</div>',
+        iconSize:[120,16], iconAnchor:[60,8]}),
+      keyboard:false
+    });
+    nm.bindPopup(tip, {className:'tk-popup', maxWidth:240});
+    mountainNameLayer.addLayer(nm);
+  });
+  mountainPeakLayer.addTo(map); mountainNameLayer.addTo(map);
+  scheduleCollision();
 })();
 
 // 2c) 南海诸岛附图 (完整十段线 + 主要岛礁，补全超出主图范围的南海部分)
@@ -991,10 +1087,17 @@ document.getElementById('cb-river').onchange=e=>{
   e.target.checked?(riverLayer.addTo(map), riverLabelLayer.addTo(map))
     :(map.removeLayer(riverLayer), map.removeLayer(riverLabelLayer));
 };
+document.getElementById('cb-mtn').onchange=e=>{
+  if(e.target.checked){
+    mountainPeakLayer.addTo(map); mountainNameLayer.addTo(map);
+  } else {
+    map.removeLayer(mountainPeakLayer); map.removeLayer(mountainNameLayer);
+  }
+};
 
 // 4b) 一键叠加全部 / 一键消除全部（复用逐层开关逻辑）
 function setAll(on){
-  ['cb-base','cb-contour','cb-label','cb-prov','cb-river',
+  ['cb-base','cb-contour','cb-label','cb-prov','cb-river','cb-mtn',
    'cb-han-bnd','cb-han-seat',
    'cb-city-capital','cb-city-ancap','cb-city-battle',
    'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'].forEach(id=>{
