@@ -11,10 +11,13 @@
 import json, os, math
 import numpy as np
 import shapefile
+import rasterio
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NE_SHP = os.path.join(BASE_DIR, 'data', 'mountains', 'ne_10m_geography_regions_polys.shp')
 OUT = os.path.join(BASE_DIR, 'viewer', 'mountains.geojson')
+# 高程栅格(SRTM DEM, EPSG:4326, 用于把山峰图标放到海拔最高处)
+DEM_TIF = os.path.join(BASE_DIR, 'rendered', 'china_full_terrain.tif')
 
 # 地图范围(L.CRS.Simple, 与 viewer/index.html 一致)
 LON_MIN, LON_MAX = 72.0, 140.0
@@ -114,7 +117,60 @@ def compute_trend(rings):
     proj = X @ maj
     return c, maj, perp, (proj.min(), proj.max())
 
-def build_features(name, rings, geom, source='Natural Earth 10m'):
+def inside_any(lon, lat, rings):
+    return any(pip(lon, lat, ring) for ring in rings)
+
+def find_peaks(rings, dem_arr, transform, bounds, nodata):
+    """在山脉面内采样 DEM 数组, 返回 3 个海拔最高且彼此相距 >= MIN_SEP 的点 [lon,lat]。
+    dem_arr=None 或面超出 DEM 范围时返回 [] → 由 JS 退回质心±走向放置。
+    像素↔经纬度用纯仿射数学换算(不调用 rasterio.transform, 避免大循环泄漏)。"""
+    if dem_arr is None:
+        return []
+    H, W = dem_arr.shape
+    a = transform.a; e = transform.e; tc = transform.c; tf = transform.f
+    xs = [p[0] for ring in rings for p in ring]; ys = [p[1] for ring in rings for p in ring]
+    lon0, lon1, lat0, lat1 = min(xs), max(xs), min(ys), max(ys)
+    lon0 = max(lon0, bounds.left); lon1 = min(lon1, bounds.right)
+    lat0 = max(lat0, bounds.bottom); lat1 = min(lat1, bounds.top)
+    if lon1 <= lon0 or lat1 <= lat0:
+        return []
+    # 包围盒四角(经纬度) → 像素索引(纯仿射), 夹到数组范围
+    col_tl = (lon0 - tc) / a; row_tl = (lat1 - tf) / e   # 左上角=最小lon/最大lat
+    col_br = (lon1 - tc) / a; row_br = (lat0 - tf) / e   # 右下角=最大lon/最小lat
+    r0 = max(0, int(math.floor(min(row_tl, row_br)))); r1 = min(H - 1, int(math.ceil(max(row_tl, row_br))))
+    c0 = max(0, int(math.floor(min(col_tl, col_br)))); c1 = min(W - 1, int(math.ceil(max(col_tl, col_br))))
+    if r1 < r0 or c1 < c0:
+        return []
+    sub = dem_arr[r0:r1 + 1, c0:c1 + 1]
+    wa, we, wc, wf = a, e, tc + c0 * a, tf + r0 * e   # sub 窗口仿射
+    rows, cols = sub.shape
+    step = max(1, int(math.ceil(max(cols, rows) / 500)))  # 限制候选点数量
+    cands = []
+    for r in range(0, rows, step):
+        lat = wf + r * we
+        for c in range(0, cols, step):
+            ev = int(sub[r, c])
+            if nodata is not None and ev == nodata:
+                continue
+            if ev <= 0:
+                continue
+            lon = wc + c * wa
+            if not inside_any(lon, lat, rings):
+                continue
+            cands.append((ev, lon, lat))
+    if not cands:
+        return []
+    cands.sort(reverse=True)  # 按海拔降序
+    MIN_SEP = 0.3
+    picked = []
+    for ev, lon, lat in cands:
+        if all(math.hypot(lon - plon, lat - plat) >= MIN_SEP for plon, plat in picked):
+            picked.append((lon, lat))
+            if len(picked) >= 3:
+                break
+    return [[round(x, 5), round(y, 5)] for x, y in picked]
+
+def build_features(name, rings, geom, source='Natural Earth 10m', dem=None):
     feats = []
     c, maj, perp, (pmin, pmax) = compute_trend(rings)
     # 包围盒(用于梳齿网格)
@@ -154,14 +210,31 @@ def build_features(name, rings, geom, source='Natural Earth 10m'):
     feats.append({'type': 'Feature',
         'properties': {'kind': 'mountain_area', 'name': name, 'source': source},
         'geometry': geom})
-    # 标签点(质心)
+    # 标签点(质心, 作为 JS 无 DEM 峰值时的退回方案)
     feats.append({'type': 'Feature',
         'properties': {'kind': 'mountain_label', 'name': name, 'source': source},
         'geometry': {'type': 'Point', 'coordinates': [round(c[0], 5), round(c[1], 5)]}})
+    # 山峰图标实际坐标: 面内 DEM 最高的 3 个点(彼此分开) → 图标尽量落在海拔最高处
+    peaks = find_peaks(rings, dem[0], dem[1], dem[2], dem[3]) if dem else []
+    if peaks:
+        feats.append({'type': 'Feature',
+            'properties': {'kind': 'mountain_peaks', 'name': name, 'source': source},
+            'geometry': {'type': 'MultiPoint', 'coordinates': peaks}})
     return feats
 
 def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    dem = None
+    if os.path.exists(DEM_TIF):
+        try:
+            ds = rasterio.open(DEM_TIF)
+            print(f'已载入 DEM: {DEM_TIF}  (bounds {ds.bounds})')
+            dem = (ds.read(1), ds.transform, ds.bounds, ds.nodata)  # 整张数组一次读入, 避免逐山脉窗口读取
+            ds.close()
+        except Exception as e:
+            print('DEM 载入失败, 退回质心±走向放置:', e)
+    else:
+        print('未找到 DEM, 退回质心±走向放置')
     ranges = load_ne_ranges()
     print(f'Natural Earth 纳入: {len(ranges)} 条')
     for n, poly in HAND_RANGES:
@@ -171,7 +244,7 @@ def main():
 
     feats = []
     for r in ranges:
-        feats.extend(build_features(r['name'], r['rings'], r['geom'], r.get('source', 'Natural Earth 10m')))
+        feats.extend(build_features(r['name'], r['rings'], r['geom'], r.get('source', 'Natural Earth 10m'), dem))
     gj = {'type': 'FeatureCollection', 'features': feats}
     json.dump(gj, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     kinds = {}
@@ -179,6 +252,9 @@ def main():
         kinds[f['properties']['kind']] = kinds.get(f['properties']['kind'], 0) + 1
     print(f'输出 → {OUT}')
     print('各类型要素数:', kinds)
+    # 报告每条山脉找到的峰数(0 表示退回质心方案)
+    pn = sum(1 for f in feats if f['properties'].get('kind') == 'mountain_peaks')
+    print(f'带 DEM 峰值坐标的山脉: {pn}/{len(ranges)}')
 
 if __name__ == '__main__':
     main()

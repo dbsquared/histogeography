@@ -213,7 +213,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="data.js?v=2026080304"></script>
+<script src="data.js?v=2026080305"></script>
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
@@ -546,11 +546,12 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
 (()=>{
   const gj = window.APP_DATA.mountains;
   if(!gj || !gj.features) return;
-  const axisByName = {}, ctrByName = {}, srcByName = {};
+  const axisByName = {}, ctrByName = {}, srcByName = {}, peaksByName = {};
   gj.features.forEach(f=>{
     const p = f.properties || {};
     if(p.kind==='mountain_axis' && p.name)        axisByName[p.name] = f.geometry.coordinates;
     else if(p.kind==='mountain_label' && p.name){ ctrByName[p.name] = f.geometry.coordinates; if(p.source) srcByName[p.name]=p.source; }
+    else if(p.kind==='mountain_peaks' && p.name)  peaksByName[p.name] = f.geometry.coordinates; // [[lon,lat]x3] DEM 最高 3 点
   });
   const MTN_HAND = new Set(['横断山脉','巫山','雪峰山','贺兰山','长白山','台湾山脉','唐古拉山脉','念青唐古拉山脉','燕山']);
   const MTN_SRC = n => srcByName[n] || (MTN_HAND.has(n) ? '手工补绘' : 'Natural Earth 10m');
@@ -593,10 +594,20 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
       const dx=ax[1][0]-ax[0][0], dy=ax[1][1]-ax[0][1];
       const L0=Math.hypot(dx,dy)||1; majx=dx/L0; majy=dy/L0; axisLen=L0;
     }
-    const d = Math.max(0.16, Math.min(0.7, axisLen*0.22)); // 山峰间距(度)
     const tip = mtnTip(name);
-    [-d,0,d].forEach((off,i)=>{
-      const lon = ctr[0] + majx*off, lat = ctr[1] + majy*off;
+    // 峰坐标：优先用 DEM 最高的 3 个点(尽量落在海拔最高处)；缺失则退回质心±走向
+    let peaks = peaksByName[name];
+    if(!peaks || !peaks.length){
+      const d = Math.max(0.16, Math.min(0.7, axisLen*0.22));
+      peaks = [-d,0,d].map(o=>[ctr[0] + majx*o, ctr[1] + majy*o]);
+    }
+    while(peaks.length < 3){
+      const base = peaks[peaks.length-1] || ctr;
+      const d = Math.max(0.16, Math.min(0.7, axisLen*0.22));
+      peaks.push([base[0] + majx*d, base[1] + majy*d]);
+    }
+    peaks.slice(0,3).forEach((coord,i)=>{
+      const lon = coord[0], lat = coord[1];
       const tid = 'mtn-'+name+'-'+i;   // 每个峰独立 tid
       const m = L.marker([lat,lon],{
         icon:L.divIcon({className:'', html:PEAK_SVG.split('__TID__').join(tid),
@@ -606,9 +617,10 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
       m.bindPopup(tip, {className:'tk-popup', maxWidth:240});
       mountainPeakLayer.addLayer(m);
     });
-    // 名称置于走向法线一侧(初始位)；tid 与峰不同 → 引擎把所有峰当障碍，名称不会再压在自己峰上
+    // 名称锚定在主峰(最高点)旁, 沿走向法线偏移; tid 与峰不同 → 名称不会再压在自己峰上
+    const main = peaks[0];
     const nx=-majy, ny=majx, side=(nx>=0?1:-1), off=0.55;
-    const nlon = ctr[0] + nx*off*side, nlat = ctr[1] + ny*off*side;
+    const nlon = main[0] + nx*off*side, nlat = main[1] + ny*off*side;
     const nm = L.marker([nlat,nlon],{
       icon:L.divIcon({className:'', html:'<div class="mlabel" data-tkid="mtnlabel-'+name+'">'+name+'</div>',
         iconSize:[120,16], iconAnchor:[60,8]}),
