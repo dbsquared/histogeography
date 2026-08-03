@@ -140,15 +140,6 @@
     border-radius:5px; padding:3px 10px; font-size:12px;
   }
   #controls .btn:hover { background:#2b4a73; }
-/* ── 南中·蛮兵地标 ── */
-.nanzhong-badge { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.65)); cursor:pointer; }
-.nanzhong-label {
-  color:#4ade80; font-weight:bold;
-  font-size:calc(11px * var(--lscale,1));
-  text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,
-    -1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;
-  white-space:nowrap; pointer-events:none;
-}
   #controls .btnbar { margin-top:8px; border-top:1px solid #34507a; padding-top:8px; }
   /* 截图模式：一键隐藏所有界面元素（地图内容保留） */
   .screenshot-mode .panel,
@@ -192,9 +183,8 @@
     <label><input type="checkbox" id="cb-tk-city"> 城池（31）</label>
     <label><input type="checkbox" id="cb-tk-pass"> 关隘（19）</label>
     <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
-    <label><input type="checkbox" id="cb-tk-battle"> 战役（30）</label>
+    <label><input type="checkbox" id="cb-tk-battle"> 战役（31）</label>
     <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
-    <label><input type="checkbox" id="cb-nanzhong" checked> 南中（蛮兵）</label>
   </div>
   <div class="citysep">
     <div style="font-weight:bold;margin-bottom:2px;">其他</div>
@@ -232,7 +222,7 @@
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
-    <script src="three_kingdoms_sites.js?v=2026080301"></script>
+    <script src="three_kingdoms_sites.js?v=2026080302"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -978,7 +968,7 @@ const _tkD = window.THREE_KINGDOM_SITES;
 
 function tkTip(cat, f){
   if(cat==='battle'){
-    return '<div style="margin:3px 0"><b>'+f.name+'</b>（'+f.year+'）<br/>地点：'+f.place+'<br/>'+f.sides+'<br/><span style="color:#ffd479">'+f.result+'</span></div>';
+    return '<div style="margin:3px 0"><b>'+f.name+'</b>（'+f.year+'）<br/>地点：'+f.place+'<br/>'+f.sides+'<br/><span style="color:#ffd479">'+f.result+'</span>'+(f.desc?('<br/><span style="color:#cfe0f0;font-size:11px;line-height:1.5">'+f.desc+'</span>'):'')+'</div>';
   }
   return '<div style="margin:3px 0"><b>'+f.name+'</b> · '+tkMeta[cat].label+'<br/>今址：'+f.modern+'（'+f.zhou+'）<br/>'+(f.desc||'')+'</div>';
 }
@@ -1065,46 +1055,6 @@ function rebuildTK(){
 });
 rebuildTK();
 
-// 南中·蛮兵地标（味县/建宁郡治，今云南曲靖）
-const nanzhongLayer = L.layerGroup();
-function buildNanzhong(){
-  nanzhongLayer.clearLayers();
-  if(!document.getElementById('cb-nanzhong').checked) return;
-  const nzLat=25.5, nzLon=103.8;
-  const iconMarker=L.marker([nzLat,nzLon],{
-    icon:L.divIcon({
-      className:'nanzhong-icon',
-      html:'<img src="nanzhong_manbing.png" class="nanzhong-badge">',
-      iconSize:[42,42], iconAnchor:[21,42]
-    }),
-    keyboard:false
-  });
-  iconMarker.bindPopup(
-    '<div class="tk-popup-body">'
-    +'<b>南中</b><br/>'
-    +'蜀汉益州南部大区（今云贵川西南）。<br/>'
-    +'诸葛亮南征（225年，七擒孟获）平定之地；<br/>'
-    +'设庲降都督统之，治建宁郡味县（今云南曲靖）。'
-    +'</div>',
-    {className:'tk-popup', maxWidth:260}
-  );
-  nanzhongLayer.addLayer(iconMarker);
-  const labelMarker=L.marker([nzLat,nzLon],{
-    icon:L.divIcon({
-      className:'',
-      html:'<div class="nanzhong-label">南中</div>',
-      iconSize:[0,0],
-      iconAnchor:[26,-2]
-    }),
-    interactive:false,
-    keyboard:false
-  });
-  nanzhongLayer.addLayer(labelMarker);
-  nanzhongLayer.addTo(map);
-}
-document.getElementById('cb-nanzhong').onchange=()=>buildNanzhong();
-buildNanzhong();
-
 // 3) 悬停查海拔 (数据已通过 data.js 注入 window.APP_DATA)
 let elevData=null, elevMeta=null;
 (()=>{
@@ -1171,8 +1121,7 @@ function setAll(on){
   ['cb-base','cb-contour','cb-label','cb-prov','cb-river','cb-mtn',
    'cb-han-bnd','cb-han-seat',
    'cb-city-capital','cb-city-ancap','cb-city-battle',
-   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge',
-   'cb-nanzhong'].forEach(id=>{
+   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'].forEach(id=>{
     const cb=document.getElementById(id);
     if(cb.checked!==on){ cb.checked=on; cb.onchange({target:cb}); }
   });
@@ -1186,7 +1135,7 @@ document.getElementById('btn-all-off').onclick=()=>setAll(false);
 // 4c) 汉末三国「全选」主选项：勾选后联动该区块全部子选项；子项变更时回写主选项状态
 (function(){
   const hanAll=document.getElementById('cb-han-all');
-  const hanSubs=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-nanzhong'];
+  const hanSubs=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'];
   function syncMaster(){ hanAll.checked=hanSubs.every(id=>document.getElementById(id).checked); }
   hanAll.onchange=e=>{
     hanSubs.forEach(id=>{
