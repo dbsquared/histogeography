@@ -25,11 +25,11 @@
   #controls label { display:block; cursor:pointer; user-select:none; }
   #controls input { vertical-align:middle; margin-right:6px; }
   #readout {
-    position:absolute; bottom:18px; left:12px; z-index:1000;
+    position:absolute; bottom:104px; left:12px; z-index:1000;
     font-size:14px; min-width:160px;
   }
   #readout .elev { font-size:20px; font-weight:bold; color:#ffd479; }
-  #legend { position:absolute; bottom:18px; right:12px; z-index:1000; width:240px; }
+  #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:240px; }
   #legend .bar {
     height:14px; border-radius:3px; margin:4px 0;
     background:linear-gradient(to right,
@@ -635,9 +635,9 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
 
 // 2c) 南海诸岛附图 (完整十段线 + 主要岛礁，补全超出主图范围的南海部分)
 // ── 南海诸岛附图：作为地图图层（锚定海南以东开阔海域）──
-// 把 scs_inset_data.js 的南海诸岛小地图内容重投影到台岛以东开阔海域的一个小框内，
+// 把 scs_inset_data.js 的南海诸岛小地图内容重投影到地图右下角开阔海域的一个小框内，
 // 用真实 Leaflet 图层绘制，随地图平移/缩放，不再依赖界面面板。
-const scsBox = { lon0:128.0, lon1:134.0, lat0:19.5, lat1:25.5 }; // 台岛以东更开阔海域
+const scsBox = { lon0:130.0, lon1:139.0, lat0:15.0, lat1:25.0 }; // 地图右下角开阔海域(放大)
 const scsLayer = L.layerGroup();
 (function buildScsLayer(){
   const D = window.SCS_INSET; if(!D) return;
