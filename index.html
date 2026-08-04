@@ -969,7 +969,7 @@ function tkTip(cat, f){
   return '<div style="margin:3px 0"><b>'+f.name+'</b> · '+tkMeta[cat].label+'<br/>今址：'+f.modern+'（'+f.zhou+'）<br/>'+(f.desc||'')+'</div>';
 }
 
-// 三国地标：合并模式把距离 < TK_FUSE_DEG 的地标融合为一个合成标记（主类型作图标，其余类型作角标），多成员标签仍走防重叠引擎；关闭合并则退化为逐类独立图层
+// 三国地标：合并模式下，非城池站点仅并入「最近的城池」(距离 ≤ TK_FUSE_DEG)；城池为各自独立的锚点，不会全图坍缩。合成标记主类型(城池)作图标、其余类型作角标；关闭合并则退化为逐类独立图层
 function rebuildTK(){
   ['city','pass','ford','battle'].forEach(cat=>{
     map.removeLayer(tkLayer[cat]); map.removeLayer(tkLabelLayer[cat]);
@@ -1007,23 +1007,37 @@ function rebuildTK(){
   types.forEach(cat=>{ (_tkD[cat]||[]).forEach((f,i)=> sites.push({cat,f,idx:i})); });
   const n=sites.length;
   if(n===0){ scheduleCollision(); return; }
-  const parent=[...Array(n).keys()];
-  const find=x=>{ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; };
-  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
-    const a=sites[i].f, b=sites[j].f;
-    if(Math.hypot(a.lon-b.lon, a.lat-b.lat) <= TK_FUSE_DEG) parent[find(i)]=find(j);
+
+  // 合并策略：非城池站点只并入「最近的城池」(距离 ≤ 尺度)，不再传递坍缩；
+  // 城池间始终各自独立为锚点——最多合并到最近的城池，不会全图坍缩为一处。
+  const cityIdx=[];
+  sites.forEach((s,i)=>{ if(s.cat==='city') cityIdx.push(i); });
+  const groups={};                                   // key=城池 site index -> 该城池融合组
+  cityIdx.forEach(ci=>{ groups[ci]=[sites[ci]]; });
+  const standalone=[];                               // 无邻近城池的非城池站点，单独渲染
+  for(let i=0;i<n;i++){
+    if(sites[i].cat==='city') continue;
+    let best=-1,bestD=Infinity;
+    for(const ci of cityIdx){
+      const a=sites[i].f,b=sites[ci].f;
+      const d=Math.hypot(a.lon-b.lon,a.lat-b.lat);
+      if(d<bestD){ bestD=d; best=ci; }
+    }
+    if(best>=0 && bestD<=TK_FUSE_DEG) groups[best].push(sites[i]);
+    else standalone.push(i);
   }
-  const groups={};
-  for(let i=0;i<n;i++){ const r=find(i); (groups[r]=groups[r]||[]).push(sites[i]); }
-  Object.values(groups).forEach(g=>{
-    g.sort((x,y)=>tkTypeOrder[x.cat]-tkTypeOrder[y.cat]);
+
+  // 渲染城池锚定的融合标记（含仅自身、无角标的城池）
+  Object.keys(groups).map(Number).forEach(ci=>{
+    const g=groups[ci];
+    g.sort((x,y)=>tkTypeOrder[x.cat]-tkTypeOrder[y.cat]);   // 保证 city 在前
     const primary=g[0];
     const badges=[...new Set(g.slice(1).map(s=>s.cat))];
-    const ll=[primary.f.lat, primary.f.lon];
+    const ll=[primary.f.lat,primary.f.lon];
     const s=size[primary.cat];
     const nudge=primary.f.nudge||[0,0];
     const tid='tkf_'+primary.cat+'_'+primary.idx+'_'+g.length;
-    const anchor=[s/2-nudge[0], s/2-nudge[1]];
+    const anchor=[s/2-nudge[0],s/2-nudge[1]];
     const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkFusedIcon(primary.cat,badges,s,tid), iconSize:[s,s], iconAnchor:anchor}), keyboard:false });
     let html='';
     ['city','pass','ford','battle'].forEach(c=>{
@@ -1040,6 +1054,22 @@ function rebuildTK(){
         interactive:false, keyboard:false
       }));
     });
+  });
+
+  // 渲染无邻近城池的孤立非城池站点（普通单类标记，不融合）
+  standalone.forEach(i=>{
+    const s=sites[i];
+    const ll=[s.f.lat,s.f.lon], sz=size[s.cat];
+    const nudge=s.f.nudge||[0,0];
+    const tid='tk_'+s.cat+'_'+s.idx;
+    const anchor=[sz/2-nudge[0],sz/2-nudge[1]];
+    const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkIconSVG(s.cat,sz,tid), iconSize:[sz,sz], iconAnchor:anchor}), keyboard:false });
+    marker.bindPopup(tkTip(s.cat,s.f),{className:'tk-popup', maxWidth:260});
+    tkMergeLayer.addLayer(marker);
+    tkMergeLabelLayer.addLayer(L.marker(ll,{
+      icon:L.divIcon({ className:'', html:'<div class="tk-label '+s.cat+'" data-tkid="'+tid+'">'+s.f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
+      interactive:false, keyboard:false
+    }));
   });
   tkMergeLayer.addTo(map); tkMergeLabelLayer.addTo(map);
   scheduleCollision();
