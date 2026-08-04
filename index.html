@@ -176,15 +176,21 @@
   <label><input type="checkbox" id="cb-scs"> 南海诸岛附图</label>
   <label><input type="checkbox" id="cb-city-capital"> 省会/直辖市</label>
   <div class="citysep">
-    <div style="font-weight:bold;margin-bottom:2px;">汉末三国</div>
-    <label style="font-weight:bold;"><input type="checkbox" id="cb-han-all"> 汉末三国（全选）</label>
-    <label><input type="checkbox" id="cb-han-bnd"> 州界</label>
-    <label><input type="checkbox" id="cb-han-seat"> 郡</label>
-    <label><input type="checkbox" id="cb-tk-city"> 城池（31）</label>
-    <label><input type="checkbox" id="cb-tk-pass"> 关隘（19）</label>
-    <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
-    <label><input type="checkbox" id="cb-tk-battle"> 战役（31）</label>
-    <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
+    <label style="font-weight:bold;"><input type="checkbox" id="cb-han-all"> 汉末三国</label>
+    <div style="margin-left:18px;">
+      <label><input type="checkbox" id="cb-han-bnd"> 州界</label>
+      <label><input type="checkbox" id="cb-han-seat"> 郡</label>
+      <label><input type="checkbox" id="cb-tk-city"> 城池（31）</label>
+      <label><input type="checkbox" id="cb-tk-pass"> 关隘（19）</label>
+      <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
+      <label><input type="checkbox" id="cb-tk-battle"> 战役（31）</label>
+      <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
+      <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;color:#bcd;">合并尺度</span>
+        <input type="range" id="merge-scale" min="0.05" max="1.5" step="0.05" value="0.25" style="flex:1;min-width:70px;">
+        <span id="merge-scale-val" style="font-size:11px;color:#ffd479;min-width:34px;text-align:right;">0.25°</span>
+      </div>
+    </div>
   </div>
   <div class="citysep">
     <div style="font-weight:bold;margin-bottom:2px;">其他</div>
@@ -950,7 +956,7 @@ function tkFusedIcon(mainCat, badges, size, tid){
 const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
 const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
 
-const TK_FUSE_DEG = 0.25;            // 融合半径（度）：距离小于此值的地标合成一个标记
+let TK_FUSE_DEG = 0.25;            // 融合半径（度）：距离小于此值的地标合成一个标记（可由「合并尺度」滑块调节）
 const tkTypeOrder = { city:0, pass:1, ford:2, battle:3 };
 const tkMergeLayer = L.layerGroup();
 const tkMergeLabelLayer = L.layerGroup();
@@ -1124,7 +1130,7 @@ document.getElementById('btn-all-off').onclick=()=>setAll(false);
 // 4c) 汉末三国「全选」主选项：勾选后联动该区块全部子选项；子项变更时回写主选项状态
 (function(){
   const hanAll=document.getElementById('cb-han-all');
-  const hanSubs=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'];
+  const hanSubs=['cb-han-bnd','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'];
   function syncMaster(){ hanAll.checked=hanSubs.every(id=>document.getElementById(id).checked); }
   hanAll.onchange=e=>{
     hanSubs.forEach(id=>{
@@ -1137,6 +1143,18 @@ document.getElementById('btn-all-off').onclick=()=>setAll(false);
   };
   hanSubs.forEach(id=>document.getElementById(id).addEventListener('change',syncMaster));
   syncMaster();
+})();
+
+// 4d) 合并重合地标：合并尺度滑块（实时调节 TK_FUSE_DEG 并重建）
+(function(){
+  const el=document.getElementById('merge-scale');
+  const out=document.getElementById('merge-scale-val');
+  if(!el) return;
+  el.addEventListener('input',()=>{
+    TK_FUSE_DEG=parseFloat(el.value);
+    if(out) out.textContent=TK_FUSE_DEG.toFixed(2)+'°';
+    if(document.getElementById('cb-tk-merge').checked) rebuildTK();
+  });
 })();
 
 // 6) 截图模式：一键隐藏所有界面元素（地图内容保留）
