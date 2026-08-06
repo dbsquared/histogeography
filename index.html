@@ -30,7 +30,8 @@
   }
   #readout .elev { font-size:20px; font-weight:bold; color:#ffd479; }
   #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:240px; }
-  #legend-scale { margin-top:4px; }
+  .legend-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  #legend-scale { text-align:right; }
   #legend-scale .leaflet-control-scale { margin:0; }
   #legend-scale .leaflet-control-scale-line {
     border:1px solid #cfe0f0; border-top:none; color:#cfe0f0; background:transparent;
@@ -263,10 +264,12 @@
 </div>
 
 <div id="legend" class="panel">
-  <div style="font-weight:bold;">海拔（米）</div>
+  <div class="legend-head">
+    <span style="font-weight:bold;">海拔（米）</span>
+    <span id="legend-scale"></span>
+  </div>
   <div class="bar"></div>
   <div class="ticks" id="legend-ticks"></div>
-  <div id="legend-scale"></div>
 </div>
 
 
