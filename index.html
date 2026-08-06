@@ -298,6 +298,7 @@ const map=L.map('map',{
 });
 // 自定义比例尺：本图用 L.CRS.Simple（1 地图单位=1°），Leaflet 自带 scale 会把「度」当「米」算，完全错误。
 // 这里按 Plate Carrée 真实距离（1°lat≈111.32km，1°lon≈111.32·cos(lat) km）实时计算。
+// 线条固定 100px 像素长度，不随缩放变化；变动的是右侧标注的真实距离数值。
 function updateScaleBar(){
   const el = document.getElementById('legend-scale');
   if(!el) return;
@@ -307,17 +308,15 @@ function updateScaleBar(){
   const pxPerDeg = Math.abs(p1.x - p0.x);
   if(pxPerDeg <= 0){ el.innerHTML=''; return; }
   const kmPerPx = 111.32 * Math.cos(lat * Math.PI / 180) / pxPerDeg;
-  const maxKm = 120 * kmPerPx;
-  const steps = [0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000];
-  let km = steps[0];
-  for(const s of steps){ if(s <= maxKm) km = s; else break; }
-  const w = km / kmPerPx;
+  const W = 100;                  // 固定像素长度
+  const km = kmPerPx * W;         // 该固定长度在当前缩放下对应的真实距离
   let label;
-  if(km >= 1000)      label = (km/1000) + ' km';
-  else if(km >= 1)    label = km + ' km';
+  if(km >= 1000)      label = Math.round(km/100)*100 + ' km';
+  else if(km >= 100)  label = Math.round(km/10)*10 + ' km';
+  else if(km >= 1)    label = Math.round(km) + ' km';
   else                label = Math.round(km*1000) + ' m';
   el.innerHTML = '<span class="scale-bar"><span class="scale-line" style="width:' +
-                 w.toFixed(1) + 'px"></span><span class="scale-text">' + label + '</span></span>';
+                 W + 'px"></span><span class="scale-text">' + label + '</span></span>';
 }
 map.on('zoomend moveend load', updateScaleBar);
 map.whenReady(updateScaleBar);
