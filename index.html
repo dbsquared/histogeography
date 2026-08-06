@@ -29,15 +29,16 @@
     font-size:14px; min-width:160px;
   }
   #readout .elev { font-size:20px; font-weight:bold; color:#ffd479; }
-  #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:240px; }
+  #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:240px;
+            backdrop-filter:none; -webkit-backdrop-filter:none; }
   .legend-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   #legend-scale { text-align:right; }
-  #legend-scale .leaflet-control-scale { margin:0; }
-  #legend-scale .leaflet-control-scale-line {
-    border:1px solid #cfe0f0; border-top:none; color:#e8eef5; background:transparent;
-    box-shadow:none; padding:2px 5px 1px; line-height:1.25; font-size:12px; font-weight:bold;
-    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; transform:translateZ(0);
-  }
+  .scale-bar { display:inline-flex; align-items:center; gap:6px; line-height:1; }
+  .scale-line { position:relative; height:6px;
+                border-left:1.5px solid #e8eef5; border-right:1.5px solid #e8eef5;
+                border-bottom:1.5px solid #e8eef5; }
+  .scale-text { font-size:12px; font-weight:bold; color:#e8eef5; white-space:nowrap;
+                -webkit-font-smoothing:antialiased; }
   #legend .bar {
     height:14px; border-radius:3px; margin:4px 0;
     background:linear-gradient(to right,
@@ -91,7 +92,7 @@
     display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:100%; box-sizing:border-box;
   }
-  .leaflet-control-scale { background:rgba(20,28,40,0.7); }
+  /* 比例尺已改为自定义实现(.scale-bar)，无需 Leaflet 默认背景 */
 .scs-title-wrap { background:none; border:none; }
 .scs-title { color:#ffe7c2; font-weight:bold; font-size:12px; white-space:nowrap;
              text-shadow:0 0 3px #000,1px 1px 2px #000; transform:translateX(-50%); display:inline-block; }
@@ -152,7 +153,7 @@
   /* 截图模式：一键隐藏所有界面元素（地图内容保留） */
   .screenshot-mode .panel,
   .screenshot-mode .leaflet-control-zoom,
-  .screenshot-mode .leaflet-control-scale { opacity:0 !important; pointer-events:none !important; }
+  .screenshot-mode .scale-bar { opacity:0 !important; pointer-events:none !important; }
   #exit-shot {
     position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:2000;
     display:none; cursor:pointer; background:rgba(192,57,43,0.92); color:#fff;
@@ -295,8 +296,31 @@ const map=L.map('map',{
   scrollWheelZoom:true,
   attributionControl:false
 });
-const scaleControl = L.control.scale({imperial:false,position:'bottomleft',maxWidth:150}).addTo(map);
-document.getElementById('legend-scale').appendChild(scaleControl.getContainer());
+// 自定义比例尺：本图用 L.CRS.Simple（1 地图单位=1°），Leaflet 自带 scale 会把「度」当「米」算，完全错误。
+// 这里按 Plate Carrée 真实距离（1°lat≈111.32km，1°lon≈111.32·cos(lat) km）实时计算。
+function updateScaleBar(){
+  const el = document.getElementById('legend-scale');
+  if(!el) return;
+  const lat = map.getCenter().lat;
+  const p0 = map.latLngToContainerPoint([lat, 0]);
+  const p1 = map.latLngToContainerPoint([lat, 1]);
+  const pxPerDeg = Math.abs(p1.x - p0.x);
+  if(pxPerDeg <= 0){ el.innerHTML=''; return; }
+  const kmPerPx = 111.32 * Math.cos(lat * Math.PI / 180) / pxPerDeg;
+  const maxKm = 120 * kmPerPx;
+  const steps = [0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000,10000,20000];
+  let km = steps[0];
+  for(const s of steps){ if(s <= maxKm) km = s; else break; }
+  const w = km / kmPerPx;
+  let label;
+  if(km >= 1000)      label = (km/1000) + ' km';
+  else if(km >= 1)    label = km + ' km';
+  else                label = Math.round(km*1000) + ' m';
+  el.innerHTML = '<span class="scale-bar"><span class="scale-line" style="width:' +
+                 w.toFixed(1) + 'px"></span><span class="scale-text">' + label + '</span></span>';
+}
+map.on('zoomend moveend load', updateScaleBar);
+map.whenReady(updateScaleBar);
 map.fitBounds(BOUNDS);
 
 // 省名标签随镜头缩放：以全图默认缩放为基准(1.0, 约8px)，放大时增大、缩小时减小
