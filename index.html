@@ -341,8 +341,6 @@ const _menuToggle = document.getElementById('menu-toggle');
 const _controlsPanel = document.getElementById('controls');
 if (_menuToggle && _controlsPanel) {
   _menuToggle.addEventListener('click', () => _controlsPanel.classList.toggle('open'));
-  // 触屏点地图空白处自动收起面板
-  map.on('click', () => { if (window.innerWidth <= 768) _controlsPanel.classList.remove('open'); });
 }
 // ── 详情侧栏：默认收起，点击标记展开，自身有独立按钮 ──
 function showInfo(title, html){
@@ -360,6 +358,14 @@ if (_infoToggle && _infoPanel) {
   const _infoClose = _infoPanel.querySelector('.info-close');
   if (_infoClose) _infoClose.addEventListener('click', hideInfo);
 }
+// 点击面板 / 开关按钮 / 地图标记【以外】的任意位置，自动收起控制面板与详情侧栏
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#controls') || e.target.closest('#info')) return;            // 面板内部
+  if (e.target.closest('#menu-toggle') || e.target.closest('#info-toggle')) return; // 开关按钮
+  if (e.target.closest('.leaflet-marker-icon, .leaflet-interactive')) return;        // 地图标记/矢量（各自会触发详情）
+  const c = document.getElementById('controls'); if (c) c.classList.remove('open');
+  const inf = document.getElementById('info'); if (inf) inf.classList.remove('open');
+});
 // 默认填充「地图信息」：未点击标记时点 ★ 也能看到地图说明与标记图例，避免空面板
 (function(){
   const tb = document.querySelector('#title b');
