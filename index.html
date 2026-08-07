@@ -14,22 +14,27 @@
   #map { position:absolute; inset:0; background:#0d1b2a; }
   .panel {
     background:rgba(20,28,40,0.88); color:#e8eef5; border:1px solid #34507a;
-    border-radius:8px; padding:10px 12px; font-size:13px; line-height:1.7;
+    border-radius:8px; padding:10px 12px; font-size:clamp(12px,0.9vw+9px,15px); line-height:1.7;
     box-shadow:0 2px 10px rgba(0,0,0,0.4); backdrop-filter:blur(4px);
     transition:opacity .2s ease;
   }
-  #title { position:absolute; top:12px; left:12px; z-index:1000; max-width:320px; }
-  #title b { font-size:15px; color:#fff; }
-  #title .src { font-size:11px; color:#9fb3c8; margin-top:4px; }
-  #controls { position:absolute; top:12px; right:12px; z-index:1000; }
+  #title { position:absolute; top:12px; left:12px; z-index:1000; max-width:min(92vw,360px); }
+  #title b { font-size:clamp(15px,1.2vw+10px,19px); color:#fff; }
+  #title .src { font-size:clamp(10px,0.8vw+8px,12px); color:#9fb3c8; margin-top:4px; }
+  #controls {
+    position:absolute; top:64px; right:12px; z-index:1000;
+    width:min(82vw,300px); max-height:84vh; overflow-y:auto;
+    transform:translateX(calc(100% + 24px)); transition:transform .25s ease;
+  }
+  #controls.open { transform:none; }
   #controls label { display:block; cursor:pointer; user-select:none; }
   #controls input { vertical-align:middle; margin-right:6px; }
   #readout {
     position:absolute; bottom:104px; left:12px; z-index:1000;
-    font-size:14px; min-width:160px;
+    font-size:clamp(13px,1vw+9px,16px); min-width:min(40vw,180px);
   }
-  #readout .elev { font-size:20px; font-weight:bold; color:#ffd479; }
-  #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:240px;
+  #readout .elev { font-size:clamp(18px,1.5vw+12px,26px); font-weight:bold; color:#ffd479; }
+  #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:min(82vw,260px);
             backdrop-filter:none; -webkit-backdrop-filter:none; }
   .legend-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
   #legend-scale { text-align:right; }
@@ -37,17 +42,17 @@
   .scale-line { position:relative; height:6px;
                 border-left:1.5px solid #e8eef5; border-right:1.5px solid #e8eef5;
                 border-bottom:1.5px solid #e8eef5; }
-  .scale-text { font-size:12px; font-weight:bold; color:#e8eef5; white-space:nowrap;
+  .scale-text { font-size:clamp(11px,0.9vw+8px,13px); font-weight:bold; color:#e8eef5; white-space:nowrap;
                 -webkit-font-smoothing:antialiased; }
   #legend .bar {
-    height:14px; border-radius:3px; margin:4px 0;
+    height:clamp(12px,1.5vw,16px); border-radius:3px; margin:4px 0;
     background:linear-gradient(to right,
       #2b5d8c 0%, #4a8ab5 2%, #7fb5d5 5%, #b3d9a0 8%, #8cc579 15%,
       #6ba356 25%, #c9b458 35%, #c9a048 45%, #a67c3d 55%, #8b5e2f 65%,
       #9e7a6a 75%, #c8b8a8 85%, #e8ddd0 95%, #ffffff 100%);
     border:1px solid #34507a;
   }
-  #legend .ticks { position:relative; height:16px; font-size:10px; color:#cfe0f0; }
+  #legend .ticks { position:relative; height:16px; font-size:clamp(9px,0.7vw+7px,11px); color:#cfe0f0; }
   #legend .ticks span { position:absolute; transform:translateX(-50%); }
   .clabel {
     background:rgba(30,20,10,0.72); color:#ffe7c2; border:1px solid #7a5230;
@@ -141,12 +146,12 @@
 .citylabel.capital         { color:#9fe5f5; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
 .citylabel.ancient_capital { color:#ffd24d; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
 .citylabel.battle          { color:#ffb3b3; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
-#controls .subctl { margin-left:18px; font-size:12px; color:#bcd; }
-#controls .citysep { margin-top:6px; border-top:1px dashed #34507a; padding-top:6px; }
+  #controls .subctl { margin-left:18px; font-size:clamp(11px,0.8vw+8px,13px); color:#bcd; }
+  #controls .citysep { margin-top:6px; border-top:1px dashed #34507a; padding-top:6px; }
   #controls .btn {
     display:inline-block; cursor:pointer; margin-top:8px; margin-right:6px;
     background:#1f3656; color:#cfe0f0; border:1px solid #4a6fa5;
-    border-radius:5px; padding:3px 10px; font-size:12px;
+    border-radius:5px; padding:clamp(3px,0.5vw,5px) clamp(8px,1vw,12px); font-size:clamp(11px,0.85vw+8px,13px);
   }
   #controls .btn:hover { background:#2b4a73; }
   #controls .btnbar { margin-top:8px; border-top:1px solid #34507a; padding-top:8px; }
@@ -165,27 +170,35 @@
   #map, #map * { -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; }
   html, body { -webkit-user-select:none; user-select:none; }
   #map img, #map .leaflet-image-layer { pointer-events:none; }
-  /* 移动端菜单按钮（仅小屏显示） */
-  #menu-toggle {
-    display:none; position:absolute; top:12px; right:12px; z-index:1500;
-    width:42px; height:42px; line-height:42px; text-align:center;
-    background:rgba(20,28,40,0.9); color:#e8eef5; border:1px solid #34507a;
-    border-radius:8px; font-size:22px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.4);
+  /* 图层 & 详情：各自独立按钮，默认收起 */
+  #menu-toggle, #info-toggle {
+    display:block; position:absolute; top:12px; z-index:1500;
+    width:clamp(38px,6vw,46px); height:clamp(38px,6vw,46px); line-height:clamp(38px,6vw,46px);
+    text-align:center; background:rgba(20,28,40,0.9); color:#e8eef5; border:1px solid #34507a;
+    border-radius:8px; font-size:clamp(20px,4vw,26px); cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.4);
   }
+  #menu-toggle { right:12px; }
+  #info-toggle { right:62px; }
+  #info {
+    position:absolute; top:12px; left:12px; z-index:1400;
+    width:min(86vw,340px); max-height:calc(100vh - 12px - 170px); overflow-y:auto;
+    padding:12px 14px; transform:translateX(calc(-100% - 24px)); transition:transform .25s ease;
+  }
+  #info.open { transform:none; }
+  #info .info-close { position:absolute; top:8px; right:12px; cursor:pointer; font-size:18px; color:#9fb3c8; line-height:1; }
+  #info .info-title { font-weight:bold; font-size:clamp(14px,1.4vw+10px,18px); color:#fff; margin:0 26px 8px 0; padding-bottom:6px; border-bottom:1px solid #34507a; }
+  #info .info-body { font-size:clamp(12px,0.9vw+9px,14px); line-height:1.7; color:#e8eef5; }
+  #info .info-body b { color:#fff; }
+  #info .info-body hr { border-color:#34507a; margin:5px 0; }
   @media (max-width:768px){
-    #menu-toggle { display:block; }
-    #controls {
-      transform:translateX(118%); transition:transform .25s ease;
-      max-height:84vh; overflow-y:auto; width:min(82vw,300px); top:64px; right:12px;
-    }
-    #controls.open { transform:none; }
-    #title { max-width:60vw; font-size:12px; }
-    #title .src { font-size:10px; }
-    #legend { width:min(64vw,240px); }
     #readout { display:none; }   /* 悬停海拔读数在触屏无意义 */
-    .panel { font-size:12px; }
+    #title b { font-size:clamp(14px,3.4vw,17px); }
+    #info { max-height:calc(100vh - 12px - 150px); }
+    #controls { max-height:84vh; }
   }
-  .screenshot-mode #menu-toggle { display:none !important; }
+  .screenshot-mode #menu-toggle,
+  .screenshot-mode #info-toggle,
+  .screenshot-mode #info { display:none !important; }
   /* ── 移动端竖屏：提示横屏 ── */
   #rotate-tip {
     display:none; position:fixed; inset:0; z-index:3000;
@@ -208,6 +221,7 @@
 
 <div id="exit-shot">退出截图（Esc）</div>
 <div id="menu-toggle" title="图层">☰</div>
+    <div id="info-toggle" title="详情">&#9432;</div>
 <div id="rotate-tip">
   <div class="rt-ico">&#8635;</div>
   <div class="rt-text">请将手机横置<br/>以获得最佳地图体验</div>
@@ -261,6 +275,11 @@
   </div>
 </div>
 
+<div id="info" class="panel">
+  <div class="info-close" title="关闭">&#10005;</div>
+  <div class="info-title"></div>
+  <div class="info-body"></div>
+</div>
 <div id="readout" class="panel">
   海拔<br/><span class="elev" id="elev-val">—</span>
 </div>
@@ -343,6 +362,22 @@ if (_menuToggle && _controlsPanel) {
   _menuToggle.addEventListener('click', () => _controlsPanel.classList.toggle('open'));
   // 触屏点地图空白处自动收起面板
   map.on('click', () => { if (window.innerWidth <= 768) _controlsPanel.classList.remove('open'); });
+}
+// ── 详情侧栏：默认收起，点击标记展开，自身有独立按钮 ──
+function showInfo(title, html){
+  const p = document.getElementById('info');
+  if(!p) return;
+  p.querySelector('.info-title').innerHTML = title;
+  p.querySelector('.info-body').innerHTML = html;
+  p.classList.add('open');
+}
+function hideInfo(){ const p = document.getElementById('info'); if(p) p.classList.remove('open'); }
+const _infoToggle = document.getElementById('info-toggle');
+const _infoPanel  = document.getElementById('info');
+if (_infoToggle && _infoPanel) {
+  _infoToggle.addEventListener('click', (e) => { e.stopPropagation(); _infoPanel.classList.toggle('open'); });
+  const _infoClose = _infoPanel.querySelector('.info-close');
+  if (_infoClose) _infoClose.addEventListener('click', hideInfo);
 }
 // 窗口缩放 / 手机旋转：重算地图渲染尺寸；旋转且处于概览态时重新适配中国全图
 let _rsTimer;
@@ -727,7 +762,7 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
           iconSize:[16,15], iconAnchor:[8,14]}),
         keyboard:false
       });
-      m.bindPopup(tip, {className:'tk-popup', maxWidth:240});
+      m.on('click', () => showInfo(name, tip));
       mountainPeakLayer.addLayer(m);
     });
     // 名称锚定在主峰(最高点)旁, 沿走向法线偏移; tid 与峰不同 → 名称不会再压在自己峰上
@@ -739,7 +774,7 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
         iconSize:[120,16], iconAnchor:[60,8]}),
       keyboard:false
     });
-    nm.bindPopup(tip, {className:'tk-popup', maxWidth:240});
+    nm.on('click', () => showInfo(name, tip));
     mountainNameLayer.addLayer(nm);
   });
   mountainPeakLayer.addTo(map); mountainNameLayer.addTo(map);
@@ -870,6 +905,7 @@ function computeLabelPoint(ring){
       this.setStyle(baseStyle);
     });
     // 悬停不再显示文字（用户要求：hover 不显示任何文字）
+    poly.on('click', () => showInfo(st.name, `<b>${st.name}</b><br/>汉末十三州之一`));
     hanBoundaryLayer.addLayer(poly);
 
     // 2) 州名标签（默认落在州境内：质心在境内则用之，否则取最内点；
@@ -903,6 +939,8 @@ function computeLabelPoint(ring){
       });
       dot.bindTooltip(`<b>${seat.name}</b><br/>${st.name} · ${isCap?'州府':seat.role==='commandery'?'郡治':seat.role}`,
         {direction:'top', offset:[0,-6], opacity:0.95});
+      dot.on('click', () => showInfo(seat.name + ' · ' + st.name,
+        `<b>${seat.name}</b><br/>${st.name} · ${isCap?'州府':seat.role==='commandery'?'郡治':seat.role}`));
       hanSeatLayer.addLayer(dot);
       // 郡模式标签：两行（郡上 / 郡治下）
       const labelCls = isCap ? 'hanseat-label capital' : 'hanseat-label';
@@ -979,12 +1017,14 @@ const cityLabelLayer  = { capital:L.layerGroup(), ancient_capital:L.layerGroup()
     if(!cityTypeMeta[t]) return;
     const ll = [f.lat, f.lon];
     // 点
-    cityMarkerLayer[t].addLayer(L.marker(ll,{
+    const _cityHtml = `<b>${f.name}</b> · ${cityTypeLabel[t]}<br/>${f.note||''}`;
+    const _cityMarker = L.marker(ll,{
       icon: L.divIcon({ className:'citypt', html: cityShapeSVG(t, tid),
         iconSize:[13,13], iconAnchor:[6.5,6.5] }),
       keyboard:false
-    }).bindTooltip(`<b>${f.name}</b> · ${cityTypeLabel[t]}<br/>${f.note||''}`,
-      { direction:'top', offset:[0,-6], opacity:0.95 }));
+    }).bindTooltip(_cityHtml, { direction:'top', offset:[0,-6], opacity:0.95 });
+    _cityMarker.on('click', () => showInfo(f.name + ' · ' + cityTypeLabel[t], _cityHtml));
+    cityMarkerLayer[t].addLayer(_cityMarker);
     // 标签（锚点=点位置，文字用 CSS transform 偏移到点右侧 8px）
     cityLabelLayer[t].addLayer(L.marker(ll,{
       icon: L.divIcon({ className:'', html:`<div class="citylabel ${t}" data-tkid="${tid}">${f.name}</div>`,
@@ -1097,7 +1137,7 @@ function rebuildTK(){
         const nudge=f.nudge||[0,0];
         const anchor=[s/2-nudge[0], s/2-nudge[1]];
         const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkIconSVG(cat,s,tid), iconSize:[s,s], iconAnchor:anchor}), keyboard:false });
-        marker.bindPopup(tkTip(cat,f),{className:'tk-popup', maxWidth:260});
+        marker.on('click', () => showInfo(f.name + ' · ' + tkMeta[cat].label, tkTip(cat,f)));
         tkLayer[cat].addLayer(marker);
         tkLabelLayer[cat].addLayer(L.marker(ll,{
           icon:L.divIcon({ className:'', html:'<div class="tk-label '+cat+'" data-tkid="'+tid+'">'+f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
@@ -1153,7 +1193,8 @@ function rebuildTK(){
       if(ms.length) html += '<hr style="border-color:#3a3a3a;margin:5px 0">';
     });
     html = html.replace(/<hr[^>]*>\s*$/,'');
-    marker.bindPopup('<div class="tk-popup-body">'+html+'</div>',{className:'tk-popup', maxWidth:300});
+    const _grpTitle = primary.f.name + ' · ' + tkMeta[primary.cat].label + (g.length>1 ? '（+'+(g.length-1)+'）' : '');
+    marker.on('click', () => showInfo(_grpTitle, '<div class="tk-popup-body">'+html+'</div>'));
     tkMergeLayer.addLayer(marker);
     g.forEach(x=>{
       tkMergeLabelLayer.addLayer(L.marker(ll,{
@@ -1171,7 +1212,7 @@ function rebuildTK(){
     const tid='tk_'+s.cat+'_'+s.idx;
     const anchor=[sz/2-nudge[0],sz/2-nudge[1]];
     const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkIconSVG(s.cat,sz,tid), iconSize:[sz,sz], iconAnchor:anchor}), keyboard:false });
-    marker.bindPopup(tkTip(s.cat,s.f),{className:'tk-popup', maxWidth:260});
+    marker.on('click', () => showInfo(s.f.name + ' · ' + tkMeta[s.cat].label, tkTip(s.cat,s.f)));
     tkMergeLayer.addLayer(marker);
     tkMergeLabelLayer.addLayer(L.marker(ll,{
       icon:L.divIcon({ className:'', html:'<div class="tk-label '+s.cat+'" data-tkid="'+tid+'">'+s.f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
