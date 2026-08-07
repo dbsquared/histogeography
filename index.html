@@ -30,7 +30,7 @@
   #controls.open { opacity:1; visibility:visible; pointer-events:auto; }
   #controls label { display:block; cursor:pointer; user-select:none; }
   #controls input { vertical-align:middle; margin-right:6px; }
-  #legend-elev-title { font-weight:bold; }
+  #legend-elev-title { font-weight:bold; white-space:nowrap; }
   #elev-val { color:#ffd479; font-weight:bold; }
   #legend .bar { position:relative; }
   #legend-elev-arrow {
@@ -43,7 +43,7 @@
   #legend-elev-arrow.active { opacity:1; }
   #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:min(82vw,260px);
             backdrop-filter:none; -webkit-backdrop-filter:none; }
-  .legend-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .legend-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap; }
   #legend-scale { text-align:right; }
   .scale-bar { display:inline-flex; align-items:center; gap:6px; line-height:1; }
   .scale-line { position:relative; height:6px;
@@ -59,8 +59,8 @@
       #9e7a6a 75%, #c8b8a8 85%, #e8ddd0 95%, #ffffff 100%);
     border:1px solid #34507a;
   }
-  #legend .ticks { position:relative; height:16px; font-size:clamp(9px,0.7vw+7px,11px); color:#cfe0f0; }
-  #legend .ticks span { position:absolute; transform:translateX(-50%); }
+  #legend .ticks { position:relative; height:16px; font-size:clamp(8px,0.55vw+6px,11px); color:#cfe0f0; }
+  #legend .ticks span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
   .clabel {
     background:rgba(30,20,10,0.72); color:#ffe7c2; border:1px solid #7a5230;
     border-radius:3px; padding:0 3px; font-size:11px; font-weight:bold;
@@ -310,7 +310,7 @@ const map=L.map('map',{
 });
 // 自定义比例尺：本图用 L.CRS.Simple（1 地图单位=1°），Leaflet 自带 scale 会把「度」当「米」算，完全错误。
 // 这里按 Plate Carrée 真实距离（1°lat≈111.32km，1°lon≈111.32·cos(lat) km）实时计算。
-// 线条固定 100px 像素长度，不随缩放变化；变动的是右侧标注的真实距离数值。
+// 线条固定像素长度（W），不随缩放变化；变动的是右侧标注的真实距离数值（km = kmPerPx × W，已自动校正）。
 function updateScaleBar(){
   const el = document.getElementById('legend-scale');
   if(!el) return;
@@ -320,7 +320,7 @@ function updateScaleBar(){
   const pxPerDeg = Math.abs(p1.x - p0.x);
   if(pxPerDeg <= 0){ el.innerHTML=''; return; }
   const kmPerPx = 111.32 * Math.cos(lat * Math.PI / 180) / pxPerDeg;
-  const W = 100;                  // 固定像素长度
+  const W = 80;                   // 固定像素长度（缩短以给标题行让位；标值随 W 自动重算）
   const km = kmPerPx * W;         // 该固定长度在当前缩放下对应的真实距离
   let label;
   if(km >= 1000)      label = Math.round(km/100)*100 + ' km';
@@ -1429,11 +1429,12 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='s'||e.key==='S'){ e.preventDefault(); toggleShot(); }
 });
 
-// 5) 图例刻度
+// 5) 图例刻度（千位用 k 缩写，标签更窄，避免窄屏互相踩踏）
 const ticks=[[0,5.4],[1000,16.0],[2000,26.7],[4000,48.1],[6000,69.5],[8000,91.0]];
 const box=document.getElementById('legend-ticks');
+const fmtTick=v => v>=1000 ? (v/1000)+'k' : (''+v);
 ticks.forEach(([v,p])=>{
-  const s=document.createElement('span'); s.style.left=p+'%'; s.textContent=v;   box.appendChild(s);
+  const s=document.createElement('span'); s.style.left=p+'%'; s.textContent=fmtTick(v);   box.appendChild(s);
 });
 scheduleCollision();
 </script>
