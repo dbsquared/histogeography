@@ -167,8 +167,8 @@ def find_peaks(rings, dem_arr, transform, bounds, nodata):
     MIN_SEP = 0.3
     picked = []
     for ev, lon, lat in cands:
-        if all(math.hypot(lon - plon, lat - plat) >= MIN_SEP for plon, plat in picked):
-            picked.append((lon, lat))
+        if all(math.hypot(lon - plon, lat - plat) >= MIN_SEP for plon, plat, _e in picked):
+            picked.append((lon, lat, ev))
             if len(picked) >= 3:
                 break
     return [[round(x, 5), round(y, 5), int(e)] for x, y, e in picked]
