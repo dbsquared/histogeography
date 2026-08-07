@@ -235,8 +235,7 @@
   <label><input type="checkbox" id="cb-contour"> 矢量等高线</label>
   <label><input type="checkbox" id="cb-label"> 海拔注记</label>
   <label><input type="checkbox" id="cb-prov"> 省行政区</label>
-  <label><input type="checkbox" id="cb-river" checked> 主要河流</label>
-  <label><input type="checkbox" id="cb-lake" checked> 主要湖泊</label>
+  <label><input type="checkbox" id="cb-water" checked> 主要河流/湖泊</label>
   <label><input type="checkbox" id="cb-mtn" checked> 主要山脉</label>
   <label><input type="checkbox" id="cb-scs"> 南海诸岛附图</label>
   <label><input type="checkbox" id="cb-city-capital"> 省会/直辖市</label>
@@ -695,7 +694,6 @@ function riverMidpoint(geom){
       }));
     }
   });
-  riverLayer.addTo(map); riverLabelLayer.addTo(map);
 })();
 
 // 2b-2b) 主要湖泊矢量图层 (Natural Earth 10m Lakes, public domain; 含中国主要湖泊 + 手工补绘云南高原湖群)
@@ -747,8 +745,11 @@ function lakeCentroid(geom){
       }));
     }
   });
-  lakeLayer.addTo(map); lakeLabelLayer.addTo(map);
 })();
+// 河流 + 湖泊 合并为单一「水系」图层：用一个 group 托管，cb-water 统一开关
+const waterLayer = L.layerGroup([riverLayer, lakeLayer]);
+const waterLabelLayer = L.layerGroup([riverLabelLayer, lakeLabelLayer]);
+waterLayer.addTo(map); waterLabelLayer.addTo(map);
 
 // 2b-3) 主要山脉矢量图层 (Natural Earth 10m geography_regions_polys, public domain)
 // 走向表现: 面内"垂直于走向"的梳齿短线段(mountain_hachure) + 中心轴线/双向箭头(mountain_axis/arrow)
@@ -1361,13 +1362,9 @@ document.getElementById('cb-prov').onchange=e=>{
   if(on){ provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map); }
   else { map.removeLayer(provinceLayer); map.removeLayer(borderLayer); map.removeLayer(nineDashLayer); map.removeLayer(provLabelLayer); }
 };
-document.getElementById('cb-river').onchange=e=>{
-  e.target.checked?(riverLayer.addTo(map), riverLabelLayer.addTo(map))
-    :(map.removeLayer(riverLayer), map.removeLayer(riverLabelLayer));
-};
-document.getElementById('cb-lake').onchange=e=>{
-  e.target.checked?(lakeLayer.addTo(map), lakeLabelLayer.addTo(map))
-    :(map.removeLayer(lakeLayer), map.removeLayer(lakeLabelLayer));
+document.getElementById('cb-water').onchange=e=>{
+  e.target.checked?(waterLayer.addTo(map), waterLabelLayer.addTo(map))
+    :(map.removeLayer(waterLayer), map.removeLayer(waterLabelLayer));
 };
 document.getElementById('cb-mtn').onchange=e=>{
   if(e.target.checked){
@@ -1379,7 +1376,7 @@ document.getElementById('cb-mtn').onchange=e=>{
 
 // 4b) 一键叠加全部 / 一键消除全部（复用逐层开关逻辑）
 function setAll(on){
-  ['cb-base','cb-contour','cb-label','cb-prov','cb-river','cb-lake','cb-mtn',
+  ['cb-base','cb-contour','cb-label','cb-prov','cb-water','cb-mtn',
    'cb-han-bnd','cb-han-seat',
    'cb-city-capital','cb-city-ancap','cb-city-battle',
    'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'].forEach(id=>{
