@@ -30,11 +30,17 @@
   #controls.open { opacity:1; visibility:visible; pointer-events:auto; }
   #controls label { display:block; cursor:pointer; user-select:none; }
   #controls input { vertical-align:middle; margin-right:6px; }
-  #readout {
-    position:absolute; bottom:104px; left:12px; z-index:1000;
-    font-size:clamp(13px,1vw+9px,16px); min-width:min(40vw,180px);
+  #legend-elev-title { font-weight:bold; }
+  #elev-val { color:#ffd479; font-weight:bold; }
+  #legend .bar { position:relative; }
+  #legend-elev-arrow {
+    position:absolute; top:-9px; left:0; margin-left:-6px;
+    width:0; height:0;
+    border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #fff;
+    filter:drop-shadow(0 0 2px #000); pointer-events:none;
+    opacity:0; transition:opacity .15s ease, left .15s ease;
   }
-  #readout .elev { font-size:clamp(18px,1.5vw+12px,26px); font-weight:bold; color:#ffd479; }
+  #legend-elev-arrow.active { opacity:1; }
   #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:min(82vw,260px);
             backdrop-filter:none; -webkit-backdrop-filter:none; }
   .legend-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -202,7 +208,6 @@
   #info .info-body b { color:#fff; }
   #info .info-body hr { border-color:#34507a; margin:5px 0; }
   @media (max-width:768px){
-    #readout { display:none; }   /* 悬停海拔读数在触屏无意义 */
     #title b { font-size:clamp(14px,3.4vw,17px); }
     #info { max-height:calc(100vh - 12px - 150px); }
     #controls { max-height:84vh; }
@@ -271,23 +276,21 @@
   <div class="info-title"></div>
   <div class="info-body"></div>
 </div>
-<div id="readout" class="panel">
-  海拔<br/><span class="elev" id="elev-val">—</span>
-</div>
-
 <div id="legend" class="panel">
   <div class="legend-head">
-    <span style="font-weight:bold;">海拔（米）</span>
+    <span id="legend-elev-title">海拔 <b id="elev-val">—</b> 米</span>
     <span id="legend-scale"></span>
   </div>
-  <div class="bar"></div>
+  <div class="bar">
+    <div id="legend-elev-arrow"></div>
+  </div>
   <div class="ticks" id="legend-ticks"></div>
 </div>
 
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="data.js?v=2026080306"></script>
+<script src="data.js?v=2026080701"></script>
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
@@ -756,14 +759,14 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
 (()=>{
   const gj = window.APP_DATA.mountains;
   if(!gj || !gj.features) return;
-  const axisByName = {}, ctrByName = {}, srcByName = {}, peaksByName = {};
+  const axisByName = {}, ctrByName = {}, srcByName = {}, peaksByName = {}, maxElevByName = {};
   gj.features.forEach(f=>{
     const p = f.properties || {};
     if(p.kind==='mountain_axis' && p.name)        axisByName[p.name] = f.geometry.coordinates;
-    else if(p.kind==='mountain_label' && p.name){ ctrByName[p.name] = f.geometry.coordinates; if(p.source) srcByName[p.name]=p.source; }
-    else if(p.kind==='mountain_peaks' && p.name)  peaksByName[p.name] = f.geometry.coordinates; // [[lon,lat]x3] DEM 最高 3 点
+    else if(p.kind==='mountain_label' && p.name){ ctrByName[p.name] = f.geometry.coordinates; if(p.source) srcByName[p.name]=p.source; if(p.max_elev!=null) maxElevByName[p.name]=p.max_elev; }
+    else if(p.kind==='mountain_peaks' && p.name){ peaksByName[p.name] = f.geometry.coordinates; if(p.max_elev!=null) maxElevByName[p.name]=p.max_elev; } // [[lon,lat]xN] DEM 最高 N 点
   });
-  const MTN_HAND = new Set(['横断山脉','巫山','雪峰山','贺兰山','长白山','台湾山脉','唐古拉山脉','念青唐古拉山脉','燕山']);
+  const MTN_HAND = new Set(['横断山脉','巫山','雪峰山','贺兰山','长白山','台湾山脉','唐古拉山脉','念青唐古拉山脉','燕山','泰山']);
   const MTN_SRC = n => srcByName[n] || (MTN_HAND.has(n) ? '手工补绘' : 'Natural Earth 10m');
   // 走向描述 + 方位角(北为0,顺时针)
   function mtnStrike(dx, dy){
@@ -779,18 +782,27 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
   }
   function mtnTip(name){
     const ax = axisByName[name]; let strike='—', len='—', src=MTN_SRC(name);
+    const me = maxElevByName[name];
+    const isSingle = (peaksByName[name] && peaksByName[name].length===1);
     if(ax && ax.length===2){
       const [x0,y0]=ax[0], [x1,y1]=ax[1];
-      const dx=x1-x0, dy=y1-y0, midLat=(y0+y1)/2;
-      const dxKm=dx*111.32*Math.cos(midLat*Math.PI/180), dyKm=dy*111.32;
-      len = Math.round(Math.hypot(dxKm,dyKm)).toLocaleString('en-US') + ' km';
-      const st = mtnStrike(dx, dy); strike = st.dir + '（方位角 ' + st.az + '°）';
+      const dx=x1-x0, dy=y1-y0, L0=Math.hypot(dx,dy);
+      if(L0 < 0.3 || isSingle){
+        strike='孤立山峰（单峰）'; len='—';
+      } else {
+        const midLat=(y0+y1)/2;
+        const dxKm=dx*111.32*Math.cos(midLat*Math.PI/180), dyKm=dy*111.32;
+        len = Math.round(Math.hypot(dxKm,dyKm)).toLocaleString('en-US') + ' km';
+        const st = mtnStrike(dx, dy); strike = st.dir + '（方位角 ' + st.az + '°）';
+      }
     }
-    return '<div style="min-width:190px">'
+    let html = '<div style="min-width:190px">'
       + '<div style="font-weight:bold;font-size:13px;color:#2faa46;margin-bottom:5px;'
       + 'border-bottom:1px solid #ddd;padding-bottom:4px">'+name+'</div>'
-      + '<div style="font-size:12px;line-height:1.7">走向：'+strike+'<br/>规模：约 '+len
-      + '<br/>数据来源：'+src+'</div></div>';
+      + '<div style="font-size:12px;line-height:1.7">';
+    if(me!=null) html += '最高海拔：约 '+me.toLocaleString('en-US')+' m<br/>';
+    html += '走向：'+strike+'<br/>规模：约 '+len+'<br/>数据来源：'+src+'</div></div>';
+    return html;
   }
   // 绿色山体 + 白色雪顶；每个峰独立 tid，名称 tid 与峰不同 → 名称不会被自己的峰压住
   const PEAK_SVG = '<svg class="mtnpeak" data-tkid="__TID__" width="16" height="15" viewBox="0 0 16 15" xmlns="http://www.w3.org/2000/svg">'
@@ -808,14 +820,11 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
     // 峰坐标：优先用 DEM 最高的 3 个点(尽量落在海拔最高处)；缺失则退回质心±走向
     let peaks = peaksByName[name];
     if(!peaks || !peaks.length){
+      // 无 DEM 峰 → 退回质心±走向 放 3 个
       const d = Math.max(0.16, Math.min(0.7, axisLen*0.22));
       peaks = [-d,0,d].map(o=>[ctr[0] + majx*o, ctr[1] + majy*o]);
     }
-    while(peaks.length < 3){
-      const base = peaks[peaks.length-1] || ctr;
-      const d = Math.max(0.16, Math.min(0.7, axisLen*0.22));
-      peaks.push([base[0] + majx*d, base[1] + majy*d]);
-    }
+    // 有 DEM 峰时直接使用(单峰=1 个, 大山脉=最多 3 个), 不再强制填充到 3 个
     peaks.slice(0,3).forEach((coord,i)=>{
       const lon = coord[0], lat = coord[1];
       const tid = 'mtn-'+name+'-'+i;   // 每个峰独立 tid
@@ -1321,7 +1330,20 @@ function sampleElev(lon,lat){
 }
 map.on('mousemove',e=>{
   const v=sampleElev(e.latlng.lng,e.latlng.lat);
-  document.getElementById('elev-val').textContent = (v===null)?'—':v+' m';
+  const el=document.getElementById('elev-val');
+  const arrow=document.getElementById('legend-elev-arrow');
+  if(!el) return;
+  if(v===null){
+    el.textContent='—';
+    if(arrow) arrow.classList.remove('active');
+  }else{
+    el.textContent=v;
+    if(arrow){
+      const pct=Math.min(100, Math.max(0, v/8000*100));
+      arrow.style.left=pct+'%';
+      arrow.classList.add('active');
+    }
+  }
 });
 
 // 4) 图层开关
