@@ -88,6 +88,15 @@
     display:inline-flex; align-items:center; justify-content:center;
     width:100%; height:100%; box-sizing:border-box;
   }
+  .llabel {
+    color:#bff7ff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #04323e,0 0 3px #04323e,1px 1px 2px #04323e;
+    white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
   .mlabel {
     color:#fff; font-weight:bold;
     font-size:calc(8px * var(--lscale,1));
@@ -212,7 +221,7 @@
 
 <div id="title" class="panel">
   <b>中国历史地形图</b>
-  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）<br/>主要山脉：Natural Earth 10m（Range/mtn，公有领域；含 9 条手工补绘中国山脉）</div>
+  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）<br/>主要山脉：Natural Earth 10m（Range/mtn，公有领域；含 9 条手工补绘中国山脉）<br/>主要河流/湖泊：Natural Earth 10m（Lakes/Rivers，公有领域；含手工补绘云南高原湖群）</div>
 </div>
 
 <div id="controls" class="panel">
@@ -222,6 +231,7 @@
   <label><input type="checkbox" id="cb-label"> 海拔注记</label>
   <label><input type="checkbox" id="cb-prov"> 省行政区</label>
   <label><input type="checkbox" id="cb-river" checked> 主要河流</label>
+  <label><input type="checkbox" id="cb-lake" checked> 主要湖泊</label>
   <label><input type="checkbox" id="cb-mtn" checked> 主要山脉</label>
   <label><input type="checkbox" id="cb-scs"> 南海诸岛附图</label>
   <label><input type="checkbox" id="cb-city-capital"> 省会/直辖市</label>
@@ -277,7 +287,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="data.js?v=2026080305"></script>
+<script src="data.js?v=2026080306"></script>
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
@@ -397,7 +407,7 @@ window.addEventListener('orientationchange', () => {
   }, 250);
 });
 // ── 全局标签自动防重叠（重叠的标签自动挪到附近空白处，绝不隐藏）──
-const _LBL_SEL  = '.clabel,.plabel,.rlabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel';
+const _LBL_SEL  = '.clabel,.plabel,.rlabel,.llabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel';
 const _LBL_PAD  = 2;                           // 像素间距，避免贴边
 const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
@@ -454,6 +464,7 @@ function _lblPriority(el){
   if(c.indexOf('hanseat-label')>=0) return 46;
   if(c.indexOf('tk-label')>=0 && c.indexOf('pass')>=0) return 44;
   if(c.indexOf('rlabel')>=0) return 40;
+  if(c.indexOf('llabel')>=0) return 38;
   if(c.indexOf('mlabel')>=0) return 64;
   if(c.indexOf('tk-label')>=0 && c.indexOf('ford')>=0) return 36;
   if(c.indexOf('clabel')>=0) return 20;
@@ -682,6 +693,58 @@ function riverMidpoint(geom){
     }
   });
   riverLayer.addTo(map); riverLabelLayer.addTo(map);
+})();
+
+// 2b-2b) 主要湖泊矢量图层 (Natural Earth 10m Lakes, public domain; 含中国主要湖泊 + 手工补绘云南高原湖群)
+const lakeLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='lake',
+  style:f=> f.properties.major
+    ? {color:'#1b4f9c', weight:1.4, opacity:0.9, fillColor:'#2a6fdb', fillOpacity:0.34}
+    : {color:'#3a6fb0', weight:1.0, opacity:0.8, fillColor:'#5b9be8', fillOpacity:0.24}});
+const lakeLabelLayer=L.layerGroup();
+// 取湖泊外环质心(Shoelace)作为标签锚点：凸/近凸湖泊落在境内，简单可靠
+function lakeCentroid(geom){
+  let poly=null, bestArea=-1;
+  if(geom.type==='Polygon'){
+    poly=geom.coordinates;
+  } else if(geom.type==='MultiPolygon'){
+    for(const p of geom.coordinates){
+      let A=0;
+      const ring=p[0];
+      for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+        A += (ring[j][0]*ring[i][1] - ring[i][0]*ring[j][1]);
+      }
+      A=Math.abs(A)/2;
+      if(A>bestArea){ bestArea=A; poly=p; }
+    }
+  }
+  if(!poly || !poly.length) return null;
+  const ring=poly[0];
+  let A=0,Cx=0,Cy=0;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const cr=ring[j][0]*ring[i][1]-ring[i][0]*ring[j][1];
+    A+=cr; Cx+=(ring[j][0]+ring[i][0])*cr; Cy+=(ring[j][1]+ring[i][1])*cr;
+  }
+  A*=0.5;
+  if(Math.abs(A)<1e-9) return [ring[0][1], ring[0][0]];
+  return [Cy/(6*A), Cx/(6*A)];
+}
+(()=>{
+  const gj=window.APP_DATA.lakes;
+  if(!gj || !gj.features) return;
+  lakeLayer.addData(gj);
+  const seenLakeNames=new Set();
+  gj.features.forEach(f=>{
+    if(f.properties.label && f.properties.name && !seenLakeNames.has(f.properties.name)){
+      seenLakeNames.add(f.properties.name);
+      const ll=lakeCentroid(f.geometry);
+      if(!ll) return;
+      lakeLabelLayer.addLayer(L.marker(ll,{
+        icon:L.divIcon({className:'', html:'<div class="llabel">'+f.properties.name+'</div>',
+          iconSize:[120,16], iconAnchor:[60,8]})
+      }));
+    }
+  });
+  lakeLayer.addTo(map); lakeLabelLayer.addTo(map);
 })();
 
 // 2b-3) 主要山脉矢量图层 (Natural Earth 10m geography_regions_polys, public domain)
@@ -1280,6 +1343,10 @@ document.getElementById('cb-river').onchange=e=>{
   e.target.checked?(riverLayer.addTo(map), riverLabelLayer.addTo(map))
     :(map.removeLayer(riverLayer), map.removeLayer(riverLabelLayer));
 };
+document.getElementById('cb-lake').onchange=e=>{
+  e.target.checked?(lakeLayer.addTo(map), lakeLabelLayer.addTo(map))
+    :(map.removeLayer(lakeLayer), map.removeLayer(lakeLabelLayer));
+};
 document.getElementById('cb-mtn').onchange=e=>{
   if(e.target.checked){
     mountainPeakLayer.addTo(map); mountainNameLayer.addTo(map);
@@ -1290,7 +1357,7 @@ document.getElementById('cb-mtn').onchange=e=>{
 
 // 4b) 一键叠加全部 / 一键消除全部（复用逐层开关逻辑）
 function setAll(on){
-  ['cb-base','cb-contour','cb-label','cb-prov','cb-river','cb-mtn',
+  ['cb-base','cb-contour','cb-label','cb-prov','cb-river','cb-lake','cb-mtn',
    'cb-han-bnd','cb-han-seat',
    'cb-city-capital','cb-city-ancap','cb-city-battle',
    'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'].forEach(id=>{

@@ -60,6 +60,9 @@ HAND_RANGES = [
     ('唐古拉山脉',[(88.5,32.8),(93.5,32.5),(93.8,33.6),(88.8,33.9)]),
     ('念青唐古拉山脉',[(87.5,29.8),(93.5,29.5),(93.8,30.6),(87.8,30.9)]),
     ('燕山',     [(114.5,40.3),(119.5,40.5),(120.0,41.3),(115.0,41.1)]),
+    # 泰山: 孤立山峰(单峰), 以玉皇顶(~117.10E,36.25N,1545m)为中心的近似圆, 范围很小 → find_peaks 只返回 1 个峰
+    ('泰山',     [(117.22,36.25),(117.185,36.335),(117.10,36.37),(117.015,36.335),
+                 (116.98,36.25),(117.015,36.165),(117.10,36.13),(117.185,36.165),(117.22,36.25)]),
 ]
 
 def in_extent(bb):
@@ -168,7 +171,7 @@ def find_peaks(rings, dem_arr, transform, bounds, nodata):
             picked.append((lon, lat))
             if len(picked) >= 3:
                 break
-    return [[round(x, 5), round(y, 5)] for x, y in picked]
+    return [[round(x, 5), round(y, 5), int(e)] for x, y, e in picked]
 
 def build_features(name, rings, geom, source='Natural Earth 10m', dem=None):
     feats = []
@@ -210,15 +213,23 @@ def build_features(name, rings, geom, source='Natural Earth 10m', dem=None):
     feats.append({'type': 'Feature',
         'properties': {'kind': 'mountain_area', 'name': name, 'source': source},
         'geometry': geom})
+    # 山峰图标实际坐标: 面内 DEM 最高的点(彼此分开) → 图标尽量落在海拔最高处
+    peaks_raw = find_peaks(rings, dem[0], dem[1], dem[2], dem[3]) if dem else []
+    peaks = [[round(p[0], 5), round(p[1], 5)] for p in peaks_raw]
+    max_elev = int(peaks_raw[0][2]) if peaks_raw else None
     # 标签点(质心, 作为 JS 无 DEM 峰值时的退回方案)
+    lbl_props = {'kind': 'mountain_label', 'name': name, 'source': source}
+    if max_elev is not None:
+        lbl_props['max_elev'] = max_elev
     feats.append({'type': 'Feature',
-        'properties': {'kind': 'mountain_label', 'name': name, 'source': source},
+        'properties': lbl_props,
         'geometry': {'type': 'Point', 'coordinates': [round(c[0], 5), round(c[1], 5)]}})
-    # 山峰图标实际坐标: 面内 DEM 最高的 3 个点(彼此分开) → 图标尽量落在海拔最高处
-    peaks = find_peaks(rings, dem[0], dem[1], dem[2], dem[3]) if dem else []
     if peaks:
+        pk_props = {'kind': 'mountain_peaks', 'name': name, 'source': source}
+        if max_elev is not None:
+            pk_props['max_elev'] = max_elev
         feats.append({'type': 'Feature',
-            'properties': {'kind': 'mountain_peaks', 'name': name, 'source': source},
+            'properties': pk_props,
             'geometry': {'type': 'MultiPoint', 'coordinates': peaks}})
     return feats
 
