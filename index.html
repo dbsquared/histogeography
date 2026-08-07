@@ -18,7 +18,7 @@
     box-shadow:0 2px 10px rgba(0,0,0,0.4); backdrop-filter:blur(4px);
     transition:opacity .2s ease;
   }
-  #title { position:absolute; top:12px; left:12px; z-index:1000; max-width:min(92vw,360px); }
+  #title { display:none; }
   #title b { font-size:clamp(15px,1.2vw+10px,19px); color:#fff; }
   #title .src { font-size:clamp(10px,0.8vw+8px,12px); color:#9fb3c8; margin-top:4px; }
   #controls {
@@ -359,6 +359,24 @@ if (_infoToggle && _infoPanel) {
   const _infoClose = _infoPanel.querySelector('.info-close');
   if (_infoClose) _infoClose.addEventListener('click', hideInfo);
 }
+// 默认填充「地图信息」：未点击标记时点 ★ 也能看到地图说明与标记图例，避免空面板
+(function(){
+  const tb = document.querySelector('#title b');
+  const ts = document.querySelector('#title .src');
+  const titleTxt = tb ? tb.textContent : '中国地形图';
+  const srcTxt = ts ? ts.textContent : '';
+  const intro = '<div style="line-height:1.8">'
+    + (srcTxt ? '<div style="color:#9fb3c8;margin-bottom:6px">'+srcTxt+'</div>' : '')
+    + '<div style="color:#cfe0f0">点击地图上的任意标记查看其历史信息：</div>'
+    + '<div style="margin-top:6px">'
+    + '<span style="color:#FFB300">●</span> 城池　<span style="color:#546E7A">●</span> 关隘　<span style="color:#1E88E5">●</span> 津渡　<span style="color:#1B1B1B;background:#fff;border-radius:3px;padding:0 4px">⚔</span> 战役<br/>'
+    + '<span style="color:#7ad1e8">●</span> 省会/直辖市　<span style="color:#ffd24d">★</span> 古都　<span style="color:#2faa46">▲</span> 山脉　<span style="color:#c0392b">■</span> 汉末州界'
+    + '</div>'
+    + '<div style="margin-top:8px;color:#9fb3c8;font-size:12px">右上角 ☰ 开关图层，★ 展开/收起本说明。</div>'
+    + '</div>';
+  const p = document.getElementById('info');
+  if(p){ p.querySelector('.info-title').textContent = titleTxt; p.querySelector('.info-body').innerHTML = intro; }
+})();
 // 窗口缩放 / 手机旋转：重算地图渲染尺寸；旋转且处于概览态时重新适配中国全图
 let _rsTimer;
 window.addEventListener('resize', () => {
