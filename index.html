@@ -151,6 +151,10 @@
 /* ── 主要城市图层 ── */
 .citypt { pointer-events:auto; cursor:help; }
 .citypt svg { display:block; overflow:visible; }.tk-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.tk-label.city{color:#ffd479;}.tk-label.pass{color:#cfd8dc;}.tk-label.ford{color:#90caf9;}.tk-label.battle{color:#ffd24d;}
+/* ── 诸葛亮北伐路线 ── */
+.zgl-chip{pointer-events:auto;cursor:pointer;}
+.zgl-badge{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;line-height:1;color:#101010;box-shadow:0 0 0 1.5px rgba(0,0,0,0.8),0 1px 3px rgba(0,0,0,0.65);}
+.zgl-label{display:inline-block;white-space:nowrap;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}
 .citylabel {
   font-weight:bold; white-space:nowrap; pointer-events:none;
   font-size:calc(10px * var(--lscale,1));
@@ -244,15 +248,25 @@
     <div style="margin-left:18px;">
       <label><input type="checkbox" id="cb-han-bnd"> 州界</label>
       <label><input type="checkbox" id="cb-han-seat"> 郡</label>
-      <label><input type="checkbox" id="cb-tk-city"> 城池（31）</label>
-      <label><input type="checkbox" id="cb-tk-pass"> 关隘（19）</label>
+      <label><input type="checkbox" id="cb-tk-city"> 城池（34）</label>
+      <label><input type="checkbox" id="cb-tk-pass"> 关隘（23）</label>
       <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
-      <label><input type="checkbox" id="cb-tk-battle"> 战役（31）</label>
+      <label><input type="checkbox" id="cb-tk-battle"> 战役（34）</label>
       <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
       <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
         <span style="font-size:11px;color:#bcd;">合并尺度</span>
         <input type="range" id="merge-scale" min="0.01" max="1.5" step="0.01" value="0.25" style="flex:1;min-width:70px;">
         <span id="merge-scale-val" style="font-size:11px;color:#ffd479;min-width:34px;text-align:right;">0.25°</span>
+      </div>
+      <div style="margin-top:5px;">
+        <label style="font-weight:bold;"><input type="checkbox" id="cb-zgl-all"> 北伐路线</label>
+        <div style="margin-left:18px;">
+          <label><input type="checkbox" id="cb-zgl-1"> ①第一次 228春</label>
+          <label><input type="checkbox" id="cb-zgl-2"> ②第二次 228冬</label>
+          <label><input type="checkbox" id="cb-zgl-3"> ③第三次 229春</label>
+          <label><input type="checkbox" id="cb-zgl-4"> ④第四次 231</label>
+          <label><input type="checkbox" id="cb-zgl-5"> ⑤第五次 234</label>
+        </div>
       </div>
     </div>
   </div>
@@ -293,7 +307,8 @@
 <script src="scs_inset_data.js?v=2026070801"></script>
 <script src="cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
-    <script src="three_kingdoms_sites.js?v=2026080302"></script>
+    <script src="three_kingdoms_sites.js?v=2026100701"></script>
+    <script src="zhuge_routes.js?v=2026100701"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -409,7 +424,7 @@ window.addEventListener('orientationchange', () => {
   }, 250);
 });
 // ── 全局标签自动防重叠（重叠的标签自动挪到附近空白处，绝不隐藏）──
-const _LBL_SEL  = '.clabel,.plabel,.rlabel,.llabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel';
+const _LBL_SEL  = '.clabel,.plabel,.rlabel,.llabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel,.zgl-label';
 const _LBL_PAD  = 2;                           // 像素间距，避免贴边
 const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
@@ -456,6 +471,7 @@ function _iconCandidates(baseDx, baseDy, iconR, labelW, labelH){
 function _lblPriority(el){
   const c = el.className || '';
   if(c.indexOf('hanstate-label')>=0) return 92;
+  if(c.indexOf('zgl-label')>=0) return 88;
   if(c.indexOf('citylabel')>=0 && c.indexOf('ancient_capital')>=0) return 82;
   if(c.indexOf('citylabel')>=0 && c.indexOf('capital')>=0) return 90;
   if(c.indexOf('plabel')>=0) return 84;
@@ -1301,6 +1317,95 @@ function rebuildTK(){
 });
 rebuildTK();
 
+// ── 2g) 诸葛亮北伐路线（五次北伐 228—234）：折线 + 行进箭头 + 编号章 + 线路说明 ──
+// 折线在 overlayPane(400)，标记在 markerPane(600)，故路线恒处于「地形之上、标记之下」
+const zglLineLayer = L.layerGroup();
+const zglChipLayer = L.layerGroup();
+(function(){
+  const D = window.ZHUGE_ROUTES; if(!D) return;
+  const subs = ['cb-zgl-1','cb-zgl-2','cb-zgl-3','cb-zgl-4','cb-zgl-5'];
+  const all  = document.getElementById('cb-zgl-all');
+  const chk  = id => { const el=document.getElementById(id); return el ? el.checked : false; };
+  // 屏幕坐标方向角（度）：CRS.Simple 下 y=-lat，故北向为负 y
+  function bearing(a,b){
+    const p1=map.project([a[1],a[0]],0), p2=map.project([b[1],b[0]],0);
+    return Math.atan2(p2.y-p1.y, p2.x-p1.x)*180/Math.PI;
+  }
+  // 沿折线按累计长度取比例位（箭头落在主线中段，避免与端点标记/其他路线重叠）
+  function along(path, frac){
+    const seg=[]; let total=0;
+    for(let i=1;i<path.length;i++){
+      const d=Math.hypot(path[i][0]-path[i-1][0], path[i][1]-path[i-1][1]);
+      seg.push(d); total+=d;
+    }
+    let want=total*frac;
+    for(let i=0;i<seg.length;i++){
+      if(want<=seg[i] || i===seg.length-1){
+        const t = seg[i] ? Math.min(want/seg[i],1) : 0;
+        const a=path[i], b=path[i+1];
+        return [[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t],[b[0],b[1]]];
+      }
+      want-=seg[i];
+    }
+    return [path[0], path[1]||path[0]];
+  }
+  function build(){
+    zglLineLayer.clearLayers(); zglChipLayer.clearLayers();
+    map.removeLayer(zglLineLayer); map.removeLayer(zglChipLayer);
+    let any=false;
+    D.forEach(r=>{
+      if(!chk('cb-zgl-'+r.id)) return;
+      any=true;
+      r.legs.forEach(leg=>{
+        const ll = leg.path.map(p=>[p[1],p[0]]);
+        // 深色描边(casing)：保证路线在绿棕地形上依然清晰
+        zglLineLayer.addLayer(L.polyline(ll,{ color:'rgba(0,0,0,0.5)', weight:(leg.dashed?4.4:5.6), opacity:0.75, lineCap:'round' }));
+        zglLineLayer.addLayer(L.polyline(ll,{
+          color:r.color, weight:(leg.dashed?2.2:3.2), opacity:(leg.dashed?0.85:0.98),
+          dashArray:(leg.dashed?'7,7':'16,9'), lineCap:'round'
+        }));
+      });
+      // 行军方向箭头：落点由数据里的 head{leg,frac} 指定
+      // （①与④等多次北伐共用同一走廊，若都用默认比例会叠在同一处，故按段/比例显式错开）
+      const hi=(r.head&&r.head.leg)||0, hf=(r.head&&r.head.frac)||0.7;
+      const hp=(r.legs[hi]||r.legs[0]).path;
+      if(hp.length>1){
+        const [pt,nx]=along(hp,hf), ang=bearing(pt,nx);
+        zglLineLayer.addLayer(L.marker([pt[1],pt[0]],{
+          icon:L.divIcon({ className:'', iconSize:[16,16], iconAnchor:[8,8],
+            html:'<svg width="16" height="16" viewBox="0 0 16 16" style="overflow:visible"><path d="M3 2.8 L14 8 L3 13.2 Z" fill="'+r.color+'" stroke="rgba(0,0,0,0.8)" stroke-width="1.1" style="transform-origin:8px 8px;transform:rotate('+ang.toFixed(1)+'deg)"/></svg>' }),
+          interactive:false, keyboard:false }));
+      }
+      // 编号章 + 名称标签（点击编号章查看该次北伐的经过）
+      const chip=L.marker([r.chip[1],r.chip[0]],{
+        icon:L.divIcon({ className:'zgl-chip', iconSize:[16,16], iconAnchor:[8,8],
+          html:'<div class="zgl-badge" style="background:'+r.color+'">'+r.ord+'</div>' }), keyboard:false });
+      chip.on('click', ()=>showInfo(r.name+'（'+r.year+'）', r.desc));
+      zglChipLayer.addLayer(chip);
+      zglChipLayer.addLayer(L.marker([r.chip[1],r.chip[0]],{
+        icon:L.divIcon({ className:'', iconSize:[0,0], iconAnchor:[0,0],
+          html:'<div class="zgl-label" style="color:'+r.color+'">'+r.ord+r.name+'·'+r.year+'</div>' }),
+        interactive:false, keyboard:false }));
+    });
+    if(any){ zglLineLayer.addTo(map); zglChipLayer.addTo(map); }
+    scheduleCollision();
+  }
+  // 子项变更：重建并回写「北伐路线」总开关 → 再回写「汉末三国」主选项
+  function rebuild(){
+    build();
+    if(all) all.checked = subs.every(id=>chk(id));
+    if(typeof window.__syncHanMaster==='function') window.__syncHanMaster();
+  }
+  subs.forEach(id=>{ const el=document.getElementById(id); if(el) el.onchange=rebuild; });
+  if(all){
+    all.onchange=e=>{
+      subs.forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=e.target.checked; });
+      build();
+    };
+  }
+  build();
+})();
+
 // 3) 悬停查海拔 (数据已通过 data.js 注入 window.APP_DATA)
 let elevData=null, elevMeta=null;
 (()=>{
@@ -1379,12 +1484,12 @@ function setAll(on){
   ['cb-base','cb-contour','cb-label','cb-prov','cb-water','cb-mtn',
    'cb-han-bnd','cb-han-seat',
    'cb-city-capital','cb-city-ancap','cb-city-battle',
-   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'].forEach(id=>{
+   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all'].forEach(id=>{
     const cb=document.getElementById(id);
     if(cb.checked!==on){ cb.checked=on; cb.onchange({target:cb}); }
   });
   const ha=document.getElementById('cb-han-all');
-  if(ha) ha.checked=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge']
+  if(ha) ha.checked=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all']
     .every(id=>document.getElementById(id).checked);
 }
 document.getElementById('btn-all-on').onclick=()=>setAll(true);
@@ -1393,8 +1498,9 @@ document.getElementById('btn-all-off').onclick=()=>setAll(false);
 // 4c) 汉末三国「全选」主选项：勾选后联动该区块全部子选项；子项变更时回写主选项状态
 (function(){
   const hanAll=document.getElementById('cb-han-all');
-  const hanSubs=['cb-han-bnd','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge'];
+  const hanSubs=['cb-han-bnd','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all'];
   function syncMaster(){ hanAll.checked=hanSubs.every(id=>document.getElementById(id).checked); }
+  window.__syncHanMaster=syncMaster;   // 供北伐路线等外部模块回写主选项
   hanAll.onchange=e=>{
     hanSubs.forEach(id=>{
       const cb=document.getElementById(id);
