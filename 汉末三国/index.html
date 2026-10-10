@@ -259,7 +259,7 @@
         <span id="merge-scale-val" style="font-size:11px;color:#ffd479;min-width:34px;text-align:right;">0.25°</span>
       </div>
       <div style="margin-top:5px;">
-        <label style="font-weight:bold;"><input type="checkbox" id="cb-zgl-all"> 北伐路线</label>
+        <label style="font-weight:bold;"><input type="checkbox" id="cb-zgl-all"> 诸葛亮北伐路线</label>
         <div style="margin-left:18px;">
           <label><input type="checkbox" id="cb-zgl-1"> ①第一次 228春</label>
           <label><input type="checkbox" id="cb-zgl-2"> ②第二次 228冬</label>
@@ -1390,7 +1390,7 @@ const zglChipLayer = L.layerGroup();
     if(any){ zglLineLayer.addTo(map); zglChipLayer.addTo(map); }
     scheduleCollision();
   }
-  // 子项变更：重建并回写「北伐路线」总开关 → 再回写「汉末三国」主选项
+  // 子项变更：重建并回写「诸葛亮北伐路线」总开关 → 再回写「汉末三国」主选项
   function rebuild(){
     build();
     if(all) all.checked = subs.every(id=>chk(id));
@@ -1500,7 +1500,7 @@ document.getElementById('btn-all-off').onclick=()=>setAll(false);
   const hanAll=document.getElementById('cb-han-all');
   const hanSubs=['cb-han-bnd','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all'];
   function syncMaster(){ hanAll.checked=hanSubs.every(id=>document.getElementById(id).checked); }
-  window.__syncHanMaster=syncMaster;   // 供北伐路线等外部模块回写主选项
+  window.__syncHanMaster=syncMaster;   // 供诸葛亮北伐路线等外部模块回写主选项
   hanAll.onchange=e=>{
     hanSubs.forEach(id=>{
       const cb=document.getElementById(id);
