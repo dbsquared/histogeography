@@ -303,7 +303,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="../data.js?v=2026080701"></script>
+<script src="../data.js?v=2026101001"></script>
 <script src="../scs_inset_data.js?v=2026070801"></script>
 <script src="../cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
@@ -853,10 +853,9 @@ const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重�
       m.on('click', () => showInfo(name, tip));
       mountainPeakLayer.addLayer(m);
     });
-    // 名称锚定在主峰(最高点)旁, 沿走向法线偏移; tid 与峰不同 → 名称不会再压在自己峰上
-    const main = peaks[0];
-    const nx=-majy, ny=majx, side=(nx>=0?1:-1), off=0.55;
-    const nlon = main[0] + nx*off*side, nlat = main[1] + ny*off*side;
+    // 名称位置 = 数据侧锚点(mountain_label; 已按"主峰旁、山脉面内、海拔较高"预算, 即山岭间)
+    // 旧版在此用"主峰+法线固定偏移0.55°" → 秦岭名称会落到北侧关中平原, 已弃用
+    const nlon = ctr[0], nlat = ctr[1];
     const nm = L.marker([nlat,nlon],{
       icon:L.divIcon({className:'', html:'<div class="mlabel" data-tkid="mtnlabel-'+name+'">'+name+'</div>',
         iconSize:[120,16], iconAnchor:[60,8]}),

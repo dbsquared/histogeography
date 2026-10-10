@@ -173,6 +173,43 @@ def find_peaks(rings, dem_arr, transform, bounds, nodata):
                 break
     return [[round(x, 5), round(y, 5), int(e)] for x, y, e in picked]
 
+def _dem_at(dem_arr, transform, lon, lat):
+    """最近邻采样 DEM 海拔(米); 越界/无效返回 None。"""
+    if dem_arr is None:
+        return None
+    H, W = dem_arr.shape
+    c = int(round((lon - transform.c) / transform.a))
+    r = int(round((lat - transform.f) / transform.e))
+    if r < 0 or r >= H or c < 0 or c >= W:
+        return None
+    v = int(dem_arr[r, c])
+    return v if v > 0 else None
+
+def find_label_pos(rings, main, perp, dem):
+    """名称锚点: 从主峰沿走向法线两侧、多档距离试探, 取"位于山脉面内 且 海拔最高"的点,
+    即落在山岭间, 而不是外侧平原/盆地。无合适点时返回 None(调用方兜底主峰/质心)。
+    背景: 秦岭主峰(太白山)北侧 0.55° 即关中平原(海拔仅数百米), 固定法线偏移会把名称放上平原。"""
+    if dem is None:
+        return None
+    arr, tr = dem[0], dem[1]
+    best = None  # (bucket, -dist, ev, lon, lat)
+    for dist in (0.25, 0.4, 0.55, 0.75, 1.0, 1.3):
+        for sgn in (1, -1):
+            lon = main[0] + perp[0] * dist * sgn
+            lat = main[1] + perp[1] * dist * sgn
+            if not inside_any(lon, lat, rings):
+                continue
+            ev = _dem_at(arr, tr, lon, lat)
+            if ev is None:
+                continue
+            bucket = ev // 300          # 海拔分桶(主序), 同桶取离主峰更近者
+            key = (bucket, -dist, ev)
+            if best is None or key > best[0]:
+                best = (key, lon, lat)
+    if best is None:
+        return None
+    return [round(best[1], 5), round(best[2], 5)]
+
 def build_features(name, rings, geom, source='Natural Earth 10m', dem=None):
     feats = []
     c, maj, perp, (pmin, pmax) = compute_trend(rings)
@@ -217,13 +254,18 @@ def build_features(name, rings, geom, source='Natural Earth 10m', dem=None):
     peaks_raw = find_peaks(rings, dem[0], dem[1], dem[2], dem[3]) if dem else []
     peaks = [[round(p[0], 5), round(p[1], 5)] for p in peaks_raw]
     max_elev = int(peaks_raw[0][2]) if peaks_raw else None
-    # 标签点(质心, 作为 JS 无 DEM 峰值时的退回方案)
+    # 标签锚点: 优先"主峰旁、面内、高海拔"的点(山岭间, 避免落到外侧平原/盆地); 无则退回质心
+    anchor = None
+    if peaks_raw:
+        anchor = find_label_pos(rings, (peaks_raw[0][0], peaks_raw[0][1]), perp, dem)
+    if anchor is None:
+        anchor = [round(c[0], 5), round(c[1], 5)]
     lbl_props = {'kind': 'mountain_label', 'name': name, 'source': source}
     if max_elev is not None:
         lbl_props['max_elev'] = max_elev
     feats.append({'type': 'Feature',
         'properties': lbl_props,
-        'geometry': {'type': 'Point', 'coordinates': [round(c[0], 5), round(c[1], 5)]}})
+        'geometry': {'type': 'Point', 'coordinates': anchor}})
     if peaks:
         pk_props = {'kind': 'mountain_peaks', 'name': name, 'source': source}
         if max_elev is not None:
