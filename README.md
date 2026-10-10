@@ -23,16 +23,17 @@
 
 ## 快速开始（本地预览查看器）
 
-查看器为纯静态前端，但会因浏览器安全策略对 `fetch` 本地文件有限制，因此需通过本地 HTTP 服务器打开（**网页文件位于仓库根目录**）：
+本站按**历史时期**划分 URL：根目录是时期选择首页，每个时期一个独立子目录。查看器为纯静态前端，但会因浏览器安全策略对 `fetch` 本地文件有限制，因此需通过本地 HTTP 服务器打开：
 
 ```bash
 # 在仓库根目录执行
 python -m http.server 8765
-# 然后浏览器打开： http://localhost:8765/index.html
+# 时期选择首页：  http://localhost:8765/
+# 汉末三国地图：  http://localhost:8765/汉末三国/
 ```
 
 > 提示：直接双击 `index.html`（file:// 协议）可能无法加载数据图层，请务必使用上面的本地服务器方式。
-> 在线版本：https://dbsquared.github.io/histogeography/ （由 GitHub Pages 从 `main` 分支根目录直接发布，推送 `main` 即自动重建）。
+> 在线版本：https://dbsquared.github.io/histogeography/ （时期选择首页）；汉末三国地图：https://dbsquared.github.io/histogeography/汉末三国/ 。由 GitHub Pages 从 `main` 分支根目录直接发布，推送 `main` 即自动重建。
 
 ---
 
@@ -42,9 +43,14 @@ python -m http.server 8765
 3D地图制作/
 ├── README.md                  # 本文件
 ├── docs/                      # 工程文档（engineering-spec.md、plan.md 等）
-├── index.html                 # ★ 主查看器页面（Leaflet），位于根目录
-├── base_terrain.png           # 地形底图（71MB，hillshade 渲染）
-├── data.js / scs_inset_data.js / cities.js / han_states.js / three_kingdoms_sites.js  # 运行时数据
+├── index.html                 # 时期选择首页
+├── 汉末三国/                  # ★ 第一时期：汉末三国地图
+│   ├── index.html             #   交互式地图主页面（Leaflet）
+│   ├── han_states.js          #   十三州州界 + 郡治
+│   ├── three_kingdoms_sites.js#   三国地点（城池/关隘/津渡/战役）
+│   └── zhuge_routes.js        #   诸葛亮北伐路线
+├── base_terrain.png           # 共享地形底图（71MB，hillshade 渲染）
+├── data.js / scs_inset_data.js / cities.js   # 跨时代共享运行时数据
 ├── .nojekyll                  # 关闭 GitHub Pages 的 Jekyll 处理
 ├── tools/                     # 构建与数据处理脚本
 │   ├── download_srtm_china.py # SRTM 90M DEM 批量下载（GSCloud）
@@ -65,7 +71,15 @@ python -m http.server 8765
 └── …（其余为各时期迭代过程中的实验 / 调试脚本，见 tools/ 与历史提交）
 ```
 
-> 说明：运行时只需根目录的网页文件；`tools/` 为构建管线，`viewer/` 为数字化与重建源；`rendered/`、`srtm_china_data/`、`汉末十三州地图范例/`、`data/` 等为大体量中间数据，已 gitignore 不入库。
+> 说明：**时代专属数据**放各自子目录，**跨时代共享的大文件**（地形、水系、行政边界、城市参照）放根目录，由子目录页以 `../` 引用——避免 71MB 地形被重复存储与重复下载。
+> `tools/` 为构建管线，`viewer/` 为数字化与重建源；`rendered/`、`srtm_china_data/`、`汉末十三州地图范例/`、`data/` 等为大体量中间数据，已 gitignore 不入库。
+
+### 如何新增一个历史时期
+
+1. 新建子目录（如 `唐/`），放入该时期专属数据与 `index.html`（可从现有时期页复制后替换数据源）；
+2. 共享资源继续放在根目录，页内用 `../base_terrain.png`、`../data.js` 引用；
+3. 在根目录 `index.html` 的时期列表中加一张卡片，指向 `唐/`；
+4. 每个时期目录**必须**有自己的 `index.html` —— GitHub Pages 不提供目录列表（无 index 即 404）。
 
 ---
 

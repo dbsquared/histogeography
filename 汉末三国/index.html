@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>中国历史地形图</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  html, body { margin:0; height:100%; overflow:hidden; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
+  #map { position:fixed; inset:0; background:#0d1b2a; }
+  .panel {
+    background:rgba(20,28,40,0.88); color:#e8eef5; border:1px solid #34507a;
+    border-radius:8px; padding:10px 12px; font-size:clamp(12px,0.9vw+9px,15px); line-height:1.7;
+    box-shadow:0 2px 10px rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    transition:opacity .2s ease;
+  }
+  #title { display:none; }
+  #title b { font-size:clamp(15px,1.2vw+10px,19px); color:#fff; }
+  #title .src { font-size:clamp(10px,0.8vw+8px,12px); color:#9fb3c8; margin-top:4px; }
+  #controls {
+    position:absolute; top:64px; right:12px; z-index:1000;
+    width:min(82vw,300px); max-height:84vh; overflow-y:auto;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .2s ease, visibility .2s;
+  }
+  #controls.open { opacity:1; visibility:visible; pointer-events:auto; }
+  #controls label { display:block; cursor:pointer; user-select:none; }
+  #controls input { vertical-align:middle; margin-right:6px; }
+  #legend-elev-title { font-weight:bold; white-space:nowrap; }
+  #elev-val { color:#ffd479; font-weight:bold; }
+  #legend .bar { position:relative; }
+  #legend-elev-arrow {
+    position:absolute; top:-9px; left:0; margin-left:-6px;
+    width:0; height:0;
+    border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #fff;
+    filter:drop-shadow(0 0 2px #000); pointer-events:none;
+    opacity:0; transition:opacity .15s ease, left .15s ease;
+  }
+  #legend-elev-arrow.active { opacity:1; }
+  #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:min(82vw,260px);
+            backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .legend-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap; }
+  #legend-scale { text-align:right; }
+  .scale-bar { display:inline-flex; align-items:center; gap:6px; line-height:1; }
+  .scale-line { position:relative; height:6px;
+                border-left:1.5px solid #e8eef5; border-right:1.5px solid #e8eef5;
+                border-bottom:1.5px solid #e8eef5; }
+  .scale-text { font-size:clamp(11px,0.9vw+8px,13px); font-weight:bold; color:#e8eef5; white-space:nowrap;
+                -webkit-font-smoothing:antialiased; }
+  #legend .bar {
+    height:clamp(12px,1.5vw,16px); border-radius:3px; margin:4px 0;
+    background:linear-gradient(to right,
+      #2b5d8c 0%, #4a8ab5 2%, #7fb5d5 5%, #b3d9a0 8%, #8cc579 15%,
+      #6ba356 25%, #c9b458 35%, #c9a048 45%, #a67c3d 55%, #8b5e2f 65%,
+      #9e7a6a 75%, #c8b8a8 85%, #e8ddd0 95%, #ffffff 100%);
+    border:1px solid #34507a;
+  }
+  #legend .ticks { position:relative; height:16px; font-size:clamp(8px,0.55vw+6px,11px); color:#cfe0f0; }
+  #legend .ticks span { position:absolute; transform:translateX(-50%); white-space:nowrap; }
+  .clabel {
+    background:rgba(30,20,10,0.72); color:#ffe7c2; border:1px solid #7a5230;
+    border-radius:3px; padding:0 3px; font-size:11px; font-weight:bold;
+    white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+  }
+  .plabel {
+    color:#fff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000;
+    white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  .sealabel {
+    color:#ffd24d; font-weight:bold;
+    font-size:calc(9px * var(--lscale,1));
+    text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000;
+    white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  .rlabel {
+    color:#bfe0ff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #06203f,0 0 3px #06203f,1px 1px 2px #06203f;
+    white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  .llabel {
+    color:#bff7ff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #04323e,0 0 3px #04323e,1px 1px 2px #04323e;
+    white-space:nowrap; pointer-events:none;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  .mlabel {
+    color:#fff; font-weight:bold;
+    font-size:calc(8px * var(--lscale,1));
+    text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,
+      -1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;
+    white-space:nowrap; pointer-events:auto; cursor:pointer;
+    transform:translate(var(--lx,0px),var(--ly,0px));
+    display:inline-flex; align-items:center; justify-content:center;
+    width:100%; height:100%; box-sizing:border-box;
+  }
+  /* 比例尺已改为自定义实现(.scale-bar)，无需 Leaflet 默认背景 */
+.scs-title-wrap { background:none; border:none; }
+.scs-title { color:#ffe7c2; font-weight:bold; font-size:12px; white-space:nowrap;
+             text-shadow:0 0 3px #000,1px 1px 2px #000; transform:translateX(-50%); display:inline-block; }
+.scs-island-label { color:#ffe7c2; font-size:10px; font-weight:bold; white-space:nowrap;
+                    text-shadow:0 0 3px #000,1px 1px 2px #000; }
+/* ── 汉末十三州图层标签（HTML div 版，无背景、纯描边） ── */
+.hanstate-label {
+  color:#ff6b35; font-weight:bold;
+  font-size:calc(13px * var(--lscale,1));
+  text-shadow:0 0 3px #000,0 0 4px #000,1px 1px 3px #000,
+    -1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;
+  white-space:nowrap; pointer-events:none;
+  display:inline-block; line-height:18px;
+  transform:translate(calc(-50% + var(--lx,0px)), calc(-50% + var(--ly,0px)));
+  letter-spacing:2px;
+  opacity:0.85;
+}
+.hanseat-label {
+  color:#ffe7c2; font-weight:bold;
+  font-size:calc(6px * var(--lscale,1));
+  text-shadow:0 0 2px #000,0 0 2px #000,1px 1px 2px #000,
+    -1px -1px 1px #000,1px -1px 1px #000,-1px 1px 1px #000;
+  white-space:nowrap; pointer-events:none;
+  display:inline-block; line-height:9px;
+  transform:translate(calc(8px + var(--lx,0px)), calc(-50% + var(--ly,0px)));
+}
+.hanseat-label.capital {
+  color:#ffd24d;
+  font-size:calc(7px * var(--lscale,1));
+}
+.hanseat-label .zhi {
+  font-size:calc(5px * var(--lscale,1));
+  font-weight:normal; opacity:0.82;
+}
+/* ── 主要城市图层 ── */
+.citypt { pointer-events:auto; cursor:help; }
+.citypt svg { display:block; overflow:visible; }.tk-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.tk-label.city{color:#ffd479;}.tk-label.pass{color:#cfd8dc;}.tk-label.ford{color:#90caf9;}.tk-label.battle{color:#ffd24d;}
+/* ── 诸葛亮北伐路线 ── */
+.zgl-chip{pointer-events:auto;cursor:pointer;}
+.zgl-badge{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;line-height:1;color:#101010;box-shadow:0 0 0 1.5px rgba(0,0,0,0.8),0 1px 3px rgba(0,0,0,0.65);}
+.zgl-label{display:inline-block;white-space:nowrap;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}
+.citylabel {
+  font-weight:bold; white-space:nowrap; pointer-events:none;
+  font-size:calc(10px * var(--lscale,1));
+  line-height:14px;
+  display:inline-block;
+  transform:translate(calc(8px + var(--lx,0px)), calc(-50% + var(--ly,0px)));
+  transform-origin:left center;
+}
+.citylabel.capital         { color:#9fe5f5; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
+.citylabel.ancient_capital { color:#ffd24d; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
+.citylabel.battle          { color:#ffb3b3; text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000; }
+  #controls .subctl { margin-left:18px; font-size:clamp(11px,0.8vw+8px,13px); color:#bcd; }
+  #controls .citysep { margin-top:6px; border-top:1px dashed #34507a; padding-top:6px; }
+  #controls .btn {
+    display:inline-block; cursor:pointer; margin-top:8px; margin-right:6px;
+    background:#1f3656; color:#cfe0f0; border:1px solid #4a6fa5;
+    border-radius:5px; padding:clamp(3px,0.5vw,5px) clamp(8px,1vw,12px); font-size:clamp(11px,0.85vw+8px,13px);
+  }
+  #controls .btn:hover { background:#2b4a73; }
+  #controls .btnbar { margin-top:8px; border-top:1px solid #34507a; padding-top:8px; }
+  /* 截图模式：一键隐藏所有界面元素（地图内容保留） */
+  .screenshot-mode .panel,
+  .screenshot-mode .leaflet-control-zoom,
+  .screenshot-mode .scale-bar { opacity:0 !important; pointer-events:none !important; }
+  #exit-shot {
+    position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:2000;
+    display:none; cursor:pointer; background:rgba(192,57,43,0.92); color:#fff;
+    border-radius:6px; padding:6px 14px; font-size:13px; box-shadow:0 2px 10px rgba(0,0,0,0.4);
+  }
+  #exit-shot:hover { background:rgba(220,70,55,0.96); }
+  .screenshot-mode #exit-shot { display:block; }
+  /* ── 触屏优化：禁用长按呼出菜单 / 文本选择 / 点击高亮；底图禁指针事件防拖影 ── */
+  #map, #map * { -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; }
+  html, body { -webkit-user-select:none; user-select:none; }
+  #map img, #map .leaflet-image-layer { pointer-events:none; }
+  /* 图层 & 详情：各自独立按钮，默认收起 */
+  #menu-toggle, #info-toggle {
+    display:block; position:absolute; top:12px; z-index:1500;
+    width:clamp(38px,6vw,46px); height:clamp(38px,6vw,46px); line-height:clamp(38px,6vw,46px);
+    text-align:center; background:rgba(20,28,40,0.9); color:#e8eef5; border:1px solid #34507a;
+    border-radius:8px; font-size:clamp(20px,4vw,26px); cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.4);
+  }
+  #menu-toggle { right:12px; }
+  #info-toggle { right:62px; }
+  #info {
+    position:absolute; top:12px; left:12px; z-index:1400;
+    width:min(86vw,340px); max-height:calc(100vh - 12px - 170px); overflow-y:auto;
+    padding:12px 14px; opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .2s ease, visibility .2s;
+  }
+  #info.open { opacity:1; visibility:visible; pointer-events:auto; }
+  #info .info-close { position:absolute; top:8px; right:12px; cursor:pointer; font-size:18px; color:#9fb3c8; line-height:1; }
+  #info .info-title { font-weight:bold; font-size:clamp(14px,1.4vw+10px,18px); color:#fff; margin:0 26px 8px 0; padding-bottom:6px; border-bottom:1px solid #34507a; }
+  #info .info-body { font-size:clamp(12px,0.9vw+9px,14px); line-height:1.7; color:#e8eef5; }
+  #info .info-body b { color:#fff; }
+  #info .info-body hr { border-color:#34507a; margin:5px 0; }
+  @media (max-width:768px){
+    #title b { font-size:clamp(14px,3.4vw,17px); }
+    #info { max-height:calc(100vh - 12px - 150px); }
+    #controls { max-height:84vh; }
+  }
+  .screenshot-mode #menu-toggle,
+  .screenshot-mode #info-toggle,
+  .screenshot-mode #info { display:none !important; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="exit-shot">退出截图（Esc）</div>
+<div id="menu-toggle" title="图层">☰</div>
+    <div id="info-toggle" title="详情">&#9432;</div>
+
+<div id="title" class="panel">
+  <b>中国历史地形图</b>
+  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）<br/>主要山脉：Natural Earth 10m（Range/mtn，公有领域；含 9 条手工补绘中国山脉）<br/>主要河流/湖泊：Natural Earth 10m（Lakes/Rivers，公有领域；含手工补绘云南高原湖群）</div>
+</div>
+
+<div id="controls" class="panel">
+  <div style="font-weight:bold;margin-bottom:4px;">图层</div>
+  <label><input type="checkbox" id="cb-base" checked> 地形底图</label>
+  <label><input type="checkbox" id="cb-contour"> 矢量等高线</label>
+  <label><input type="checkbox" id="cb-label"> 海拔注记</label>
+  <label><input type="checkbox" id="cb-prov"> 省行政区</label>
+  <label><input type="checkbox" id="cb-water" checked> 主要河流/湖泊</label>
+  <label><input type="checkbox" id="cb-mtn" checked> 主要山脉</label>
+  <label><input type="checkbox" id="cb-scs"> 南海诸岛附图</label>
+  <label><input type="checkbox" id="cb-city-capital"> 省会/直辖市</label>
+  <div class="citysep">
+    <label style="font-weight:bold;"><input type="checkbox" id="cb-han-all"> 汉末三国</label>
+    <div style="margin-left:18px;">
+      <label><input type="checkbox" id="cb-han-bnd"> 州界</label>
+      <label><input type="checkbox" id="cb-han-seat"> 郡</label>
+      <label><input type="checkbox" id="cb-tk-city"> 城池（34）</label>
+      <label><input type="checkbox" id="cb-tk-pass"> 关隘（23）</label>
+      <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
+      <label><input type="checkbox" id="cb-tk-battle"> 战役（34）</label>
+      <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
+      <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11px;color:#bcd;">合并尺度</span>
+        <input type="range" id="merge-scale" min="0.01" max="1.5" step="0.01" value="0.25" style="flex:1;min-width:70px;">
+        <span id="merge-scale-val" style="font-size:11px;color:#ffd479;min-width:34px;text-align:right;">0.25°</span>
+      </div>
+      <div style="margin-top:5px;">
+        <label style="font-weight:bold;"><input type="checkbox" id="cb-zgl-all"> 北伐路线</label>
+        <div style="margin-left:18px;">
+          <label><input type="checkbox" id="cb-zgl-1"> ①第一次 228春</label>
+          <label><input type="checkbox" id="cb-zgl-2"> ②第二次 228冬</label>
+          <label><input type="checkbox" id="cb-zgl-3"> ③第三次 229春</label>
+          <label><input type="checkbox" id="cb-zgl-4"> ④第四次 231</label>
+          <label><input type="checkbox" id="cb-zgl-5"> ⑤第五次 234</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="citysep">
+    <div style="font-weight:bold;margin-bottom:2px;">其他</div>
+    <label><input type="checkbox" id="cb-city-ancap"> 古都</label>
+    <label><input type="checkbox" id="cb-city-battle"> 古战场/重镇</label>
+  </div>
+  <div class="btnbar">
+    <button id="btn-all-on" class="btn" type="button">一键叠加全部</button>
+    <button id="btn-all-off" class="btn" type="button">一键消除全部</button>
+  </div>
+  <div class="btnbar">
+    <button id="btn-shot" class="btn" type="button">截图模式（S）</button>
+  </div>
+</div>
+
+<div id="info" class="panel">
+  <div class="info-close" title="关闭">&#10005;</div>
+  <div class="info-title"></div>
+  <div class="info-body"></div>
+</div>
+<div id="legend" class="panel">
+  <div class="legend-head">
+    <span id="legend-elev-title">海拔 <b id="elev-val">—</b> 米</span>
+    <span id="legend-scale"></span>
+  </div>
+  <div class="bar">
+    <div id="legend-elev-arrow"></div>
+  </div>
+  <div class="ticks" id="legend-ticks"></div>
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="../data.js?v=2026080701"></script>
+<script src="../scs_inset_data.js?v=2026070801"></script>
+<script src="../cities.js?v=2026072001"></script>
+<script src="han_states.js?v=2026080124"></script>
+    <script src="three_kingdoms_sites.js?v=2026100701"></script>
+    <script src="zhuge_routes.js?v=2026100701"></script>
+<script>
+const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
+const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
+
+// 使用笛卡尔坐标系(CRS.Simple)，与 Plate Carrée 底图一致
+// 避免 Web Mercator 对大范围 imageOverlay 造成 1200km+ 扭曲
+// Simple CRS 下 1 地图单位=1 度，缩放层级用负值表示"看全图"
+const map=L.map('map',{
+  crs:L.CRS.Simple,
+  center:[35,105],
+  minZoom:-2, maxZoom:10, zoomSnap:0.25, zoomDelta:0.5,
+  scrollWheelZoom:true,
+  attributionControl:false
+});
+// 自定义比例尺：本图用 L.CRS.Simple（1 地图单位=1°），Leaflet 自带 scale 会把「度」当「米」算，完全错误。
+// 这里按 Plate Carrée 真实距离（1°lat≈111.32km，1°lon≈111.32·cos(lat) km）实时计算。
+// 线条固定像素长度（W），不随缩放变化；变动的是右侧标注的真实距离数值（km = kmPerPx × W，已自动校正）。
+function updateScaleBar(){
+  const el = document.getElementById('legend-scale');
+  if(!el) return;
+  const lat = map.getCenter().lat;
+  const p0 = map.latLngToContainerPoint([lat, 0]);
+  const p1 = map.latLngToContainerPoint([lat, 1]);
+  const pxPerDeg = Math.abs(p1.x - p0.x);
+  if(pxPerDeg <= 0){ el.innerHTML=''; return; }
+  const kmPerPx = 111.32 * Math.cos(lat * Math.PI / 180) / pxPerDeg;
+  const W = 80;                   // 固定像素长度（缩短以给标题行让位；标值随 W 自动重算）
+  const km = kmPerPx * W;         // 该固定长度在当前缩放下对应的真实距离
+  let label;
+  if(km >= 1000)      label = Math.round(km/100)*100 + ' km';
+  else if(km >= 100)  label = Math.round(km/10)*10 + ' km';
+  else if(km >= 1)    label = Math.round(km) + ' km';
+  else                label = Math.round(km*1000) + ' m';
+  el.innerHTML = '<span class="scale-bar"><span class="scale-line" style="width:' +
+                 W + 'px"></span><span class="scale-text">' + label + '</span></span>';
+}
+map.on('zoomend moveend load', updateScaleBar);
+map.whenReady(updateScaleBar);
+map.fitBounds(BOUNDS);
+
+// 省名标签随镜头缩放：以全图默认缩放为基准(1.0, 约8px)，放大时增大、缩小时减小
+const baseZoom = map.getZoom();
+function updateLabelScale(){
+  let s = Math.pow(1.28, map.getZoom() - baseZoom);
+  s = Math.max(0.85, Math.min(2.4, s));
+  document.documentElement.style.setProperty('--lscale', s);
+  // 三国地标标签字号随缩放：全图(大尺度)用小字、放大后相应变大；基准0.62使 overview 不糊
+  let ts = 0.62 * Math.pow(1.3, map.getZoom() - baseZoom);
+  ts = Math.max(0.5, Math.min(3.0, ts));
+  document.documentElement.style.setProperty('--tk-lscale', ts);
+}
+map.on('zoomend', updateLabelScale);
+updateLabelScale();
+
+// ── 移动端：图层面板抽屉 + 视口自适应 ──
+const _menuToggle = document.getElementById('menu-toggle');
+const _controlsPanel = document.getElementById('controls');
+if (_menuToggle && _controlsPanel) {
+  _menuToggle.addEventListener('click', () => _controlsPanel.classList.toggle('open'));
+}
+// ── 详情侧栏：默认收起，点击标记展开，自身有独立按钮 ──
+function showInfo(title, html){
+  const p = document.getElementById('info');
+  if(!p) return;
+  p.querySelector('.info-title').innerHTML = title;
+  p.querySelector('.info-body').innerHTML = html;
+  p.classList.add('open');
+}
+function hideInfo(){ const p = document.getElementById('info'); if(p) p.classList.remove('open'); }
+const _infoToggle = document.getElementById('info-toggle');
+const _infoPanel  = document.getElementById('info');
+if (_infoToggle && _infoPanel) {
+  _infoToggle.addEventListener('click', (e) => { e.stopPropagation(); _infoPanel.classList.toggle('open'); });
+  const _infoClose = _infoPanel.querySelector('.info-close');
+  if (_infoClose) _infoClose.addEventListener('click', hideInfo);
+}
+// 点击面板 / 开关按钮 / 地图标记【以外】的任意位置，自动收起控制面板与详情侧栏
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#controls') || e.target.closest('#info')) return;            // 面板内部
+  if (e.target.closest('#menu-toggle') || e.target.closest('#info-toggle')) return; // 开关按钮
+  if (e.target.closest('.leaflet-marker-icon, .leaflet-interactive')) return;        // 地图标记/矢量（各自会触发详情）
+  const c = document.getElementById('controls'); if (c) c.classList.remove('open');
+  const inf = document.getElementById('info'); if (inf) inf.classList.remove('open');
+});
+// 默认填充「地图信息」：未点击标记时点 ★ 也能看到地图说明与标记图例，避免空面板
+(function(){
+  const tb = document.querySelector('#title b');
+  const ts = document.querySelector('#title .src');
+  const titleTxt = tb ? tb.textContent : '中国地形图';
+  const srcTxt = ts ? ts.textContent : '';
+  const intro = '<div style="line-height:1.8">'
+    + (srcTxt ? '<div style="color:#9fb3c8;margin-bottom:6px">'+srcTxt+'</div>' : '')
+    + '<div style="color:#cfe0f0">点击地图上的任意标记查看其历史信息：</div>'
+    + '<div style="margin-top:6px">'
+    + '<span style="color:#FFB300">●</span> 城池　<span style="color:#546E7A">●</span> 关隘　<span style="color:#1E88E5">●</span> 津渡　<span style="color:#1B1B1B;background:#fff;border-radius:3px;padding:0 4px">⚔</span> 战役<br/>'
+    + '<span style="color:#7ad1e8">●</span> 省会/直辖市　<span style="color:#ffd24d">★</span> 古都　<span style="color:#2faa46">▲</span> 山脉　<span style="color:#c0392b">■</span> 汉末州界'
+    + '</div>'
+    + '<div style="margin-top:8px;color:#9fb3c8;font-size:12px">右上角 ☰ 开关图层，★ 展开/收起本说明。</div>'
+    + '</div>';
+  const p = document.getElementById('info');
+  if(p){ p.querySelector('.info-title').textContent = titleTxt; p.querySelector('.info-body').innerHTML = intro; }
+})();
+// 窗口缩放 / 手机旋转：重算地图渲染尺寸；旋转且处于概览态时重新适配中国全图
+let _rsTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_rsTimer);
+  _rsTimer = setTimeout(() => map.invalidateSize(), 150);
+});
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    map.invalidateSize();
+    if (map.getZoom() <= baseZoom) map.fitBounds(BOUNDS);
+  }, 250);
+});
+// ── 全局标签自动防重叠（重叠的标签自动挪到附近空白处，绝不隐藏）──
+const _LBL_SEL  = '.clabel,.plabel,.rlabel,.llabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel,.zgl-label';
+const _LBL_PAD  = 2;                           // 像素间距，避免贴边
+const _LBL_CANVAS = document.createElement('canvas');
+const _LBL_CTX = _LBL_CANVAS.getContext('2d');
+// 候选偏移：从“原位”开始，按半径递增向 8 个方向扇形展开（重叠标签挪到附近空白，绝不隐藏）
+// 螺旋候选位：360°均匀采样，按距原点距离排序，重叠时可向任意方向找空地
+// 螺旋候选位：360°均匀采样，按距原点距离排序，重叠时可向任意方向找空地
+const _DIRS = (function(){
+  const dirs = [[0,0]];
+  const seen = new Set(['0,0']);
+  const add = (x,y)=>{ const k=Math.round(x)+','+Math.round(y); if(!seen.has(k)){seen.add(k); dirs.push([Math.round(x),Math.round(y)]);} };
+  for(let r=14; r<=90; r+=14){
+    const n = Math.max(8, Math.round(2*Math.PI*r/18));
+    for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2; add(r*Math.cos(a), r*Math.sin(a)); }
+  }
+  for(let r=100; r<=140; r+=20){
+    const n = Math.max(12, Math.round(2*Math.PI*r/22));
+    for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2; add(r*Math.cos(a), r*Math.sin(a)); }
+  }
+  return dirs;
+})();
+// 图标关联标签的候选位：先尝试自然位，然后从图标中心由近到远生成 360° 均匀候选。
+// 打分选出「离自己图标最近」且「离其他标签/图标最远」的位置，避免互相挤兑。
+function _iconCandidates(baseDx, baseDy, iconR, labelW, labelH){
+  const baseAng = Math.atan2(baseDy, baseDx);
+  const minR = Math.max(iconR + Math.max(labelW,labelH)/2 + 3, 14);
+  const list = [];
+  const seen = new Set();
+  // 0) 自然位
+  const nat = [Math.round(baseDx), Math.round(baseDy)];
+  seen.add(nat[0]+','+nat[1]); list.push(nat);
+  // 1) 由近到远，每圈均匀 16 方向
+  for(let r=minR; r<=80; r += (r<40 ? 8 : 12)){
+    const n = 16;
+    for(let i=0;i<n;i++){
+      const a = baseAng + (i/n)*Math.PI*2;
+      const dx = Math.round(r*Math.cos(a));
+      const dy = Math.round(r*Math.sin(a));
+      const k = dx+','+dy;
+      if(!seen.has(k)){ seen.add(k); list.push([dx,dy]); }
+    }
+  }
+  return list;
+}
+function _lblPriority(el){
+  const c = el.className || '';
+  if(c.indexOf('hanstate-label')>=0) return 92;
+  if(c.indexOf('zgl-label')>=0) return 88;
+  if(c.indexOf('citylabel')>=0 && c.indexOf('ancient_capital')>=0) return 82;
+  if(c.indexOf('citylabel')>=0 && c.indexOf('capital')>=0) return 90;
+  if(c.indexOf('plabel')>=0) return 84;
+  if(c.indexOf('hanseat-label')>=0 && c.indexOf('capital')>=0) return 78;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('battle')>=0) return 72;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('city')>=0) return 70;
+  if(c.indexOf('citylabel')>=0 && c.indexOf('battle')>=0) return 66;
+  if(c.indexOf('hanseat-label')>=0) return 46;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('pass')>=0) return 44;
+  if(c.indexOf('rlabel')>=0) return 40;
+  if(c.indexOf('llabel')>=0) return 38;
+  if(c.indexOf('mlabel')>=0) return 64;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('ford')>=0) return 36;
+  if(c.indexOf('clabel')>=0) return 20;
+  return 30;
+}
+function _labelBox(el){
+  const rb = el.getBoundingClientRect();
+  if(rb.width<2 || rb.height<2) return null;
+  if(el.querySelector('br')) return rb;                 // 多行：用元素盒
+  const text = (el.textContent||'').trim();
+  if(!text) return rb;
+  const cs = getComputedStyle(el);
+  const fs = parseFloat(cs.fontSize)||12;
+  _LBL_CTX.font = (cs.fontWeight||'400')+' '+fs+'px '+(cs.fontFamily||'sans-serif');
+  const tw = _LBL_CTX.measureText(text).width;
+  const w = tw + 4;                 // 用文字实测宽（省名/河流/海拔等图标盒溢出的也准）
+  const h = Math.ceil(fs*1.25) + 4; // 用字号实测高
+  const cx = rb.left + rb.width/2, cy = rb.top + rb.height/2;
+  return { left:cx-w/2, right:cx+w/2, top:cy-h/2, bottom:cy+h/2 };
+}
+function _lblOverlap(a,b,pad){
+  return !(a.right+pad <= b.left-pad || a.left-pad >= b.right+pad ||
+           a.bottom+pad <= b.top-pad || a.top-pad >= b.bottom+pad);
+}
+// 给候选位置打分：不碰撞前提下，离自己图标越近越好，离其他标签/图标越远越好
+function _labelCandidateScore(cand, ownIcon, placed, nearObs, ownTid){
+  for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)) return -Infinity; }
+  for(let j=0;j<nearObs.length;j++){ if(nearObs[j].tid!==ownTid && _lblOverlap(cand, nearObs[j].box, _LBL_PAD)) return -Infinity; }
+  const cx=(cand.left+cand.right)/2, cy=(cand.top+cand.bottom)/2;
+  const dOwn = Math.hypot(cx-ownIcon.cx, cy-ownIcon.cy);
+  let dOther = 300;
+  for(let j=0;j<placed.length;j++){
+    const b=placed[j].box;
+    dOther = Math.min(dOther, Math.hypot(cx-(b.left+b.right)/2, cy-(b.top+b.bottom)/2));
+  }
+  for(let j=0;j<nearObs.length;j++){
+    if(nearObs[j].tid===ownTid) continue;
+    dOther = Math.min(dOther, Math.hypot(cx-nearObs[j].cx, cy-nearObs[j].cy));
+  }
+  return -dOwn*3 + dOther*0.7;
+}
+function applyLabelCollision(){
+  if(!map || !map._loaded) return;
+  const mapEl = map.getContainer();
+  const all = Array.prototype.slice.call(mapEl.querySelectorAll(_LBL_SEL));
+  for(let i=0;i<all.length;i++){ all[i].style.setProperty('--lx','0px'); all[i].style.setProperty('--ly','0px'); }
+  // 图标障碍
+  const obstacles = Array.prototype.slice.call(mapEl.querySelectorAll('.tkpt svg[data-tkid], .citypt svg[data-tkid], .mtnpeak[data-tkid]')).map(sv=>{
+    const r = sv.getBoundingClientRect();
+    return { tid: sv.getAttribute('data-tkid'), box:{left:r.left,right:r.right,top:r.top,bottom:r.bottom}, cx:(r.left+r.right)/2, cy:(r.top+r.bottom)/2 };
+  });
+  const items = [];
+  for(let i=0;i<all.length;i++){
+    const box = _labelBox(all[i]);
+    if(!box) continue;
+    items.push({ el:all[i], box:box, prio:_lblPriority(all[i]), tid:all[i].getAttribute('data-tkid') , idx:i });
+  }
+  items.sort((a,b)=> b.prio - a.prio || a.idx - b.idx);
+  const placed = [];
+  for(let i=0;i<items.length;i++){
+    const a = items[i].box;
+    const ownTid = items[i].tid;
+    const ownIcon = ownTid ? obstacles.find(ob=>ob.tid===ownTid) : null;
+    const nearObs = obstacles.filter(ob => !(ob.box.right < a.left-120 || ob.box.left > a.right+120 || ob.box.bottom < a.top-120 || ob.box.top > a.bottom+120));
+    let chosen = null;
+
+    // 有专属图标的标签：以图标中心为基准 360° 找最近空地
+    if(ownIcon){
+      const cx = (a.left+a.right)/2, cy = (a.top+a.bottom)/2;
+      const baseDx = cx - ownIcon.cx, baseDy = cy - ownIcon.cy; // 自然位相对图标中心的偏移
+      const lw = a.right-a.left, lh = a.bottom-a.top;
+      const candidates = _iconCandidates(baseDx, baseDy, Math.max(ownIcon.box.right-ownIcon.box.left, ownIcon.box.bottom-ownIcon.box.top)/2, lw, lh);
+      let bestScore = -Infinity;
+      for(let k=0;k<candidates.length;k++){
+        const [dx,dy] = candidates[k];
+        const shiftX = dx - baseDx, shiftY = dy - baseDy;
+        const cand = { left:a.left+shiftX, right:a.right+shiftX, top:a.top+shiftY, bottom:a.bottom+shiftY };
+        const sc = _labelCandidateScore(cand, ownIcon, placed, nearObs, ownTid);
+        if(sc > bestScore){ bestScore=sc; chosen=[shiftX,shiftY]; }
+      }
+    }
+
+    // 无图标或图标周围没空位：退化为通用螺旋
+    if(!chosen){
+      for(let k=0;k<_DIRS.length;k++){
+        const dx=_DIRS[k][0], dy=_DIRS[k][1];
+        const cand = { left:a.left+dx, right:a.right+dx, top:a.top+dy, bottom:a.bottom+dy };
+        let ok=true;
+        for(let j=0;j<placed.length;j++){ if(_lblOverlap(cand, placed[j].box, _LBL_PAD)){ ok=false; break; } }
+        if(ok){
+          for(let j=0;j<nearObs.length;j++){
+            const ob=nearObs[j];
+            if(ob.tid===ownTid) continue;
+            if(_lblOverlap(cand, ob.box, _LBL_PAD)){ ok=false; break; }
+          }
+        }
+        if(ok){ chosen=[dx,dy]; break; }
+      }
+    }
+
+    if(chosen){
+      items[i].el.style.setProperty('--lx', chosen[0]+'px');
+      items[i].el.style.setProperty('--ly', chosen[1]+'px');
+      placed.push({ box:{left:a.left+chosen[0],right:a.right+chosen[0],top:a.top+chosen[1],bottom:a.bottom+chosen[1]}, prio:items[i].prio });
+    } else {
+      placed.push({ box:a, prio:items[i].prio });
+    }
+  }
+}
+let _collideScheduled = false;
+function scheduleCollision(){
+  if(_collideScheduled) return;
+  _collideScheduled = true;
+  requestAnimationFrame(()=>{ _collideScheduled=false; applyLabelCollision(); });
+}
+map.on('moveend', scheduleCollision);
+map.on('zoomend', scheduleCollision);
+map.on('layeradd', scheduleCollision);
+map.on('layerremove', scheduleCollision);
+scheduleCollision();   // 初始整理一次
+
+// 1) 地形底图
+const baseLayer=L.imageOverlay('../base_terrain.png', BOUNDS, {opacity:1});
+baseLayer.addTo(map);
+
+// 2) 矢量等高线 + 注记
+function contourStyle(f){
+  const k=f.properties.klass;
+  if(k==='coast')  return {color:'#1a3a5a', weight:1.2, opacity:0.9};
+  if(k==='major')  return {color:'#4a2e12', weight:1.1, opacity:0.85};
+  return {color:'#6b4a2a', weight:0.5, opacity:0.45};
+}
+const contourLayer=L.geoJSON(null,{style:contourStyle,
+  filter:f=>f.properties.kind==='contour',
+  onEachFeature:(f,ly)=>{ if(f.properties.klass!=='minor')
+    ly.bindTooltip(f.properties.elevation+' m',{sticky:true}); }
+});
+const labelLayer=L.geoJSON(null,{
+  filter:f=>f.properties.kind==='label',
+  pointToLayer:(f,latlng)=>L.marker(latlng,{
+    icon:L.divIcon({className:'',html:'<div class="clabel">'+f.properties.text+'</div>',
+      iconSize:[28,16], iconAnchor:[14,8]})
+  })
+});
+
+// 数据已通过 data.js 注入 window.APP_DATA (兼容 file:// 与 http://)
+(()=>{
+  const gj=window.APP_DATA.contours;
+  contourLayer.addData(gj);
+  labelLayer.addData(gj);
+  if(document.getElementById('cb-contour').checked) contourLayer.addTo(map);
+  if(document.getElementById('cb-label').checked)   labelLayer.addTo(map);
+})();
+
+// 2b) 省行政区图层 (Supeset China-GeoData，遵循自然资源部标准地图：含完整藏南·达旺/珞瑜/阿克赛钦)
+const borderLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='country_border',
+  style:{color:'#c0392b', weight:2, opacity:0.95}});
+const provinceLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='province',
+  style:f=>{
+    if(f.properties.border_red)   // 台湾省：红色实线，略粗
+      return {color:'#c0392b', weight:2, opacity:1, fill:false};
+    return {color:'#c0392b', weight:1.6, opacity:1, fill:false};  // 省界红色，与当前粗细一致
+  }});
+const nineDashLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='nine_dash',
+  style:{color:'#c0392b', weight:2.2, opacity:0.95, dashArray:'10,6'}});  // 十段线
+const provLabelLayer=L.layerGroup();
+(()=>{
+  const gj=window.APP_DATA.provinces;
+  provinceLayer.addData(gj); borderLayer.addData(gj); nineDashLayer.addData(gj);
+  gj.features.forEach(f=>{
+    if(f.properties.kind==='province'){
+      provLabelLayer.addLayer(L.marker([f.properties.label_lat, f.properties.label_lon],{
+        icon:L.divIcon({className:'', html:'<div class="plabel">'+f.properties.name_zh+'</div>',
+          iconSize:[120,16], iconAnchor:[60-(f.properties.label_dx||0), 8-(f.properties.label_dy||0)]})
+      }));
+    }
+  });
+  if(document.getElementById('cb-prov').checked){
+    provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map);
+  }
+})();
+
+// 2b-2) 主要河流矢量图层 (Natural Earth 10m Rivers, public domain; 含国外主要河流)
+const riverLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='river',
+  style:f=> f.properties.major
+    ? {color:'#2a6fdb', weight:2.4, opacity:0.92}
+    : {color:'#5b9be8', weight:1.3, opacity:0.82}});
+const riverLabelLayer=L.layerGroup();
+function riverMidpoint(geom){
+  let best=null, bestLen=-1;
+  const segs = geom.type==='MultiLineString' ? geom.coordinates : [geom.coordinates];
+  for(const s of segs){ if(s.length>bestLen){ bestLen=s.length; best=s; } }
+  if(!best || !best.length) return null;
+  const m=best[Math.floor(best.length/2)];
+  return [m[1], m[0]];
+}
+(()=>{
+  const gj=window.APP_DATA.rivers;
+  if(!gj || !gj.features) return;
+  riverLayer.addData(gj);
+  // 黑龙江标签移到上游: 取全要素中经度最小端(约源端)略下游一点, 而非最长段中点
+  let hlLabelLL=null;
+  const hlFeats=gj.features.filter(f=>f.properties.name==='黑龙江');
+  if(hlFeats.length){
+    const pts=[];
+    hlFeats.forEach(f=>{
+      const segs=f.geometry.type==='MultiLineString'?f.geometry.coordinates:[f.geometry.coordinates];
+      segs.forEach(s=>s.forEach(p=>pts.push(p)));
+    });
+    if(pts.length){
+      pts.sort((a,b)=>a[0]-b[0]);
+      const up=pts[Math.max(0,Math.floor(pts.length*0.08))];
+      hlLabelLL=[up[1],up[0]];
+    }
+  }
+  const seenRiverNames=new Set();
+  gj.features.forEach(f=>{
+    if(f.properties.label && f.properties.name && !seenRiverNames.has(f.properties.name)){
+      seenRiverNames.add(f.properties.name);
+      const ll = (f.properties.name==='黑龙江' && hlLabelLL) ? hlLabelLL : riverMidpoint(f.geometry);
+      if(!ll) return;
+      riverLabelLayer.addLayer(L.marker(ll,{
+        icon:L.divIcon({className:'', html:'<div class="rlabel">'+f.properties.name+'</div>',
+          iconSize:[120,16], iconAnchor:[60,8]})
+      }));
+    }
+  });
+})();
+
+// 2b-2b) 主要湖泊矢量图层 (Natural Earth 10m Lakes, public domain; 含中国主要湖泊 + 手工补绘云南高原湖群)
+const lakeLayer=L.geoJSON(null,{filter:f=>f.properties.kind==='lake',
+  style:f=> f.properties.major
+    ? {color:'#1b4f9c', weight:1.4, opacity:0.9, fillColor:'#2a6fdb', fillOpacity:0.34}
+    : {color:'#3a6fb0', weight:1.0, opacity:0.8, fillColor:'#5b9be8', fillOpacity:0.24}});
+const lakeLabelLayer=L.layerGroup();
+// 取湖泊外环质心(Shoelace)作为标签锚点：凸/近凸湖泊落在境内，简单可靠
+function lakeCentroid(geom){
+  let poly=null, bestArea=-1;
+  if(geom.type==='Polygon'){
+    poly=geom.coordinates;
+  } else if(geom.type==='MultiPolygon'){
+    for(const p of geom.coordinates){
+      let A=0;
+      const ring=p[0];
+      for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+        A += (ring[j][0]*ring[i][1] - ring[i][0]*ring[j][1]);
+      }
+      A=Math.abs(A)/2;
+      if(A>bestArea){ bestArea=A; poly=p; }
+    }
+  }
+  if(!poly || !poly.length) return null;
+  const ring=poly[0];
+  let A=0,Cx=0,Cy=0;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const cr=ring[j][0]*ring[i][1]-ring[i][0]*ring[j][1];
+    A+=cr; Cx+=(ring[j][0]+ring[i][0])*cr; Cy+=(ring[j][1]+ring[i][1])*cr;
+  }
+  A*=0.5;
+  if(Math.abs(A)<1e-9) return [ring[0][1], ring[0][0]];
+  return [Cy/(6*A), Cx/(6*A)];
+}
+(()=>{
+  const gj=window.APP_DATA.lakes;
+  if(!gj || !gj.features) return;
+  lakeLayer.addData(gj);
+  const seenLakeNames=new Set();
+  gj.features.forEach(f=>{
+    if(f.properties.label && f.properties.name && !seenLakeNames.has(f.properties.name)){
+      seenLakeNames.add(f.properties.name);
+      const ll=lakeCentroid(f.geometry);
+      if(!ll) return;
+      lakeLabelLayer.addLayer(L.marker(ll,{
+        icon:L.divIcon({className:'', html:'<div class="llabel">'+f.properties.name+'</div>',
+          iconSize:[120,16], iconAnchor:[60,8]})
+      }));
+    }
+  });
+})();
+// 河流 + 湖泊 合并为单一「水系」图层：用一个 group 托管，cb-water 统一开关
+const waterLayer = L.layerGroup([riverLayer, lakeLayer]);
+const waterLabelLayer = L.layerGroup([riverLabelLayer, lakeLabelLayer]);
+waterLayer.addTo(map); waterLabelLayer.addTo(map);
+
+// 2b-3) 主要山脉矢量图层 (Natural Earth 10m geography_regions_polys, public domain)
+// 走向表现: 面内"垂直于走向"的梳齿短线段(mountain_hachure) + 中心轴线/双向箭头(mountain_axis/arrow)
+// 大量梳齿线段用 canvas 渲染以保性能; CRS.Simple 下 经纬度几何的垂直即屏幕垂直, 走向随缩放保持正确
+// 山脉图层：仅显示「3 个山峰图标 + 名称」，不再显示阴影/梳齿纹理
+const mountainPeakLayer = L.layerGroup();   // 每条山脉 3 个山峰图标(沿走向排列)
+const mountainNameLayer = L.layerGroup();   // 山脉名称(套用全局防重叠引擎)
+(()=>{
+  const gj = window.APP_DATA.mountains;
+  if(!gj || !gj.features) return;
+  const axisByName = {}, ctrByName = {}, srcByName = {}, peaksByName = {}, maxElevByName = {};
+  gj.features.forEach(f=>{
+    const p = f.properties || {};
+    if(p.kind==='mountain_axis' && p.name)        axisByName[p.name] = f.geometry.coordinates;
+    else if(p.kind==='mountain_label' && p.name){ ctrByName[p.name] = f.geometry.coordinates; if(p.source) srcByName[p.name]=p.source; if(p.max_elev!=null) maxElevByName[p.name]=p.max_elev; }
+    else if(p.kind==='mountain_peaks' && p.name){ peaksByName[p.name] = f.geometry.coordinates; if(p.max_elev!=null) maxElevByName[p.name]=p.max_elev; } // [[lon,lat]xN] DEM 最高 N 点
+  });
+  const MTN_HAND = new Set(['横断山脉','巫山','雪峰山','贺兰山','长白山','台湾山脉','唐古拉山脉','念青唐古拉山脉','燕山','泰山']);
+  const MTN_SRC = n => srcByName[n] || (MTN_HAND.has(n) ? '手工补绘' : 'Natural Earth 10m');
+  // 走向描述 + 方位角(北为0,顺时针)
+  function mtnStrike(dx, dy){
+    const ang = Math.atan2(Math.abs(dx), Math.abs(dy)) * 180/Math.PI; // 0=南北, 90=东西
+    let dir;
+    if(ang < 22.5)       dir = '南北';
+    else if(ang < 67.5)  dir = (dx>=0 ? '北东—南西' : '北西—南东');
+    else if(ang < 112.5) dir = '东西';
+    else if(ang < 157.5) dir = (dx>=0 ? '南东—北西' : '南西—北东');
+    else                 dir = '南北';
+    const az = (Math.atan2(dx, dy) * 180/Math.PI + 360) % 360;
+    return { dir: dir + '走向', az: Math.round(az) };
+  }
+  function mtnTip(name){
+    const ax = axisByName[name]; let strike='—', len='—', src=MTN_SRC(name);
+    const me = maxElevByName[name];
+    const isSingle = (peaksByName[name] && peaksByName[name].length===1);
+    if(ax && ax.length===2){
+      const [x0,y0]=ax[0], [x1,y1]=ax[1];
+      const dx=x1-x0, dy=y1-y0, L0=Math.hypot(dx,dy);
+      if(L0 < 0.3 || isSingle){
+        strike='孤立山峰（单峰）'; len='—';
+      } else {
+        const midLat=(y0+y1)/2;
+        const dxKm=dx*111.32*Math.cos(midLat*Math.PI/180), dyKm=dy*111.32;
+        len = Math.round(Math.hypot(dxKm,dyKm)).toLocaleString('en-US') + ' km';
+        const st = mtnStrike(dx, dy); strike = st.dir + '（方位角 ' + st.az + '°）';
+      }
+    }
+    let html = '<div style="min-width:190px">'
+      + '<div style="font-weight:bold;font-size:13px;color:#2faa46;margin-bottom:5px;'
+      + 'border-bottom:1px solid #ddd;padding-bottom:4px">'+name+'</div>'
+      + '<div style="font-size:12px;line-height:1.7">';
+    if(me!=null) html += '最高海拔：约 '+me.toLocaleString('en-US')+' m<br/>';
+    html += '走向：'+strike+'<br/>规模：约 '+len+'<br/>数据来源：'+src+'</div></div>';
+    return html;
+  }
+  // 绿色山体 + 白色雪顶；每个峰独立 tid，名称 tid 与峰不同 → 名称不会被自己的峰压住
+  const PEAK_SVG = '<svg class="mtnpeak" data-tkid="__TID__" width="16" height="15" viewBox="0 0 16 15" xmlns="http://www.w3.org/2000/svg">'
+    + '<path d="M1 15 L8 2 L15 15 Z" fill="#2faa46" stroke="#0b3d1c" stroke-width="1.1" stroke-linejoin="round"/>'
+    + '<path d="M8 2 L11 7.5 L8 9 L5 7.5 Z" fill="#ffffff"/></svg>';
+  Object.keys(ctrByName).forEach(name=>{
+    const ctr = ctrByName[name];
+    const ax = axisByName[name];
+    let majx=1, majy=0, axisLen=0.6;
+    if(ax && ax.length===2){
+      const dx=ax[1][0]-ax[0][0], dy=ax[1][1]-ax[0][1];
+      const L0=Math.hypot(dx,dy)||1; majx=dx/L0; majy=dy/L0; axisLen=L0;
+    }
+    const tip = mtnTip(name);
+    // 峰坐标：优先用 DEM 最高的 3 个点(尽量落在海拔最高处)；缺失则退回质心±走向
+    let peaks = peaksByName[name];
+    if(!peaks || !peaks.length){
+      // 无 DEM 峰 → 退回质心±走向 放 3 个
+      const d = Math.max(0.16, Math.min(0.7, axisLen*0.22));
+      peaks = [-d,0,d].map(o=>[ctr[0] + majx*o, ctr[1] + majy*o]);
+    }
+    // 有 DEM 峰时直接使用(单峰=1 个, 大山脉=最多 3 个), 不再强制填充到 3 个
+    peaks.slice(0,3).forEach((coord,i)=>{
+      const lon = coord[0], lat = coord[1];
+      const tid = 'mtn-'+name+'-'+i;   // 每个峰独立 tid
+      const m = L.marker([lat,lon],{
+        icon:L.divIcon({className:'', html:PEAK_SVG.split('__TID__').join(tid),
+          iconSize:[16,15], iconAnchor:[8,14]}),
+        keyboard:false
+      });
+      m.on('click', () => showInfo(name, tip));
+      mountainPeakLayer.addLayer(m);
+    });
+    // 名称锚定在主峰(最高点)旁, 沿走向法线偏移; tid 与峰不同 → 名称不会再压在自己峰上
+    const main = peaks[0];
+    const nx=-majy, ny=majx, side=(nx>=0?1:-1), off=0.55;
+    const nlon = main[0] + nx*off*side, nlat = main[1] + ny*off*side;
+    const nm = L.marker([nlat,nlon],{
+      icon:L.divIcon({className:'', html:'<div class="mlabel" data-tkid="mtnlabel-'+name+'">'+name+'</div>',
+        iconSize:[120,16], iconAnchor:[60,8]}),
+      keyboard:false
+    });
+    nm.on('click', () => showInfo(name, tip));
+    mountainNameLayer.addLayer(nm);
+  });
+  mountainPeakLayer.addTo(map); mountainNameLayer.addTo(map);
+  scheduleCollision();
+})();
+
+// 2c) 南海诸岛附图 (完整十段线 + 主要岛礁，补全超出主图范围的南海部分)
+// ── 南海诸岛附图：作为地图图层（锚定海南以东开阔海域）──
+// 把 scs_inset_data.js 的南海诸岛小地图内容重投影到地图右下角开阔海域的一个小框内，
+// 用真实 Leaflet 图层绘制，随地图平移/缩放，不再依赖界面面板。
+const scsBox = { lon0:130.0, lon1:139.0, lat0:15.0, lat1:25.0 }; // 地图右下角开阔海域(放大)
+const scsLayer = L.layerGroup();
+(function buildScsLayer(){
+  const D = window.SCS_INSET; if(!D) return;
+  const sb = D.box;
+  const remap = (lon, lat) => [
+    scsBox.lat0 + (lat - sb.lat0)/(sb.lat1 - sb.lat0)*(scsBox.lat1 - scsBox.lat0),
+    scsBox.lon0 + (lon - sb.lon0)/(sb.lon1 - sb.lon0)*(scsBox.lon1 - scsBox.lon0)
+  ];
+  const poly = (segs, opts) => segs.forEach(seg =>
+    scsLayer.addLayer(L.polyline(seg.map(p => remap(p[0], p[1])), opts)));
+  // 框底色 + 边框
+  scsLayer.addLayer(L.rectangle(
+    [[scsBox.lat0, scsBox.lon0], [scsBox.lat1, scsBox.lon1]],
+    { color:'#7fb2d6', weight:1.2, fillColor:'#0e3a52', fillOpacity:0.92 }));
+  // 经纬网（原附图 5° 间隔网格，重投影进小框）
+  const grat = [];
+  for(let lon=Math.ceil(sb.lon0/5)*5; lon<=sb.lon1; lon+=5) grat.push([[lon,sb.lat0],[lon,sb.lat1]]);
+  for(let lat=Math.ceil(sb.lat0/5)*5; lat<=sb.lat1; lat+=5) grat.push([[sb.lon0,lat],[sb.lon1,lat]]);
+  poly(grat, { color:'rgba(255,255,255,0.14)', weight:0.5 });
+  // 边界 / 岸线 / 十段线
+  poly(D.ne,    { color:'#5d7587', weight:0.7, opacity:0.85 });
+  poly(D.coast, { color:'#e0a06a', weight:1.5 });
+  poly(D.dash,  { color:'#c0392b', weight:2.3, dashArray:'6,4' });
+  // 主要岛礁 + 名称
+  D.islands.forEach(([lon, lat, name]) => {
+    const [la, lo] = remap(lon, lat);
+    scsLayer.addLayer(L.circleMarker([la, lo],
+      { radius:3, color:'#c0392b', weight:1, fillColor:'#fff', fillOpacity:1 }));
+    scsLayer.addLayer(L.marker([la, lo], {
+      interactive:false,
+      icon: L.divIcon({ className:'scs-island-label', html:name, iconAnchor:[-4,6] })
+    }));
+  });
+  // 标题
+  scsLayer.addLayer(L.marker([scsBox.lat1 - 0.35, (scsBox.lon0+scsBox.lon1)/2], {
+    interactive:false,
+    icon: L.divIcon({ className:'scs-title-wrap', html:'<span class="scs-title">南海诸岛</span>', iconAnchor:[0,0] })
+  }));
+})();
+// 附图只受自身开关控制（与省行政区开关独立）
+document.getElementById('cb-scs').onchange = e =>
+  e.target.checked ? scsLayer.addTo(map) : map.removeLayer(scsLayer);
+
+// ── 2d) 汉末十三州（基于交互式打点重建）──
+// 数据: window.HAN_STATES = {meta, states:[{name,color,boundary,seats,meta}]}
+// 两级图层: 州界 (cb-han-bnd) + 郡治/州府 (cb-han-seat)
+const hanBoundaryLayer = L.layerGroup();
+const hanSeatLayer     = L.layerGroup();
+const hanSeatLabelLayer= L.layerGroup();
+const hanStateLabelLayer=L.layerGroup();
+const hanCapitalLayer  =L.layerGroup();  // 州界模式下随州界一起显示的州府（仅治所名）
+
+// 计算州名标签位置：优先面积加权质心（若落在州境内则用之，最贴合"几何中心"）；
+// 若质心落在境外（如渤海海上），改用"最内点"算法（pole of inaccessibility 近似），
+// 即在境内网格采样取离边界最远的点，保证标签始终落在州境内。
+function pointInPolygon(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+    if(((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function distToSeg(px,py,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,l2=dx*dx+dy*dy;
+  if(l2===0) return Math.hypot(px-x1,py-y1);
+  let t=((px-x1)*dx+(py-y1)*dy)/l2; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+function computeLabelPoint(ring){
+  const pts = ring.map(p=>[p[1],p[0]]);  // [[lat,lon]] → [[lon,lat]]
+  const n = pts.length;
+  let A=0,Cx=0,Cy=0;
+  for(let i=0;i<n-1;i++){
+    const x0=pts[i][0],y0=pts[i][1],x1=pts[i+1][0],y1=pts[i+1][1];
+    const cr=x0*y1-x1*y0; A+=cr; Cx+=(x0+x1)*cr; Cy+=(y0+y1)*cr;
+  }
+  A*=0.5;
+  const clon=Cx/(6*A), clat=Cy/(6*A);
+  if(pointInPolygon(clon,clat,pts)) return [clat,clon];
+  let lons=pts.map(p=>p[0]), lats=pts.map(p=>p[1]);
+  const minLon=Math.min(...lons),maxLon=Math.max(...lons),minLat=Math.min(...lats),maxLat=Math.max(...lats);
+  const step=0.12;
+  let best=null,bestDist=-1;
+  for(let lat=minLat;lat<=maxLat;lat+=step){
+    for(let lon=minLon;lon<=maxLon;lon+=step){
+      if(!pointInPolygon(lon,lat,pts)) continue;
+      let dmin=Infinity;
+      for(let i=0;i<n-1;i++){
+        const d=distToSeg(lat,lon,pts[i][1],pts[i][0],pts[i+1][1],pts[i+1][0]);
+        if(d<dmin)dmin=d;
+      }
+      if(dmin>bestDist){bestDist=dmin;best=[lat,lon];}
+    }
+  }
+  return best || [clat,clon];
+}
+
+(function(){
+  const D = window.HAN_STATES;
+  if(!D || !D.states){ console.warn('汉末州数据未加载'); return; }
+  // 仅叠加「已校正」(verified) 的州；未校正的自动初稿先不显示（用户校正后可逐个开启）
+  const visibleStates = D.states.filter(st => st.meta && st.meta.verified === true);
+  console.log(`汉末十三州: 共 ${D.states.length} 州，本次显示已校正的 ${visibleStates.length} 州`);
+  visibleStates.forEach(st=>{
+    // 1) 州界多边形
+    const ring = st.boundary.map(p=>[p[1],p[0]]);  // [lon,lat]→[lat,lon]
+    const fillOpacity = 0.15;  // 统一更低填充透明度，地形底图更清晰；边界 0.92 不透明承担识别任务
+    const baseStyle = {color:st.color, weight:2.6, opacity:0.92, fillColor:st.color, fillOpacity};
+    const poly = L.polygon(ring, baseStyle);
+    // hover 高亮：加粗描边 + 轻微加深填充 + 置顶（不显示文字，用户要求）
+    poly.on('mouseover', function(){
+      this.setStyle({ weight:3.4, opacity:1, fillOpacity:0.22 });
+      this.bringToFront();
+    });
+    poly.on('mouseout', function(){
+      this.setStyle(baseStyle);
+    });
+    // 悬停不再显示文字（用户要求：hover 不显示任何文字）
+    poly.on('click', () => showInfo(st.name, `<b>${st.name}</b><br/>汉末十三州之一`));
+    hanBoundaryLayer.addLayer(poly);
+
+    // 2) 州名标签（默认落在州境内：质心在境内则用之，否则取最内点；
+    //    若某州指定了州名锚点郡——如幽州放在"右北平郡"上方——则优先用该锚点）
+    let labelLL;
+    const anchorSeat = st.seats.find(s=>s.name.includes('右北平'));
+    if(anchorSeat){
+      const aLat=anchorSeat.lat+0.6, aLon=anchorSeat.lon;  // 右北平郡正北约 67km（燕山南麓，仍在境内）
+      const pts=ring.map(p=>[p[1],p[0]]);
+      labelLL = pointInPolygon(aLon,aLat,pts) ? [aLat,aLon] : computeLabelPoint(ring);
+    } else {
+      labelLL = computeLabelPoint(ring);
+    }
+    hanStateLabelLayer.addLayer(L.marker(labelLL,{
+      icon:L.divIcon({className:'', html:'<div class="hanstate-label">'+st.name+'</div>',
+        iconSize:[0,0], iconAnchor:[0,0]}),
+      interactive:false, keyboard:false
+    }));
+
+    // 3) 郡治点 + 标签
+    // seat.name 形如 "太原郡/晋阳"（郡在上、治所在下）；无 '/' 则整体当郡名
+    const splitSeat = n => { const i=n.indexOf('/'); return i<0 ? [n,''] : [n.slice(0,i), n.slice(i+1)]; };
+    st.seats.forEach(seat=>{
+      const isCap = seat.role==='capital';
+      const [jun, zhi] = splitSeat(seat.name);
+      const dotColor = isCap ? '#ffd24d' : (seat.role==='commandery' ? '#ffb870' : '#c8c8c8');
+      const dot = L.circleMarker([seat.lat,seat.lon],{
+        radius: isCap?3:2,
+        color:'#fff', weight:1, opacity:0.95,
+        fillColor:dotColor, fillOpacity:0.92,
+      });
+      dot.bindTooltip(`<b>${seat.name}</b><br/>${st.name} · ${isCap?'州府':seat.role==='commandery'?'郡治':seat.role}`,
+        {direction:'top', offset:[0,-6], opacity:0.95});
+      dot.on('click', () => showInfo(seat.name + ' · ' + st.name,
+        `<b>${seat.name}</b><br/>${st.name} · ${isCap?'州府':seat.role==='commandery'?'郡治':seat.role}`));
+      hanSeatLayer.addLayer(dot);
+      // 郡模式标签：两行（郡上 / 郡治下）
+      const labelCls = isCap ? 'hanseat-label capital' : 'hanseat-label';
+      const labelHtml = zhi ? `${jun}<br><span class="zhi">${zhi}</span>` : jun;
+      hanSeatLabelLayer.addLayer(L.marker([seat.lat,seat.lon],{
+        icon:L.divIcon({className:'', html:`<div class="${labelCls}">${labelHtml}</div>`,
+          iconSize:[0,0], iconAnchor:[0,0]}),
+        interactive:false, keyboard:false
+      }));
+      // 州界模式：仅州府（显示治所名，不带郡名）+ 黄点定位
+      if(isCap){
+        hanCapitalLayer.addLayer(L.circleMarker([seat.lat,seat.lon],{
+          radius:3, color:'#fff', weight:1, opacity:0.95,
+          fillColor:'#ffd24d', fillOpacity:0.92,
+        }));
+        hanCapitalLayer.addLayer(L.marker([seat.lat,seat.lon],{
+          icon:L.divIcon({className:'', html:`<div class="hanseat-label capital">${zhi||jun}</div>`,
+            iconSize:[0,0], iconAnchor:[0,0]}),
+          interactive:false, keyboard:false
+        }));
+      }
+    });
+  });
+  console.log(`汉末十三州: ${visibleStates.length} 州已叠加`);
+})();
+function showHanBnd(){ hanBoundaryLayer.addTo(map); hanStateLabelLayer.addTo(map); }   // 州界不再显示州府（用户要求）
+function hideHanBnd(){ map.removeLayer(hanBoundaryLayer); map.removeLayer(hanStateLabelLayer); }
+function showHanSeat(){ hanSeatLayer.addTo(map); hanSeatLabelLayer.addTo(map); }
+function hideHanSeat(){ map.removeLayer(hanSeatLayer); map.removeLayer(hanSeatLabelLayer); }
+document.getElementById('cb-han-bnd').onchange = e => e.target.checked ? showHanBnd() : hideHanBnd();
+document.getElementById('cb-han-seat').onchange = e => e.target.checked ? showHanSeat() : hideHanSeat();
+// 初始化
+if(document.getElementById('cb-han-bnd').checked) showHanBnd();
+if(document.getElementById('cb-han-seat').checked) showHanSeat();
+
+// ── 2e) 主要城市图层 (省会/直辖市 · 古都 · 古战场) ──
+// 三类城市按类型分色分形状；同一城市有多重身份时主 type 取最高优先级（古都>省会>战场）
+const cityTypeMeta = {
+  capital:          { color:'#7ad1e8', shape:'circle'  },
+  ancient_capital:  { color:'#ffd24d', shape:'star'    },
+  battle:           { color:'#ff6b6b', shape:'triangle'}
+};
+// 形状 SVG：circle 实心圆+白描边；star 五角星+红描边；triangle 等边三角+白描边
+function cityShapeSVG(type, tid){
+  const m = cityTypeMeta[type];
+  const c = m.color;
+  if(m.shape==='star'){
+    // 五角星 path（圆心 6,6 外径 6.5 内径 2.6）
+    return `<svg data-tkid="${tid||''}" width="13" height="13" viewBox="0 0 13 13">
+      <path d="M6.5 0.4 L8.05 4.4 L12.35 4.6 L8.95 7.3 L10.15 11.45 L6.5 9.0 L2.85 11.45 L4.05 7.3 L0.65 4.6 L4.95 4.4 Z"
+        fill="${c}" stroke="#3a0d0d" stroke-width="0.9" stroke-linejoin="round"/></svg>`;
+  }
+  if(m.shape==='triangle'){
+    return `<svg data-tkid="${tid||''}" width="12" height="12" viewBox="0 0 12 12">
+      <path d="M6 0.6 L11.3 10.6 L0.7 10.6 Z"
+        fill="${c}" stroke="#fff" stroke-width="1.0" stroke-linejoin="round"/></svg>`;
+  }
+  // circle
+  return `<svg data-tkid="${tid||''}" width="12" height="12" viewBox="0 0 12 12">
+    <circle cx="6" cy="6" r="4.5" fill="${c}" stroke="#fff" stroke-width="1.1"/></svg>`;
+}
+// 类别中文（用于 tooltip 头）
+const cityTypeLabel = { capital:'省会/直辖市', ancient_capital:'古都', battle:'古战场/重镇' };
+
+// 三类城市分别独立 layerGroup，方便单独开关
+const cityMarkerLayer = { capital:L.layerGroup(), ancient_capital:L.layerGroup(), battle:L.layerGroup() };
+const cityLabelLayer  = { capital:L.layerGroup(), ancient_capital:L.layerGroup(), battle:L.layerGroup() };
+(function(){
+  const D = window.MAJOR_CITIES;
+  if(!D || !D.features){ console.warn('主要城市数据未加载'); return; }
+  D.features.forEach((f,idx)=>{
+    const t = f.type;
+    const tid='ct_'+idx;
+    if(!cityTypeMeta[t]) return;
+    const ll = [f.lat, f.lon];
+    // 点
+    const _cityHtml = `<b>${f.name}</b> · ${cityTypeLabel[t]}<br/>${f.note||''}`;
+    const _cityMarker = L.marker(ll,{
+      icon: L.divIcon({ className:'citypt', html: cityShapeSVG(t, tid),
+        iconSize:[13,13], iconAnchor:[6.5,6.5] }),
+      keyboard:false
+    }).bindTooltip(_cityHtml, { direction:'top', offset:[0,-6], opacity:0.95 });
+    _cityMarker.on('click', () => showInfo(f.name + ' · ' + cityTypeLabel[t], _cityHtml));
+    cityMarkerLayer[t].addLayer(_cityMarker);
+    // 标签（锚点=点位置，文字用 CSS transform 偏移到点右侧 8px）
+    cityLabelLayer[t].addLayer(L.marker(ll,{
+      icon: L.divIcon({ className:'', html:`<div class="citylabel ${t}" data-tkid="${tid}">${f.name}</div>`,
+        iconSize:[0,0], iconAnchor:[0,0] }),
+      interactive:false, keyboard:false
+    }));
+  });
+  console.log(`主要城市: 共 ${D.features.length} 处`);
+  // 按勾选状态初始化显示
+  ['capital','ancient_capital','battle'].forEach(t=>{
+    if(document.getElementById('cb-city-'+(t==='ancient_capital'?'ancap':t)).checked)
+      showCityType(t);
+  });
+})();
+function showCityType(t){
+  cityMarkerLayer[t].addTo(map); cityLabelLayer[t].addTo(map);
+}
+function hideCityType(t){
+  map.removeLayer(cityMarkerLayer[t]); map.removeLayer(cityLabelLayer[t]);
+}
+document.getElementById('cb-city-capital').onchange = e => e.target.checked ? showCityType('capital') : hideCityType('capital');
+document.getElementById('cb-city-ancap').onchange  = e => e.target.checked ? showCityType('ancient_capital') : hideCityType('ancient_capital');
+document.getElementById('cb-city-battle').onchange = e => e.target.checked ? showCityType('battle') : hideCityType('battle');
+
+// ── 2f) 三国关键地点（城池/关隘/津渡/战役），用自定义 SVG 徽章做 divIcon ──
+const tkMeta = {
+  city:   { color:'#FFB300', label:'城池' },
+  pass:   { color:'#546E7A', label:'关隘' },
+  ford:   { color:'#1E88E5', label:'津渡' },
+  battle: { color:'#1B1B1B', label:'战役' }
+};
+function tkGlyph(category, uid){
+  if(category==='city'){
+    return '<g fill="#FFFFFF" fill-rule="evenodd"><path d="M -22 16 L -22 -10 L -18 -10 L -18 -18 L -10 -18 L -10 -10 L -6 -10 L -6 -18 L 2 -18 L 2 -10 L 6 -10 L 6 -18 L 14 -18 L 14 -10 L 18 -10 L 18 16 Z M -7 16 L -7 2 A 7 7 0 0 1 7 2 L 7 16 Z"/></g>';
+  } else if(category==='pass'){
+    return '<g transform="translate(0,-6) scale(0.88)"><path d="M -32 20 Q -16 5 0 16 Q 16 6 32 18 L 32 26 L -32 26 Z" fill="#FFFFFF" opacity="0.20"/><path d="M -32 15 L -32 1 L -28 1 L -28 -2 L -24 -2 L -24 1 L -20 1 L -20 -2 L -16 -2 L -16 1 L -12 1 L -12 -2 L -8 -2 L -8 1 L -4 1 L -4 -2 L 0 -2 L 0 1 L 4 1 L 4 -2 L 8 -2 L 8 1 L 12 1 L 12 -2 L 16 -2 L 16 1 L 20 1 L 20 -2 L 24 -2 L 24 1 L 28 1 L 28 -2 L 32 -2 L 32 1 L 32 15 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7" stroke-linejoin="round"/><path d="M -6 15 L -6 -4 L -3 -4 L -3 -9 L 3 -9 L 3 -4 L 6 -4 L 6 15 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7" stroke-linejoin="round"/><path d="M -9 -4 L 0 -15 L 9 -4 Z" fill="#37474F"/><path d="M -3 -9 L -3 -12 L 3 -12 L 3 -9 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7"/><path d="M -2 15 L -2 8 A 2 2 0 0 1 2 8 L 2 15 Z" fill="#546E7A"/></g>';
+  } else if(category==='ford'){
+    return '<g transform="scale(0.82)"><path d="M -15 -2 L 15 -2 L 10 6 L -10 6 Z" fill="#FFFFFF"/><path d="M 0 -2 L 0 -18 L 11 -2 Z" fill="#FFFFFF"/><path d="M 0 -18 L 0 -2" stroke="#FFFFFF" stroke-width="2" fill="none"/><path d="M -22 12 q 5.5 -6 11 0 q 5.5 6 11 0 q 5.5 -6 11 0 q 5.5 6 11 0" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M -22 19 q 5.5 -6 11 0 q 5.5 6 11 0 q 5.5 -6 11 0 q 5.5 6 11 0" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
+  } else { // battle
+    return '<defs><linearGradient id="blade-'+uid+'" x1="0" y1="-22" x2="6" y2="-3" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#CFD8DC"/><stop offset="1" stop-color="#78909C"/></linearGradient></defs><g transform="scale(0.62)"><g transform="rotate(32)"><path d="M -2.5 -3 L -2.5 -19 Q -2.5 -23 1.8 -22.3 L 4.2 -18 Q 5.2 -11 2.8 -3 Z" fill="url(#blade-'+uid+')" stroke="#455A64" stroke-width="0.5"/><rect x="-5" y="-3.2" width="11" height="2.6" rx="1.1" fill="#C9A227"/><rect x="-2" y="-0.6" width="4" height="13" rx="1.6" fill="#4E342E"/><circle cx="0" cy="13" r="2.2" fill="#C9A227"/><path d="M 0 14 C -3.2 17 -2.2 21.5 0 23 C 2.2 21.5 3.2 17 0 14 Z" fill="#C62828"/></g><g transform="rotate(-32)"><path d="M -2.5 -3 L -2.5 -19 Q -2.5 -23 1.8 -22.3 L 4.2 -18 Q 5.2 -11 2.8 -3 Z" fill="url(#blade-'+uid+')" stroke="#455A64" stroke-width="0.5"/><rect x="-5" y="-3.2" width="11" height="2.6" rx="1.1" fill="#C9A227"/><rect x="-2" y="-0.6" width="4" height="13" rx="1.6" fill="#4E342E"/><circle cx="0" cy="13" r="2.2" fill="#C9A227"/><path d="M 0 14 C -3.2 17 -2.2 21.5 0 23 C 2.2 21.5 3.2 17 0 14 Z" fill="#C62828"/></g><circle cx="0" cy="-1" r="2.6" fill="#FFC107" stroke="#37474F" stroke-width="0.5"/></g>';
+  }
+}
+function tkIconSVG(category, size, tid){
+  const m = tkMeta[category];
+  const ring = category==='battle' ? '#FFC107' : '#FFFFFF';
+  const ringW = category==='battle' ? 2.2 : 1.8;
+  const uid = Math.random().toString(36).slice(2,8);
+  return '<svg data-tkid="'+(tid||'')+'" width="'+size+'" height="'+size+'" viewBox="-26 -26 52 52">' +
+    '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>' + tkGlyph(category,uid) + '</svg>';
+}
+function tkFusedIcon(mainCat, badges, size, tid){
+  const m = tkMeta[mainCat];
+  const ring = mainCat==='battle' ? '#FFC107' : '#FFFFFF';
+  const ringW = mainCat==='battle' ? 2.2 : 1.8;
+  const uid = Math.random().toString(36).slice(2,8);
+  let inner = '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>';
+  // 主类型glyph略下移缩小，给"战役"叠加留出上方空间
+  inner += '<g transform="translate(0,6) scale(0.82)">'+tkGlyph(mainCat, uid)+'</g>';
+  const pos=[[-12,-12],[12,-12],[-12,12],[12,12]];
+  const seen={};
+  let battleDone=false;
+  badges.forEach((bc,k)=>{
+    if(bc==='battle'){                 // 战役：两把交叉的刀直接叠在城池上方，不再做小角标
+      if(battleDone) return; battleDone=true;
+      const buid = Math.random().toString(36).slice(2,8);
+      inner += '<g transform="translate(0,-10) scale(1.0)">'+tkGlyph('battle',buid)+'</g>';
+      return;
+    }
+    if(seen[bc]) return; seen[bc]=1;
+    const [bx,by]=pos[k%4];
+    const buid = Math.random().toString(36).slice(2,8);
+    inner += '<g transform="translate('+bx+','+by+') scale(0.34)"><circle r="14" fill="rgba(18,18,26,0.82)" stroke="'+tkMeta[bc].color+'" stroke-width="2.6"/>'+tkGlyph(bc,buid)+'</g>';
+  });
+  return '<svg data-tkid="'+(tid||'')+'" width="'+size+'" height="'+size+'" viewBox="-26 -26 52 52">'+inner+'</svg>';
+}
+const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
+const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
+
+let TK_FUSE_DEG = 0.25;            // 融合半径（度）：距离小于此值的地标合成一个标记（可由「合并尺度」滑块调节）
+const tkTypeOrder = { city:0, pass:1, ford:2, battle:3 };
+const tkMergeLayer = L.layerGroup();
+const tkMergeLabelLayer = L.layerGroup();
+const _tkD = window.THREE_KINGDOM_SITES;
+
+function tkTip(cat, f){
+  if(cat==='battle'){
+    return '<div style="margin:3px 0"><b>'+f.name+'</b>（'+f.year+'）<br/>地点：'+f.place+'<br/>'+f.sides+'<br/><span style="color:#ffd479">'+f.result+'</span>'+(f.desc?('<br/><span style="color:#cfe0f0;font-size:11px;line-height:1.5">'+f.desc+'</span>'):'')+'</div>';
+  }
+  return '<div style="margin:3px 0"><b>'+f.name+'</b> · '+tkMeta[cat].label+'<br/>今址：'+f.modern+'（'+f.zhou+'）<br/>'+(f.desc||'')+'</div>';
+}
+
+// 三国地标：合并模式下，非城池站点仅并入「最近的城池」(距离 ≤ TK_FUSE_DEG)；城池为各自独立的锚点，不会全图坍缩。合成标记主类型(城池)作图标、其余类型作角标；关闭合并则退化为逐类独立图层
+function rebuildTK(){
+  ['city','pass','ford','battle'].forEach(cat=>{
+    map.removeLayer(tkLayer[cat]); map.removeLayer(tkLabelLayer[cat]);
+    tkLayer[cat].clearLayers(); tkLabelLayer[cat].clearLayers();
+  });
+  map.removeLayer(tkMergeLayer); map.removeLayer(tkMergeLabelLayer);
+  tkMergeLayer.clearLayers(); tkMergeLabelLayer.clearLayers();
+  if(!_tkD){ return; }
+
+  const types = ['city','pass','ford','battle'].filter(c=>document.getElementById('cb-tk-'+c).checked);
+  const merge = document.getElementById('cb-tk-merge').checked;
+  const size = { city:22, pass:20, ford:20, battle:22 };
+
+  if(!merge){
+    types.forEach(cat=>{
+      (_tkD[cat]||[]).forEach((f,idx)=>{
+        const ll=[f.lat,f.lon], tid='tk_'+cat+'_'+idx, s=size[cat];
+        const nudge=f.nudge||[0,0];
+        const anchor=[s/2-nudge[0], s/2-nudge[1]];
+        const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkIconSVG(cat,s,tid), iconSize:[s,s], iconAnchor:anchor}), keyboard:false });
+        marker.on('click', () => showInfo(f.name + ' · ' + tkMeta[cat].label, tkTip(cat,f)));
+        tkLayer[cat].addLayer(marker);
+        tkLabelLayer[cat].addLayer(L.marker(ll,{
+          icon:L.divIcon({ className:'', html:'<div class="tk-label '+cat+'" data-tkid="'+tid+'">'+f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
+          interactive:false, keyboard:false
+        }));
+      });
+      tkLayer[cat].addTo(map); tkLabelLayer[cat].addTo(map);
+    });
+    scheduleCollision();
+    return;
+  }
+
+  const sites=[];
+  types.forEach(cat=>{ (_tkD[cat]||[]).forEach((f,i)=> sites.push({cat,f,idx:i})); });
+  const n=sites.length;
+  if(n===0){ scheduleCollision(); return; }
+
+  // 合并策略：非城池站点只并入「最近的城池」(距离 ≤ 尺度)，不再传递坍缩；
+  // 城池间始终各自独立为锚点——最多合并到最近的城池，不会全图坍缩为一处。
+  const cityIdx=[];
+  sites.forEach((s,i)=>{ if(s.cat==='city') cityIdx.push(i); });
+  const groups={};                                   // key=城池 site index -> 该城池融合组
+  cityIdx.forEach(ci=>{ groups[ci]=[sites[ci]]; });
+  const standalone=[];                               // 无邻近城池的非城池站点，单独渲染
+  for(let i=0;i<n;i++){
+    if(sites[i].cat==='city') continue;
+    let best=-1,bestD=Infinity;
+    for(const ci of cityIdx){
+      const a=sites[i].f,b=sites[ci].f;
+      const d=Math.hypot(a.lon-b.lon,a.lat-b.lat);
+      if(d<bestD){ bestD=d; best=ci; }
+    }
+    if(best>=0 && bestD<=TK_FUSE_DEG) groups[best].push(sites[i]);
+    else standalone.push(i);
+  }
+
+  // 渲染城池锚定的融合标记（含仅自身、无角标的城池）
+  Object.keys(groups).map(Number).forEach(ci=>{
+    const g=groups[ci];
+    g.sort((x,y)=>tkTypeOrder[x.cat]-tkTypeOrder[y.cat]);   // 保证 city 在前
+    const primary=g[0];
+    const badges=[...new Set(g.slice(1).map(s=>s.cat))];
+    const ll=[primary.f.lat,primary.f.lon];
+    const s=size[primary.cat];
+    const nudge=primary.f.nudge||[0,0];
+    const tid='tkf_'+primary.cat+'_'+primary.idx+'_'+g.length;
+    const anchor=[s/2-nudge[0],s/2-nudge[1]];
+    const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkFusedIcon(primary.cat,badges,s,tid), iconSize:[s,s], iconAnchor:anchor}), keyboard:false });
+    let html='';
+    ['city','pass','ford','battle'].forEach(c=>{
+      const ms=g.filter(x=>x.cat===c);
+      ms.forEach(x=>{ html += tkTip(c,x.f); });
+      if(ms.length) html += '<hr style="border-color:#3a3a3a;margin:5px 0">';
+    });
+    html = html.replace(/<hr[^>]*>\s*$/,'');
+    const _grpTitle = primary.f.name + ' · ' + tkMeta[primary.cat].label + (g.length>1 ? '（+'+(g.length-1)+'）' : '');
+    marker.on('click', () => showInfo(_grpTitle, '<div class="tk-popup-body">'+html+'</div>'));
+    tkMergeLayer.addLayer(marker);
+    g.forEach(x=>{
+      tkMergeLabelLayer.addLayer(L.marker(ll,{
+        icon:L.divIcon({ className:'', html:'<div class="tk-label '+x.cat+'" data-tkid="'+tid+'">'+x.f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
+        interactive:false, keyboard:false
+      }));
+    });
+  });
+
+  // 渲染无邻近城池的孤立非城池站点（普通单类标记，不融合）
+  standalone.forEach(i=>{
+    const s=sites[i];
+    const ll=[s.f.lat,s.f.lon], sz=size[s.cat];
+    const nudge=s.f.nudge||[0,0];
+    const tid='tk_'+s.cat+'_'+s.idx;
+    const anchor=[sz/2-nudge[0],sz/2-nudge[1]];
+    const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkIconSVG(s.cat,sz,tid), iconSize:[sz,sz], iconAnchor:anchor}), keyboard:false });
+    marker.on('click', () => showInfo(s.f.name + ' · ' + tkMeta[s.cat].label, tkTip(s.cat,s.f)));
+    tkMergeLayer.addLayer(marker);
+    tkMergeLabelLayer.addLayer(L.marker(ll,{
+      icon:L.divIcon({ className:'', html:'<div class="tk-label '+s.cat+'" data-tkid="'+tid+'">'+s.f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
+      interactive:false, keyboard:false
+    }));
+  });
+  tkMergeLayer.addTo(map); tkMergeLabelLayer.addTo(map);
+  scheduleCollision();
+}
+
+['city','pass','ford','battle','merge'].forEach(suf=>{
+  const cb=document.getElementById('cb-tk-'+suf);
+  if(cb) cb.onchange=()=>rebuildTK();
+});
+rebuildTK();
+
+// ── 2g) 诸葛亮北伐路线（五次北伐 228—234）：折线 + 行进箭头 + 编号章 + 线路说明 ──
+// 折线在 overlayPane(400)，标记在 markerPane(600)，故路线恒处于「地形之上、标记之下」
+const zglLineLayer = L.layerGroup();
+const zglChipLayer = L.layerGroup();
+(function(){
+  const D = window.ZHUGE_ROUTES; if(!D) return;
+  const subs = ['cb-zgl-1','cb-zgl-2','cb-zgl-3','cb-zgl-4','cb-zgl-5'];
+  const all  = document.getElementById('cb-zgl-all');
+  const chk  = id => { const el=document.getElementById(id); return el ? el.checked : false; };
+  // 屏幕坐标方向角（度）：CRS.Simple 下 y=-lat，故北向为负 y
+  function bearing(a,b){
+    const p1=map.project([a[1],a[0]],0), p2=map.project([b[1],b[0]],0);
+    return Math.atan2(p2.y-p1.y, p2.x-p1.x)*180/Math.PI;
+  }
+  // 沿折线按累计长度取比例位（箭头落在主线中段，避免与端点标记/其他路线重叠）
+  function along(path, frac){
+    const seg=[]; let total=0;
+    for(let i=1;i<path.length;i++){
+      const d=Math.hypot(path[i][0]-path[i-1][0], path[i][1]-path[i-1][1]);
+      seg.push(d); total+=d;
+    }
+    let want=total*frac;
+    for(let i=0;i<seg.length;i++){
+      if(want<=seg[i] || i===seg.length-1){
+        const t = seg[i] ? Math.min(want/seg[i],1) : 0;
+        const a=path[i], b=path[i+1];
+        return [[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t],[b[0],b[1]]];
+      }
+      want-=seg[i];
+    }
+    return [path[0], path[1]||path[0]];
+  }
+  function build(){
+    zglLineLayer.clearLayers(); zglChipLayer.clearLayers();
+    map.removeLayer(zglLineLayer); map.removeLayer(zglChipLayer);
+    let any=false;
+    D.forEach(r=>{
+      if(!chk('cb-zgl-'+r.id)) return;
+      any=true;
+      r.legs.forEach(leg=>{
+        const ll = leg.path.map(p=>[p[1],p[0]]);
+        // 深色描边(casing)：保证路线在绿棕地形上依然清晰
+        zglLineLayer.addLayer(L.polyline(ll,{ color:'rgba(0,0,0,0.5)', weight:(leg.dashed?4.4:5.6), opacity:0.75, lineCap:'round' }));
+        zglLineLayer.addLayer(L.polyline(ll,{
+          color:r.color, weight:(leg.dashed?2.2:3.2), opacity:(leg.dashed?0.85:0.98),
+          dashArray:(leg.dashed?'7,7':'16,9'), lineCap:'round'
+        }));
+      });
+      // 行军方向箭头：落点由数据里的 head{leg,frac} 指定
+      // （①与④等多次北伐共用同一走廊，若都用默认比例会叠在同一处，故按段/比例显式错开）
+      const hi=(r.head&&r.head.leg)||0, hf=(r.head&&r.head.frac)||0.7;
+      const hp=(r.legs[hi]||r.legs[0]).path;
+      if(hp.length>1){
+        const [pt,nx]=along(hp,hf), ang=bearing(pt,nx);
+        zglLineLayer.addLayer(L.marker([pt[1],pt[0]],{
+          icon:L.divIcon({ className:'', iconSize:[16,16], iconAnchor:[8,8],
+            html:'<svg width="16" height="16" viewBox="0 0 16 16" style="overflow:visible"><path d="M3 2.8 L14 8 L3 13.2 Z" fill="'+r.color+'" stroke="rgba(0,0,0,0.8)" stroke-width="1.1" style="transform-origin:8px 8px;transform:rotate('+ang.toFixed(1)+'deg)"/></svg>' }),
+          interactive:false, keyboard:false }));
+      }
+      // 编号章 + 名称标签（点击编号章查看该次北伐的经过）
+      const chip=L.marker([r.chip[1],r.chip[0]],{
+        icon:L.divIcon({ className:'zgl-chip', iconSize:[16,16], iconAnchor:[8,8],
+          html:'<div class="zgl-badge" style="background:'+r.color+'">'+r.ord+'</div>' }), keyboard:false });
+      chip.on('click', ()=>showInfo(r.name+'（'+r.year+'）', r.desc));
+      zglChipLayer.addLayer(chip);
+      zglChipLayer.addLayer(L.marker([r.chip[1],r.chip[0]],{
+        icon:L.divIcon({ className:'', iconSize:[0,0], iconAnchor:[0,0],
+          html:'<div class="zgl-label" style="color:'+r.color+'">'+r.ord+r.name+'·'+r.year+'</div>' }),
+        interactive:false, keyboard:false }));
+    });
+    if(any){ zglLineLayer.addTo(map); zglChipLayer.addTo(map); }
+    scheduleCollision();
+  }
+  // 子项变更：重建并回写「北伐路线」总开关 → 再回写「汉末三国」主选项
+  function rebuild(){
+    build();
+    if(all) all.checked = subs.every(id=>chk(id));
+    if(typeof window.__syncHanMaster==='function') window.__syncHanMaster();
+  }
+  subs.forEach(id=>{ const el=document.getElementById(id); if(el) el.onchange=rebuild; });
+  if(all){
+    all.onchange=e=>{
+      subs.forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=e.target.checked; });
+      build();
+    };
+  }
+  build();
+})();
+
+// 3) 悬停查海拔 (数据已通过 data.js 注入 window.APP_DATA)
+let elevData=null, elevMeta=null;
+(()=>{
+  try{
+    elevMeta=window.APP_DATA.elevMeta;
+    const b64=window.APP_DATA.elevGridB64;
+    const bin=atob(b64);
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    elevData=new Float32Array(bytes.buffer);
+  }catch(e){ console.error('高程网格加载失败',e); }
+})();
+
+function sampleElev(lon,lat){
+  if(!elevData||!elevMeta) return null;
+  const {width:W,height:Hh,lon_min,lon_max,lat_max,lat_min}=elevMeta;
+  let fx=(lon-lon_min)/(lon_max-lon_min)*(W-1);
+  let fy=(lat_max-lat)/(lat_max-lat_min)*(Hh-1);
+  if(fx<0||fy<0||fx>W-1||fy>Hh-1) return null;
+  const x0=Math.floor(fx), y0=Math.floor(fy);
+  const x1=Math.min(x0+1,W-1), y1=Math.min(y0+1,Hh-1);
+  const tx=fx-x0, ty=fy-y0;
+  const g=i=>elevData[i];
+  const v00=g(y0*W+x0), v10=g(y0*W+x1), v01=g(y1*W+x0), v11=g(y1*W+x1);
+  if([v00,v10,v01,v11].some(Number.isNaN)) return null;
+  const v=(v00*(1-tx)+v10*tx)*(1-ty)+(v01*(1-tx)+v11*tx)*ty;
+  return Math.round(v);
+}
+map.on('mousemove',e=>{
+  const v=sampleElev(e.latlng.lng,e.latlng.lat);
+  const el=document.getElementById('elev-val');
+  const arrow=document.getElementById('legend-elev-arrow');
+  if(!el) return;
+  if(v===null){
+    el.textContent='—';
+    if(arrow) arrow.classList.remove('active');
+  }else{
+    el.textContent=v;
+    if(arrow){
+      const pct=Math.min(100, Math.max(0, v/8000*100));
+      arrow.style.left=pct+'%';
+      arrow.classList.add('active');
+    }
+  }
+});
+
+// 4) 图层开关
+document.getElementById('cb-base').onchange=e=>{
+  e.target.checked?baseLayer.addTo(map):map.removeLayer(baseLayer);
+};
+document.getElementById('cb-contour').onchange=e=>{
+  e.target.checked?contourLayer.addTo(map):map.removeLayer(contourLayer);
+};
+document.getElementById('cb-label').onchange=e=>{
+  e.target.checked?labelLayer.addTo(map):map.removeLayer(labelLayer);
+};
+document.getElementById('cb-prov').onchange=e=>{
+  const on=e.target.checked;
+  if(on){ provinceLayer.addTo(map); borderLayer.addTo(map); nineDashLayer.addTo(map); provLabelLayer.addTo(map); }
+  else { map.removeLayer(provinceLayer); map.removeLayer(borderLayer); map.removeLayer(nineDashLayer); map.removeLayer(provLabelLayer); }
+};
+document.getElementById('cb-water').onchange=e=>{
+  e.target.checked?(waterLayer.addTo(map), waterLabelLayer.addTo(map))
+    :(map.removeLayer(waterLayer), map.removeLayer(waterLabelLayer));
+};
+document.getElementById('cb-mtn').onchange=e=>{
+  if(e.target.checked){
+    mountainPeakLayer.addTo(map); mountainNameLayer.addTo(map);
+  } else {
+    map.removeLayer(mountainPeakLayer); map.removeLayer(mountainNameLayer);
+  }
+};
+
+// 4b) 一键叠加全部 / 一键消除全部（复用逐层开关逻辑）
+function setAll(on){
+  ['cb-base','cb-contour','cb-label','cb-prov','cb-water','cb-mtn',
+   'cb-han-bnd','cb-han-seat',
+   'cb-city-capital','cb-city-ancap','cb-city-battle',
+   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all'].forEach(id=>{
+    const cb=document.getElementById(id);
+    if(cb.checked!==on){ cb.checked=on; cb.onchange({target:cb}); }
+  });
+  const ha=document.getElementById('cb-han-all');
+  if(ha) ha.checked=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all']
+    .every(id=>document.getElementById(id).checked);
+}
+document.getElementById('btn-all-on').onclick=()=>setAll(true);
+document.getElementById('btn-all-off').onclick=()=>setAll(false);
+
+// 4c) 汉末三国「全选」主选项：勾选后联动该区块全部子选项；子项变更时回写主选项状态
+(function(){
+  const hanAll=document.getElementById('cb-han-all');
+  const hanSubs=['cb-han-bnd','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all'];
+  function syncMaster(){ hanAll.checked=hanSubs.every(id=>document.getElementById(id).checked); }
+  window.__syncHanMaster=syncMaster;   // 供北伐路线等外部模块回写主选项
+  hanAll.onchange=e=>{
+    hanSubs.forEach(id=>{
+      const cb=document.getElementById(id);
+      if(cb.checked!==e.target.checked){
+        cb.checked=e.target.checked;
+        if(typeof cb.onchange==='function') cb.onchange({target:cb});
+      }
+    });
+  };
+  hanSubs.forEach(id=>document.getElementById(id).addEventListener('change',syncMaster));
+  syncMaster();
+})();
+
+// 4d) 合并重合地标：合并尺度滑块（实时调节 TK_FUSE_DEG 并重建）
+(function(){
+  const el=document.getElementById('merge-scale');
+  const out=document.getElementById('merge-scale-val');
+  if(!el) return;
+  el.addEventListener('input',()=>{
+    TK_FUSE_DEG=parseFloat(el.value);
+    if(out) out.textContent=TK_FUSE_DEG.toFixed(2)+'°';
+    if(document.getElementById('cb-tk-merge').checked) rebuildTK();
+  });
+})();
+
+// 6) 截图模式：一键隐藏所有界面元素（地图内容保留）
+function toggleShot(){ document.body.classList.toggle('screenshot-mode'); }
+document.getElementById('btn-shot').onclick=toggleShot;
+document.getElementById('exit-shot').onclick=toggleShot;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ document.body.classList.remove('screenshot-mode'); }
+  else if(e.key==='s'||e.key==='S'){ e.preventDefault(); toggleShot(); }
+});
+
+// 5) 图例刻度（千位用 k 缩写，标签更窄，避免窄屏互相踩踏）
+const ticks=[[0,5.4],[1000,16.0],[2000,26.7],[4000,48.1],[6000,69.5],[8000,91.0]];
+const box=document.getElementById('legend-ticks');
+const fmtTick=v => v>=1000 ? (v/1000)+'k' : (''+v);
+ticks.forEach(([v,p])=>{
+  const s=document.createElement('span'); s.style.left=p+'%'; s.textContent=fmtTick(v);   box.appendChild(s);
+});
+scheduleCollision();
+</script>
+</body>
+</html>
