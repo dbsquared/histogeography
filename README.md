@@ -2,7 +2,7 @@
 
 基于 SRTM 90M 数字高程模型（DEM）与中国历史地理矢量数据，构建的**多时代历史地理**交互式地形地图项目。
 
-本项目不局限于某一个朝代——它以真实地形为底，统一的交互框架还原不同历史时期的州郡、山川、城邑格局。当前已完成 **汉末（东汉）十三州** 时期的第一版地图（十三州州界与郡治、地形晕渲、河流、行政边界与南海诸岛附图），后续将持续接入更多时代（如先秦、唐、宋、明等）的历史地图。
+本项目不局限于某一个朝代——它以真实地形为底，统一的交互框架还原不同历史时期的州郡、山川、城邑格局。当前已完成两个时期：**汉末（东汉）十三州**（十三州州界与郡治、三国地点、诸葛亮北伐路线）与 **楚汉争霸**（十八诸侯国 + 西楚疆域与都邑、楚汉地点、六条战争路线），均含地形晕渲、河流、行政边界与南海诸岛附图；后续将持续接入更多时代（如先秦、唐、宋、明等）的历史地图。
 
 > 项目目标：以统一的交互框架呈现中国历代历史地理空间信息，支持在浏览器中缩放、悬停查看地名与治所、按图层 / 时代切换浏览。
 
@@ -12,7 +12,8 @@
 
 - **地形底图**：SRTM 90M DEM 渲染的山体阴影（hillshade）+ 14 级自定义色阶（深水→雪顶），约 450m/px。
 - **历史图层（按时代组织）**：
-  - *汉末十三州（第一时期）*：十三州边界多边形，悬停高亮并显示「州名 + 州府」；各郡治所标注（郡名在上、治所名在下两行显示），州府以金色圆点突出。
+  - *汉末三国（第一时期）*：十三州边界多边形，悬停高亮；各郡治所标注（郡名在上、治所名在下两行显示），州府以金色圆点突出；三国地点（城池/关隘/津渡/战役）与诸葛亮北伐路线。
+  - *楚汉争霸（第二时期）*：十八诸侯国 + 西楚的疆域与都邑（按通行历史地图示意性重建），楚汉地点（城池/关隘/津渡/战役）与六条战争路线（西进灭秦 → 还定三秦 → 韩信北伐 → 彭城反击 → 垓下决战 → 乌江末路）。
   - 后续时代将作为独立图层 / 时期接入，共享同一地形底图与交互框架。
 - **河流 / 湖泊**：Natural Earth 10m 水系叠加（长江、黄河、珠江等主要河流中文标注）。
 - **行政边界**：国界（含十段线）、省界（含港澳台标注）、南海附图。
@@ -30,10 +31,11 @@
 python -m http.server 8765
 # 时期选择首页：  http://localhost:8765/
 # 汉末三国地图：  http://localhost:8765/汉末三国/
+# 楚汉争霸地图：  http://localhost:8765/楚汉争霸/
 ```
 
 > 提示：直接双击 `index.html`（file:// 协议）可能无法加载数据图层，请务必使用上面的本地服务器方式。
-> 在线版本：https://dbsquared.github.io/histogeography/ （时期选择首页）；汉末三国地图：https://dbsquared.github.io/histogeography/汉末三国/ 。由 GitHub Pages 从 `main` 分支根目录直接发布，推送 `main` 即自动重建。
+> 在线版本：https://dbsquared.github.io/histogeography/ （时期选择首页）；汉末三国地图：https://dbsquared.github.io/histogeography/汉末三国/ ；楚汉争霸地图：https://dbsquared.github.io/histogeography/楚汉争霸/ 。由 GitHub Pages 从 `main` 分支根目录直接发布，推送 `main` 即自动重建。
 
 ---
 
@@ -49,6 +51,11 @@ python -m http.server 8765
 │   ├── han_states.js          #   十三州州界 + 郡治
 │   ├── three_kingdoms_sites.js#   三国地点（城池/关隘/津渡/战役）
 │   └── zhuge_routes.js        #   诸葛亮北伐路线
+├── 楚汉争霸/                  # ★ 第二时期：楚汉争霸地图
+│   ├── index.html             #   交互式地图主页面（Leaflet）
+│   ├── chu_han_states.js      #   十八国 + 西楚 疆域与都邑（示意性重建）
+│   ├── chu_han_sites.js       #   楚汉地点（城池/关隘/津渡/战役）
+│   └── chu_han_routes.js      #   六条战争路线
 ├── base_terrain.png           # 共享地形底图（71MB，hillshade 渲染）
 ├── data.js / scs_inset_data.js / cities.js   # 跨时代共享运行时数据
 ├── .nojekyll                  # 关闭 GitHub Pages 的 Jekyll 处理
@@ -56,6 +63,7 @@ python -m http.server 8765
 │   ├── download_srtm_china.py # SRTM 90M DEM 批量下载（GSCloud）
 │   ├── terrain_renderer.py    # DEM → hillshade / 色阶渲染
 │   ├── build_han_states.py    # 合并各州 GeoJSON → han_states.js
+│   ├── build_chu_han_states.py  # 十八国 + 西楚疆域重建（含 QA 渲染）→ chu_han_states.js
 │   ├── build_provinces_layer.py / build_rivers_layer.py / build_mountains_layer.py
 │   ├── build_scs_inset.py     # 南海附图构建
 │   ├── build_thirteen_states.py / calibrate_13states.py
@@ -148,6 +156,7 @@ python tools/download_srtm_china.py --sid YOUR_SID --uid YOUR_UID
 
 - [x] 地形底图渲染（hillshade + 色阶）
 - [x] **汉末十三州（第一时期）**：十三州州界与郡治接入（含手工精修与自动初稿）
+- [x] **楚汉争霸（第二时期）**：十八国 + 西楚疆域、都邑、楚汉地点与六条战争路线（按通行历史地图示意性重建）
 - [x] 河流 / 湖泊 / 行政边界 / 南海附图叠加
 - [x] 交互式查看器（悬停、图层切换、时代组织）
 - [x] GitHub Pages 在线发布（main 根目录）
