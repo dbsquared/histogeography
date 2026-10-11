@@ -154,7 +154,12 @@
 /* ── 诸葛亮北伐路线 ── */
 .zgl-chip{pointer-events:auto;cursor:pointer;}
 .zgl-badge{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;line-height:1;color:#101010;box-shadow:0 0 0 1.5px rgba(0,0,0,0.8),0 1px 3px rgba(0,0,0,0.65);}
-.zgl-label{display:inline-block;white-space:nowrap;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}
+.zgl-label{display:inline-block;white-space:nowrap;pointer-events:auto;cursor:pointer;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}
+/* 路线节点（未进地标库的纯节点：沮县/太白/褒谷口）：小圆点 + 更小的名称 */
+.zgl-nodedot{width:7px;height:7px;border-radius:50%;background:#eaf1f8;box-shadow:0 0 0 1.5px rgba(0,0,0,0.78),0 1px 2px rgba(0,0,0,0.6);}
+/* 可点击标签的悬停反馈（下划线跟着标签自身颜色） */
+.zgl-label:hover,.zgl-node:hover{text-decoration:underline;text-underline-offset:2px;}
+.zgl-node{display:inline-block;white-space:nowrap;pointer-events:auto;cursor:pointer;font-weight:bold;font-size:calc(8px * var(--tk-lscale,1));letter-spacing:0;line-height:1;color:#dfe8f2;transform:translate(calc(11px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}
 .citylabel {
   font-weight:bold; white-space:nowrap; pointer-events:none;
   font-size:calc(10px * var(--lscale,1));
@@ -248,8 +253,8 @@
     <div style="margin-left:18px;">
       <label><input type="checkbox" id="cb-han-bnd"> 州界</label>
       <label><input type="checkbox" id="cb-han-seat"> 郡</label>
-      <label><input type="checkbox" id="cb-tk-city"> 城池（34）</label>
-      <label><input type="checkbox" id="cb-tk-pass"> 关隘（23）</label>
+      <label><input type="checkbox" id="cb-tk-city"> 城池（37）</label>
+      <label><input type="checkbox" id="cb-tk-pass"> 关隘（25）</label>
       <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
       <label><input type="checkbox" id="cb-tk-battle"> 战役（34）</label>
       <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
@@ -266,6 +271,7 @@
           <label><input type="checkbox" id="cb-zgl-3"> ③第三次 229春</label>
           <label><input type="checkbox" id="cb-zgl-4"> ④第四次 231</label>
           <label><input type="checkbox" id="cb-zgl-5"> ⑤第五次 234</label>
+          <div style="font-size:10px;color:#bcd;margin-top:2px;">点路线名或编号章可看该次北伐经过</div>
         </div>
       </div>
     </div>
@@ -307,8 +313,8 @@
 <script src="../scs_inset_data.js?v=2026070801"></script>
 <script src="../cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
-    <script src="three_kingdoms_sites.js?v=2026100701"></script>
-    <script src="zhuge_routes.js?v=2026100701"></script>
+    <script src="three_kingdoms_sites.js?v=2026101101"></script>
+    <script src="zhuge_routes.js?v=2026101001"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -424,7 +430,7 @@ window.addEventListener('orientationchange', () => {
   }, 250);
 });
 // ── 全局标签自动防重叠（重叠的标签自动挪到附近空白处，绝不隐藏）──
-const _LBL_SEL  = '.clabel,.plabel,.rlabel,.llabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel,.zgl-label';
+const _LBL_SEL  = '.clabel,.plabel,.rlabel,.llabel,.hanstate-label,.hanseat-label,.citylabel,.tk-label,.mlabel,.zgl-label,.zgl-node';
 const _LBL_PAD  = 2;                           // 像素间距，避免贴边
 const _LBL_CANVAS = document.createElement('canvas');
 const _LBL_CTX = _LBL_CANVAS.getContext('2d');
@@ -1348,6 +1354,23 @@ const zglChipLayer = L.layerGroup();
     }
     return [path[0], path[1]||path[0]];
   }
+  // 路线节点去重：与既有地标「同名（忽略括号后缀及“之战/之役”）」或「相距 <0.05°(~5.5km)」者不再重复标注
+  // —— 兜底用，避免日后把沮县/太白/褒谷口补进 three_kingdoms_sites.js 后标两遍
+  const _lndBase = s => String(s||'').split(/[（(]/)[0].replace(/之战$|之役$/,'').trim();
+  const _lndNames = new Set(), _lndPts = [];
+  (function(){
+    const TK = window.THREE_KINGDOM_SITES || {};
+    ['city','pass','ford','battle'].forEach(k=>(TK[k]||[]).forEach(f=>{
+      _lndNames.add(_lndBase(f.name)); _lndPts.push([f.lon,f.lat]);
+    }));
+  })();
+  function nodeDup(n){
+    if(_lndNames.has(_lndBase(n.name))) return true;
+    for(let i=0;i<_lndPts.length;i++){
+      if(Math.hypot((_lndPts[i][0]-n.lon)*0.83, _lndPts[i][1]-n.lat) < 0.05) return true;
+    }
+    return false;
+  }
   function build(){
     zglLineLayer.clearLayers(); zglChipLayer.clearLayers();
     map.removeLayer(zglLineLayer); map.removeLayer(zglChipLayer);
@@ -1381,10 +1404,29 @@ const zglChipLayer = L.layerGroup();
           html:'<div class="zgl-badge" style="background:'+r.color+'">'+r.ord+'</div>' }), keyboard:false });
       chip.on('click', ()=>showInfo(r.name+'（'+r.year+'）', r.desc));
       zglChipLayer.addLayer(chip);
-      zglChipLayer.addLayer(L.marker([r.chip[1],r.chip[0]],{
+      // 路线名标签也可点击 → 弹出该次北伐的经过（与编号章同一入口；文字比 16px 编号章更好点中）
+      const rlbl = L.marker([r.chip[1],r.chip[0]],{
         icon:L.divIcon({ className:'', iconSize:[0,0], iconAnchor:[0,0],
           html:'<div class="zgl-label" style="color:'+r.color+'">'+r.ord+r.name+'·'+r.year+'</div>' }),
-        interactive:false, keyboard:false }));
+        keyboard:false });
+      rlbl.on('click', ()=>showInfo(r.name+'（'+r.year+'）', r.desc));
+      zglChipLayer.addLayer(rlbl);
+      // 路线节点（未进地标库的中途小站，如沮县/太白/褒谷口）：更小的圆点 + 更小的名称
+      // 节点标签同样可点击 → 弹出它所属那一次北伐的经过（标题即所属路线的名称与年份）
+      (r.nodes||[]).forEach(n=>{
+        if(nodeDup(n)) return;
+        const tid = 'zglnd-'+r.id+'-'+n.name;
+        zglChipLayer.addLayer(L.marker([n.lat,n.lon],{
+          icon:L.divIcon({ className:'', iconSize:[7,7], iconAnchor:[3.5,3.5],
+            html:'<div class="zgl-nodedot"></div>' }),
+          interactive:false, keyboard:false }));
+        const nlbl = L.marker([n.lat,n.lon],{
+          icon:L.divIcon({ className:'', iconSize:[0,0], iconAnchor:[0,0],
+            html:'<div class="zgl-node" data-tkid="'+tid+'">'+n.name+'</div>' }),
+          keyboard:false });
+        nlbl.on('click', ()=>showInfo(r.name+'（'+r.year+'）', r.desc));
+        zglChipLayer.addLayer(nlbl);
+      });
     });
     if(any){ zglLineLayer.addTo(map); zglChipLayer.addTo(map); }
     scheduleCollision();
