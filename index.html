@@ -78,11 +78,14 @@
   footer a:hover{color:var(--gold); border-color:var(--gold)}
   .src{margin-bottom:10px}
 
+  .eras > .era:last-child:nth-child(odd){grid-column:1 / -1; max-width:calc(50% - 8px); justify-self:center}
+
   @media(max-width:640px){
     .wrap{padding:38px 18px 30px}
     h1{font-size:28px; letter-spacing:.1em}
     .eras{grid-template-columns:1fr}
     .era.live::after{position:static; display:block; margin-top:14px}
+    .eras > .era:last-child:nth-child(odd){grid-column:auto; max-width:none}
   }
 </style>
 </head>
@@ -100,12 +103,12 @@
   <main>
     <h2>选择历史时期</h2>
     <div class="eras">
-      <a class="era live" href="汉末三国/">
-        <span class="badge">已上线</span>
-        <div class="era-name">汉末三国</div>
-        <div class="era-period">东汉末年至三国 · 约公元 184–280 年</div>
-        <p class="era-desc">十三州州界与郡治 · 三国地点（城池/关隘/津渡/战役）· 诸葛亮北伐路线 · 山脉海拔 · 水系与南海附图</p>
-      </a>
+      <div class="era plan">
+        <span class="badge plan-badge">筹备中</span>
+        <div class="era-name">先秦</div>
+        <div class="era-period">西周至战国 · 公元前 221 年以前</div>
+        <p class="era-desc">诸侯会盟与列国疆域</p>
+      </div>
 
       <a class="era live" href="楚汉争霸/">
         <span class="badge">已上线</span>
@@ -114,24 +117,24 @@
         <p class="era-desc">十八诸侯国疆域与都邑 · 楚汉地点（城池/关隘/津渡/战役）· 六条战争路线（西进灭秦至乌江末路）· 山脉海拔 · 水系与南海附图</p>
       </a>
 
-      <div class="era plan">
-        <span class="badge plan-badge">筹备中</span>
-        <div class="era-name">先秦</div>
-        <div class="era-period">待定</div>
-        <p class="era-desc">诸侯会盟与列国疆域</p>
-      </div>
+      <a class="era live" href="汉末三国/">
+        <span class="badge">已上线</span>
+        <div class="era-name">汉末三国</div>
+        <div class="era-period">东汉末年至三国 · 约公元 184–280 年</div>
+        <p class="era-desc">十三州州界与郡治 · 三国地点（城池/关隘/津渡/战役）· 诸葛亮北伐路线 · 山脉海拔 · 水系与南海附图</p>
+      </a>
 
       <div class="era plan">
         <span class="badge plan-badge">筹备中</span>
         <div class="era-name">唐</div>
-        <div class="era-period">待定</div>
+        <div class="era-period">公元 618–907 年</div>
         <p class="era-desc">道州县体系与丝路通道</p>
       </div>
 
       <div class="era plan">
         <span class="badge plan-badge">筹备中</span>
         <div class="era-name">明</div>
-        <div class="era-period">待定</div>
+        <div class="era-period">公元 1368–1644 年</div>
         <p class="era-desc">两京十三布政使司</p>
       </div>
     </div>
