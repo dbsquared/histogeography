@@ -271,7 +271,8 @@
           <label><input type="checkbox" id="cb-zgl-3"> ③第三次 229春</label>
           <label><input type="checkbox" id="cb-zgl-4"> ④第四次 231</label>
           <label><input type="checkbox" id="cb-zgl-5"> ⑤第五次 234</label>
-          <div style="font-size:10px;color:#bcd;margin-top:2px;">点路线名或编号章可看该次北伐经过</div>
+          <label><input type="checkbox" id="cb-zgl-6"> ⑥子午谷道</label>
+          <div style="font-size:10px;color:#bcd;margin-top:2px;">点路线名或编号章可看该路线经过</div>
         </div>
       </div>
     </div>
@@ -314,7 +315,7 @@
 <script src="../cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
     <script src="three_kingdoms_sites.js?v=2026101101"></script>
-    <script src="zhuge_routes.js?v=2026101001"></script>
+    <script src="zhuge_routes.js?v=2026101102"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -1322,13 +1323,13 @@ function rebuildTK(){
 });
 rebuildTK();
 
-// ── 2g) 诸葛亮北伐路线（五次北伐 228—234）：折线 + 行进箭头 + 编号章 + 线路说明 ──
+// ── 2g) 诸葛亮北伐路线（五次北伐 228—234）＋子午谷道：折线 + 行进箭头 + 编号章 + 线路说明 ──
 // 折线在 overlayPane(400)，标记在 markerPane(600)，故路线恒处于「地形之上、标记之下」
 const zglLineLayer = L.layerGroup();
 const zglChipLayer = L.layerGroup();
 (function(){
   const D = window.ZHUGE_ROUTES; if(!D) return;
-  const subs = ['cb-zgl-1','cb-zgl-2','cb-zgl-3','cb-zgl-4','cb-zgl-5'];
+  const subs = ['cb-zgl-1','cb-zgl-2','cb-zgl-3','cb-zgl-4','cb-zgl-5','cb-zgl-6'];
   const all  = document.getElementById('cb-zgl-all');
   const chk  = id => { const el=document.getElementById(id); return el ? el.checked : false; };
   // 屏幕坐标方向角（度）：CRS.Simple 下 y=-lat，故北向为负 y
