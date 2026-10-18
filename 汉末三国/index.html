@@ -43,6 +43,11 @@
   #legend-elev-arrow.active { opacity:1; }
   #legend { position:absolute; bottom:18px; left:12px; z-index:1000; width:min(82vw,260px);
             backdrop-filter:none; -webkit-backdrop-filter:none; }
+  /* 战役时间轴（../timeline/map_timeline.js）：桌面贴底右侧，避开左下角图例；窄屏置于图例上方 */
+  #timebar { position:absolute; right:12px; bottom:18px; z-index:1000; width:min(660px, calc(100vw - 320px)); }
+  @media (max-width: 700px) {
+    #timebar { left:10px; right:10px; width:auto; bottom: calc(18px + 100px); }
+  }
   .legend-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:nowrap; }
   #legend-scale { text-align:right; }
   .scale-bar { display:inline-flex; align-items:center; gap:6px; line-height:1; }
@@ -223,8 +228,10 @@
   }
   .screenshot-mode #menu-toggle,
   .screenshot-mode #info-toggle,
-  .screenshot-mode #info { display:none !important; }
+  .screenshot-mode #info,
+  .screenshot-mode #timebar { display:none !important; }
 </style>
+<link rel="stylesheet" href="../timeline/map_timeline.css?v=2026101302">
 </head>
 <body>
 <div id="map"></div>
@@ -257,6 +264,7 @@
       <label><input type="checkbox" id="cb-tk-pass"> 关隘（25）</label>
       <label><input type="checkbox" id="cb-tk-ford"> 津渡（12）</label>
       <label><input type="checkbox" id="cb-tk-battle"> 战役（34）</label>
+      <label><input type="checkbox" id="cb-tk-event"> 大事记（13）</label>
       <label><input type="checkbox" id="cb-tk-merge"> 合并重合地标</label>
       <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
         <span style="font-size:11px;color:#bcd;">合并尺度</span>
@@ -307,6 +315,7 @@
   <div class="ticks" id="legend-ticks"></div>
 </div>
 
+<div id="timebar"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -315,8 +324,9 @@
 <script src="../scs_inset_data.js?v=2026070801"></script>
 <script src="../cities.js?v=2026072001"></script>
 <script src="han_states.js?v=2026080124"></script>
-    <script src="three_kingdoms_sites.js?v=2026101101"></script>
+    <script src="three_kingdoms_sites.js?v=2026101301"></script>
     <script src="zhuge_routes.js?v=2026101102"></script>
+    <script src="../timeline/map_timeline.js?v=2026101302"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
 const BOUNDS=[[LAT_MIN,LON_MIN],[LAT_MAX,LON_MAX]];
@@ -485,6 +495,7 @@ function _lblPriority(el){
   if(c.indexOf('plabel')>=0) return 84;
   if(c.indexOf('hanseat-label')>=0 && c.indexOf('capital')>=0) return 78;
   if(c.indexOf('tk-label')>=0 && c.indexOf('battle')>=0) return 72;
+  if(c.indexOf('tk-label')>=0 && c.indexOf('event')>=0) return 68;
   if(c.indexOf('tk-label')>=0 && c.indexOf('city')>=0) return 70;
   if(c.indexOf('citylabel')>=0 && c.indexOf('battle')>=0) return 66;
   if(c.indexOf('hanseat-label')>=0) return 46;
@@ -1150,7 +1161,8 @@ const tkMeta = {
   city:   { color:'#FFB300', label:'城池' },
   pass:   { color:'#546E7A', label:'关隘' },
   ford:   { color:'#1E88E5', label:'津渡' },
-  battle: { color:'#1B1B1B', label:'战役' }
+  battle: { color:'#1B1B1B', label:'战役' },
+  event:  { color:'#7B1FA2', label:'大事记' }
 };
 function tkGlyph(category, uid){
   if(category==='city'){
@@ -1159,13 +1171,15 @@ function tkGlyph(category, uid){
     return '<g transform="translate(0,-6) scale(0.88)"><path d="M -32 20 Q -16 5 0 16 Q 16 6 32 18 L 32 26 L -32 26 Z" fill="#FFFFFF" opacity="0.20"/><path d="M -32 15 L -32 1 L -28 1 L -28 -2 L -24 -2 L -24 1 L -20 1 L -20 -2 L -16 -2 L -16 1 L -12 1 L -12 -2 L -8 -2 L -8 1 L -4 1 L -4 -2 L 0 -2 L 0 1 L 4 1 L 4 -2 L 8 -2 L 8 1 L 12 1 L 12 -2 L 16 -2 L 16 1 L 20 1 L 20 -2 L 24 -2 L 24 1 L 28 1 L 28 -2 L 32 -2 L 32 1 L 32 15 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7" stroke-linejoin="round"/><path d="M -6 15 L -6 -4 L -3 -4 L -3 -9 L 3 -9 L 3 -4 L 6 -4 L 6 15 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7" stroke-linejoin="round"/><path d="M -9 -4 L 0 -15 L 9 -4 Z" fill="#37474F"/><path d="M -3 -9 L -3 -12 L 3 -12 L 3 -9 Z" fill="#ECEFF1" stroke="#37474F" stroke-width="0.7"/><path d="M -2 15 L -2 8 A 2 2 0 0 1 2 8 L 2 15 Z" fill="#546E7A"/></g>';
   } else if(category==='ford'){
     return '<g transform="scale(0.82)"><path d="M -15 -2 L 15 -2 L 10 6 L -10 6 Z" fill="#FFFFFF"/><path d="M 0 -2 L 0 -18 L 11 -2 Z" fill="#FFFFFF"/><path d="M 0 -18 L 0 -2" stroke="#FFFFFF" stroke-width="2" fill="none"/><path d="M -22 12 q 5.5 -6 11 0 q 5.5 6 11 0 q 5.5 -6 11 0 q 5.5 6 11 0" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M -22 19 q 5.5 -6 11 0 q 5.5 6 11 0 q 5.5 -6 11 0 q 5.5 6 11 0" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
+  } else if(category==='event'){
+    return '<g transform="translate(0,-1)"><path d="M -2.2 -17 L -2.2 16" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/><path d="M -0.4 -17 L 15 -11.6 L -0.4 -6.2 Z" fill="#FFFFFF"/><circle cx="-2.2" cy="16" r="2.4" fill="#FFFFFF"/></g>';
   } else { // battle
     return '<defs><linearGradient id="blade-'+uid+'" x1="0" y1="-22" x2="6" y2="-3" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#CFD8DC"/><stop offset="1" stop-color="#78909C"/></linearGradient></defs><g transform="scale(0.62)"><g transform="rotate(32)"><path d="M -2.5 -3 L -2.5 -19 Q -2.5 -23 1.8 -22.3 L 4.2 -18 Q 5.2 -11 2.8 -3 Z" fill="url(#blade-'+uid+')" stroke="#455A64" stroke-width="0.5"/><rect x="-5" y="-3.2" width="11" height="2.6" rx="1.1" fill="#C9A227"/><rect x="-2" y="-0.6" width="4" height="13" rx="1.6" fill="#4E342E"/><circle cx="0" cy="13" r="2.2" fill="#C9A227"/><path d="M 0 14 C -3.2 17 -2.2 21.5 0 23 C 2.2 21.5 3.2 17 0 14 Z" fill="#C62828"/></g><g transform="rotate(-32)"><path d="M -2.5 -3 L -2.5 -19 Q -2.5 -23 1.8 -22.3 L 4.2 -18 Q 5.2 -11 2.8 -3 Z" fill="url(#blade-'+uid+')" stroke="#455A64" stroke-width="0.5"/><rect x="-5" y="-3.2" width="11" height="2.6" rx="1.1" fill="#C9A227"/><rect x="-2" y="-0.6" width="4" height="13" rx="1.6" fill="#4E342E"/><circle cx="0" cy="13" r="2.2" fill="#C9A227"/><path d="M 0 14 C -3.2 17 -2.2 21.5 0 23 C 2.2 21.5 3.2 17 0 14 Z" fill="#C62828"/></g><circle cx="0" cy="-1" r="2.6" fill="#FFC107" stroke="#37474F" stroke-width="0.5"/></g>';
   }
 }
 function tkIconSVG(category, size, tid){
   const m = tkMeta[category];
-  const ring = category==='battle' ? '#FFC107' : '#FFFFFF';
+  const ring = category==='battle' ? '#FFC107' : (category==='event' ? '#FFD479' : '#FFFFFF');
   const ringW = category==='battle' ? 2.2 : 1.8;
   const uid = Math.random().toString(36).slice(2,8);
   return '<svg data-tkid="'+(tid||'')+'" width="'+size+'" height="'+size+'" viewBox="-26 -26 52 52">' +
@@ -1173,7 +1187,7 @@ function tkIconSVG(category, size, tid){
 }
 function tkFusedIcon(mainCat, badges, size, tid){
   const m = tkMeta[mainCat];
-  const ring = mainCat==='battle' ? '#FFC107' : '#FFFFFF';
+  const ring = mainCat==='battle' ? '#FFC107' : (mainCat==='event' ? '#FFD479' : '#FFFFFF');
   const ringW = mainCat==='battle' ? 2.2 : 1.8;
   const uid = Math.random().toString(36).slice(2,8);
   let inner = '<circle r="24" fill="'+m.color+'" stroke="'+ring+'" stroke-width="'+ringW+'"/>';
@@ -1186,35 +1200,45 @@ function tkFusedIcon(mainCat, badges, size, tid){
     if(bc==='battle'){                 // 战役：两把交叉的刀直接叠在城池上方，不再做小角标
       if(battleDone) return; battleDone=true;
       const buid = Math.random().toString(36).slice(2,8);
-      inner += '<g transform="translate(0,-10) scale(1.0)">'+tkGlyph('battle',buid)+'</g>';
+      inner += '<g class="tkf-battle" transform="translate(0,-10) scale(1.0)">'+tkGlyph('battle',buid)+'</g>';
       return;
     }
     if(seen[bc]) return; seen[bc]=1;
     const [bx,by]=pos[k%4];
     const buid = Math.random().toString(36).slice(2,8);
-    inner += '<g transform="translate('+bx+','+by+') scale(0.34)"><circle r="14" fill="rgba(18,18,26,0.82)" stroke="'+tkMeta[bc].color+'" stroke-width="2.6"/>'+tkGlyph(bc,buid)+'</g>';
+    inner += '<g'+((bc==='event')?' class="tkf-event"':'')+' transform="translate('+bx+','+by+') scale(0.34)"><circle r="14" fill="rgba(18,18,26,0.82)" stroke="'+tkMeta[bc].color+'" stroke-width="2.6"/>'+tkGlyph(bc,buid)+'</g>';
   });
   return '<svg data-tkid="'+(tid||'')+'" width="'+size+'" height="'+size+'" viewBox="-26 -26 52 52">'+inner+'</svg>';
 }
-const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
-const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup() };
+const tkLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup(), event:L.layerGroup() };
+const tkLabelLayer = { city:L.layerGroup(), pass:L.layerGroup(), ford:L.layerGroup(), battle:L.layerGroup(), event:L.layerGroup() };
 
 let TK_FUSE_DEG = 0.25;            // 融合半径（度）：距离小于此值的地标合成一个标记（可由「合并尺度」滑块调节）
-const tkTypeOrder = { city:0, pass:1, ford:2, battle:3 };
+const tkTypeOrder = { city:0, pass:1, ford:2, battle:3, event:4 };
 const tkMergeLayer = L.layerGroup();
 const tkMergeLabelLayer = L.layerGroup();
 const _tkD = window.THREE_KINGDOM_SITES;
 
+// 时间轴过滤（map_timeline.js）：引用表随 rebuildTK 重建；curYear=Infinity 表示全部显示
+const battleTimeRefs = [];
+battleTimeRefs.version = 0;
+let battleTimeCurYear = Infinity;
+
 function tkTip(cat, f){
   if(cat==='battle'){
     return '<div style="margin:3px 0"><b>'+f.name+'</b>（'+f.year+'）<br/>地点：'+f.place+'<br/>'+f.sides+'<br/><span style="color:#ffd479">'+f.result+'</span>'+(f.desc?('<br/><span style="color:#cfe0f0;font-size:11px;line-height:1.5">'+f.desc+'</span>'):'')+'</div>';
+  }
+  if(cat==='event'){
+    return '<div style="margin:3px 0"><b>'+f.name+'</b>（'+f.year+'）<br/>地点：'+f.place+'<br/><span style="color:#ffd479">'+f.result+'</span>'+(f.desc?('<br/><span style="color:#cfe0f0;font-size:11px;line-height:1.5">'+f.desc+'</span>'):'')+'</div>';
   }
   return '<div style="margin:3px 0"><b>'+f.name+'</b> · '+tkMeta[cat].label+'<br/>今址：'+f.modern+'（'+f.zhou+'）<br/>'+(f.desc||'')+'</div>';
 }
 
 // 三国地标：合并模式下，非城池站点仅并入「最近的城池」(距离 ≤ TK_FUSE_DEG)；城池为各自独立的锚点，不会全图坍缩。合成标记主类型(城池)作图标、其余类型作角标；关闭合并则退化为逐类独立图层
 function rebuildTK(){
-  ['city','pass','ford','battle'].forEach(cat=>{
+  battleTimeRefs.length = 0;
+  battleTimeRefs.version++;
+  ['city','pass','ford','battle','event'].forEach(cat=>{
     map.removeLayer(tkLayer[cat]); map.removeLayer(tkLabelLayer[cat]);
     tkLayer[cat].clearLayers(); tkLabelLayer[cat].clearLayers();
   });
@@ -1222,9 +1246,9 @@ function rebuildTK(){
   tkMergeLayer.clearLayers(); tkMergeLabelLayer.clearLayers();
   if(!_tkD){ return; }
 
-  const types = ['city','pass','ford','battle'].filter(c=>document.getElementById('cb-tk-'+c).checked);
+  const types = ['city','pass','ford','battle','event'].filter(c=>document.getElementById('cb-tk-'+c).checked);
   const merge = document.getElementById('cb-tk-merge').checked;
-  const size = { city:22, pass:20, ford:20, battle:22 };
+  const size = { city:22, pass:20, ford:20, battle:22, event:20 };
 
   if(!merge){
     types.forEach(cat=>{
@@ -1235,10 +1259,12 @@ function rebuildTK(){
         const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkIconSVG(cat,s,tid), iconSize:[s,s], iconAnchor:anchor}), keyboard:false });
         marker.on('click', () => showInfo(f.name + ' · ' + tkMeta[cat].label, tkTip(cat,f)));
         tkLayer[cat].addLayer(marker);
-        tkLabelLayer[cat].addLayer(L.marker(ll,{
+        const _lm=L.marker(ll,{
           icon:L.divIcon({ className:'', html:'<div class="tk-label '+cat+'" data-tkid="'+tid+'">'+f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
           interactive:false, keyboard:false
-        }));
+        });
+        tkLabelLayer[cat].addLayer(_lm);
+        if(cat==='battle'||cat==='event'){ const _y=parseTimelineYear(f.year); if(_y!=null) battleTimeRefs.push({ymin:_y, marker, label:_lm}); }
       });
       tkLayer[cat].addTo(map); tkLabelLayer[cat].addTo(map);
     });
@@ -1283,7 +1309,7 @@ function rebuildTK(){
     const anchor=[s/2-nudge[0],s/2-nudge[1]];
     const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkFusedIcon(primary.cat,badges,s,tid), iconSize:[s,s], iconAnchor:anchor}), keyboard:false });
     let html='';
-    ['city','pass','ford','battle'].forEach(c=>{
+    ['city','pass','ford','battle','event'].forEach(c=>{
       const ms=g.filter(x=>x.cat===c);
       ms.forEach(x=>{ html += tkTip(c,x.f); });
       if(ms.length) html += '<hr style="border-color:#3a3a3a;margin:5px 0">';
@@ -1291,6 +1317,16 @@ function rebuildTK(){
     html = html.replace(/<hr[^>]*>\s*$/,'');
     const _grpTitle = primary.f.name + ' · ' + tkMeta[primary.cat].label + (g.length>1 ? '（+'+(g.length-1)+'）' : '');
     marker.on('click', () => showInfo(_grpTitle, '<div class="tk-popup-body">'+html+'</div>'));
+    const _btg = g.filter(x=>x.cat==='battle');
+    if(_btg.length){
+      const _btys = _btg.map(x=>parseTimelineYear(x.f.year)).filter(y=>y!=null);
+      if(_btys.length) battleTimeRefs.push({ymin:Math.min.apply(null,_btys), marker, fuse:true, gcls:'.tkf-battle'});
+    }
+    const _evg = g.filter(x=>x.cat==='event');
+    if(_evg.length){
+      const _evys = _evg.map(x=>parseTimelineYear(x.f.year)).filter(y=>y!=null);
+      if(_evys.length) battleTimeRefs.push({ymin:Math.min.apply(null,_evys), marker, fuse:true, gcls:'.tkf-event'});
+    }
     tkMergeLayer.addLayer(marker);
     g.forEach(x=>{
       tkMergeLabelLayer.addLayer(L.marker(ll,{
@@ -1310,18 +1346,20 @@ function rebuildTK(){
     const marker=L.marker(ll,{ icon:L.divIcon({className:'tkpt', html:tkIconSVG(s.cat,sz,tid), iconSize:[sz,sz], iconAnchor:anchor}), keyboard:false });
     marker.on('click', () => showInfo(s.f.name + ' · ' + tkMeta[s.cat].label, tkTip(s.cat,s.f)));
     tkMergeLayer.addLayer(marker);
-    tkMergeLabelLayer.addLayer(L.marker(ll,{
+    const _lm=L.marker(ll,{
       icon:L.divIcon({ className:'', html:'<div class="tk-label '+s.cat+'" data-tkid="'+tid+'">'+s.f.name+'</div>', iconSize:[0,0], iconAnchor:[nudge[0],nudge[1]] }),
       interactive:false, keyboard:false
-    }));
+    });
+    tkMergeLabelLayer.addLayer(_lm);
+    if(s.cat==='battle'||s.cat==='event'){ const _y=parseTimelineYear(s.f.year); if(_y!=null) battleTimeRefs.push({ymin:_y, marker, label:_lm}); }
   });
   tkMergeLayer.addTo(map); tkMergeLabelLayer.addTo(map);
   scheduleCollision();
 }
 
-['city','pass','ford','battle','merge'].forEach(suf=>{
+['city','pass','ford','battle','event','merge'].forEach(suf=>{
   const cb=document.getElementById('cb-tk-'+suf);
-  if(cb) cb.onchange=()=>rebuildTK();
+  if(cb) cb.onchange=()=>{ rebuildTK(); refreshBattleTimeFilter(); };
 });
 rebuildTK();
 
@@ -1363,7 +1401,7 @@ const zglChipLayer = L.layerGroup();
   const _lndNames = new Set(), _lndPts = [];
   (function(){
     const TK = window.THREE_KINGDOM_SITES || {};
-    ['city','pass','ford','battle'].forEach(k=>(TK[k]||[]).forEach(f=>{
+    ['city','pass','ford','battle','event'].forEach(k=>(TK[k]||[]).forEach(f=>{
       _lndNames.add(_lndBase(f.name)); _lndPts.push([f.lon,f.lat]);
     }));
   })();
@@ -1528,12 +1566,12 @@ function setAll(on){
   ['cb-base','cb-contour','cb-label','cb-prov','cb-water','cb-mtn',
    'cb-han-bnd','cb-han-seat',
    'cb-city-capital','cb-city-ancap','cb-city-battle',
-   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all'].forEach(id=>{
+   'cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-event','cb-tk-merge','cb-zgl-all'].forEach(id=>{
     const cb=document.getElementById(id);
     if(cb.checked!==on){ cb.checked=on; cb.onchange({target:cb}); }
   });
   const ha=document.getElementById('cb-han-all');
-  if(ha) ha.checked=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all']
+  if(ha) ha.checked=['cb-han-bnd','cb-han-seat','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-event','cb-tk-merge','cb-zgl-all']
     .every(id=>document.getElementById(id).checked);
 }
 document.getElementById('btn-all-on').onclick=()=>setAll(true);
@@ -1542,7 +1580,7 @@ document.getElementById('btn-all-off').onclick=()=>setAll(false);
 // 4c) 汉末三国「全选」主选项：勾选后联动该区块全部子选项；子项变更时回写主选项状态
 (function(){
   const hanAll=document.getElementById('cb-han-all');
-  const hanSubs=['cb-han-bnd','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-merge','cb-zgl-all'];
+  const hanSubs=['cb-han-bnd','cb-tk-city','cb-tk-pass','cb-tk-ford','cb-tk-battle','cb-tk-event','cb-tk-merge','cb-zgl-all'];
   function syncMaster(){ hanAll.checked=hanSubs.every(id=>document.getElementById(id).checked); }
   window.__syncHanMaster=syncMaster;   // 供诸葛亮北伐路线等外部模块回写主选项
   hanAll.onchange=e=>{
@@ -1566,7 +1604,7 @@ document.getElementById('btn-all-off').onclick=()=>setAll(false);
   el.addEventListener('input',()=>{
     TK_FUSE_DEG=parseFloat(el.value);
     if(out) out.textContent=TK_FUSE_DEG.toFixed(2)+'°';
-    if(document.getElementById('cb-tk-merge').checked) rebuildTK();
+    if(document.getElementById('cb-tk-merge').checked){ rebuildTK(); refreshBattleTimeFilter(); }
   });
 })();
 
@@ -1586,6 +1624,73 @@ const fmtTick=v => v>=1000 ? (v/1000)+'k' : (''+v);
 ticks.forEach(([v,p])=>{
   const s=document.createElement('span'); s.style.left=p+'%'; s.textContent=fmtTick(v);   box.appendChild(s);
 });
+// 7) 事件时间轴：拖动游标按时间窗显示/隐藏地图上的战役与大事（../timeline/map_timeline.js）
+const TL_BC = false;                         // 本页数据是否按「公元前」计年（必须与下方控件 bc 参数一致！）
+function parseTimelineYear(v){
+  const m = String(v == null ? '' : v).match(/\d+/);
+  if(!m) return null;
+  const n = parseInt(m[0],10);
+  return TL_BC ? -Math.abs(n) : n;
+}
+let battleTimeState = { all: true, year: 0, lo: 0, hi: 0 };
+let _btVer = -1, _btSorted = [], _btWasAll = null;
+function refreshBattleTimeFilter(){
+  applyBattleTimeFilter(battleTimeState);
+}
+/* 用户首交互（按下 / 键盘 / 点复位）：确保「战役 / 大事记」图层已勾选（幂等） */
+function ensureTimelineLayers(){
+  ['battle','event'].forEach(k=>{
+    const cb = document.getElementById('cb-tk-'+k);
+    if(cb && !cb.checked){ cb.checked = true; cb.dispatchEvent(new Event('change')); }
+  });
+}
+/* 显隐：all=全部显示（初始视图）；filter=仅显示 [lo,hi] 时间窗内的事件——窗口外的（含更早的）一律隐藏 */
+function applyBattleTimeFilter(st){
+  battleTimeState = st;
+  if(battleTimeRefs.version !== _btVer){
+    _btVer = battleTimeRefs.version;
+    _btSorted = battleTimeRefs.slice().sort((a,b)=>a.ymin-b.ymin);
+    _btWasAll = null;
+  }
+  const n = _btSorted.length;
+  let showFrom = 0, showTo = n;
+  if(!st.all){
+    let a=0,b=n;
+    while(a<b){ const m=(a+b)>>1; if(_btSorted[m].ymin < st.lo) a=m+1; else b=m; }
+    let p=a,q=n;
+    while(p<q){ const m=(p+q)>>1; if(_btSorted[m].ymin <= st.hi) p=m+1; else q=m; }
+    showFrom = a; showTo = p;
+  } else if(_btWasAll === true){
+    return;   // 已在「全部显示」态，无需重复
+  }
+  for(let i=0;i<n;i++){
+    const r = _btSorted[i];
+    const show = (i >= showFrom && i < showTo);
+    const el = r.marker.getElement();
+    if(el) el.style.display = show ? '' : 'none';
+    if(r.label){ const le = r.label.getElement(); if(le) le.style.display = show ? '' : 'none'; }
+    if(r.fuse && el && r.gcls){ const g = el.querySelector(r.gcls); if(g) g.style.display = show ? '' : 'none'; }
+  }
+  _btWasAll = !!st.all;
+}
+(function initEventTimebar(){
+  const host = document.getElementById('timebar');
+  if(!host || !window.MapTimeline || !_tkD) return;
+  const evs = [].concat(_tkD.battle||[], _tkD.event||[]);
+  if(!evs.length) return;
+  const tl = new MapTimeline(host, {
+    events: evs,
+    bc: false,
+    onChange: function(st){
+      if(!st.all) ensureTimelineLayers();
+      applyBattleTimeFilter(st);
+    },
+    onEngage: ensureTimelineLayers,
+    onSettle: function(){ scheduleCollision(); }
+  });
+  window.__eventTimebar = tl;
+  applyBattleTimeFilter(tl.getState());
+})();
 scheduleCollision();
 </script>
 </body>

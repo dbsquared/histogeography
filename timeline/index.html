@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>历史长河 · 华夏历史地图</title>
+<meta name="description" content="拖动时间轴游标，浏览华夏各历史时期的重大事件——事件随游标实时显示与隐藏。">
+<style>
+  :root{
+    --bg:#0d1b2a; --panel:rgba(20,28,40,0.88); --line:#34507a;
+    --gold:#ffd479; --text:#e8eef5; --muted:#9fb3c8; --muted2:#cfe0f0; --warm:#ffe7c2;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{width:100%; max-width:960px; margin:0 auto; padding:52px 24px 40px; flex:1}
+
+  header{text-align:center; margin-bottom:40px}
+  h1{
+    font-family:"Songti SC","SimSun","Noto Serif SC",serif;
+    font-size:40px; font-weight:600; letter-spacing:.14em;
+    margin:0 0 14px; color:var(--gold);
+  }
+  .rule{width:76px; height:2px; background:var(--gold); opacity:.75; margin:0 auto 18px}
+  .sub{color:var(--muted); font-size:15px; line-height:1.9; margin:0}
+  .sub b{color:var(--warm); font-weight:500}
+
+  .hint{
+    margin:18px 2px 0; font-size:12px; color:var(--muted); line-height:1.9;
+    letter-spacing:.02em;
+  }
+  .hint kbd{
+    display:inline-block; font-family:inherit; font-size:11px;
+    border:1px solid var(--line); border-bottom-width:2px; border-radius:4px;
+    padding:0 6px; margin:0 1px; color:var(--muted2); background:rgba(255,255,255,.03);
+  }
+
+  footer{
+    border-top:1px solid var(--line); margin-top:52px; padding-top:22px;
+    font-size:12px; line-height:2; color:var(--muted);
+  }
+  footer a{color:var(--muted2); text-decoration:none; border-bottom:1px solid var(--line)}
+  footer a:hover{color:var(--gold); border-color:var(--gold)}
+  .src{margin-bottom:10px}
+
+  @media(max-width:640px){
+    .wrap{padding:34px 16px 30px}
+    h1{font-size:28px; letter-spacing:.1em}
+    .sub{font-size:13.5px}
+  }
+</style>
+<link rel="stylesheet" href="timeline.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>历史长河</h1>
+    <div class="rule"></div>
+    <p class="sub">
+      拖动时间轴游标，纵览各历史时期的重大事件<br>
+      改动游标位置，<b>当前时期的事件实时显现，其余时期的自动隐去</b>
+    </p>
+  </header>
+
+  <main>
+    <div id="timeline"></div>
+
+    <p class="hint">
+      操作方式：按住游标或点击时间轴任意位置拖动 · 点击时期名可直达该时期 ·
+      点击轴面聚焦后可用 <kbd>←</kbd> <kbd>→</kbd> 微调、<kbd>Shift</kbd> 加步、<kbd>Home</kbd>/<kbd>End</kbd> 直达两端 ·
+      拖动时，游标年份之后的事件呈「未至」半透明态，越过即点亮
+    </p>
+  </main>
+
+  <footer>
+    <div class="src">
+      事件数据：楚汉争霸 / 汉末三国 取自本项目既有地点数据（与地图页同源）；
+      先秦 / 唐 / 明 暂为筹备时期，收录通行史观下的标志性事件 ·
+      地形底图：SRTM 90M DEM（中国科学院地理空间数据云 GSCloud）
+    </div>
+    <div>
+      <a href="../">← 返回时期选择</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/dbsquared/histogeography" target="_blank" rel="noopener">GitHub 仓库</a>
+    </div>
+  </footer>
+</div>
+
+<script src="timeline_data.js"></script>
+<script src="timeline.js"></script>
+<script>
+  (function () {
+    var tl = new HistoryTimeline(document.getElementById('timeline'), {
+      eras: HISTORY_TIMELINE_DATA.eras,
+      initialEra: 'han-san-guo',
+      initialYear: 208
+    });
+    window.__timeline__ = tl; // 便于控制台调试
+  })();
+</script>
+</body>
+</html>

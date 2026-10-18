@@ -1,0 +1,176 @@
+/* ══════════════════════════════════════════════════════════════
+   华夏历史地图 · 地图时间轴样式（.mtl- 命名空间，随 map_timeline.js）
+   面板风格与地图页既有一致：深蓝底 · 金线 · 圆角
+   ══════════════════════════════════════════════════════════════ */
+
+.mtl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px 8px;
+  background: rgba(20, 28, 40, 0.92);
+  border: 1px solid #34507a;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  color: #e8eef5;
+  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── 左侧按钮 ── */
+.mtl-side { display: flex; gap: 6px; flex: none; }
+.mtl-btn {
+  width: 30px; height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid #34507a;
+  background: rgba(13, 27, 42, 0.7);
+  color: #ffd479;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.mtl-btn:hover { border-color: #ffd479; background: rgba(255, 212, 121, 0.12); }
+.mtl-btn.on { background: rgba(255, 212, 121, 0.2); border-color: #ffd479; }
+
+/* ── 轴 ── */
+.mtl-mid { flex: 1 1 auto; min-width: 0; }
+.mtl-axis {
+  position: relative;
+  height: 44px;
+  outline: none;
+  user-select: none;
+}
+.mtl-axis:focus-visible {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1.5px rgba(255, 212, 121, 0.5);
+}
+
+/* 事件点带（两行错落） */
+.mtl-dots { position: absolute; left: 0; right: 0; top: 0; height: 17px; pointer-events: none; }
+.mtl-pt {
+  position: absolute;
+  width: 5px; height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #6b82a6;
+  opacity: 0.35;
+  transition: background-color .25s, opacity .25s, box-shadow .25s;
+}
+.mtl-pt.past { background: #ffd479; opacity: 1; box-shadow: 0 0 5px rgba(255, 212, 121, 0.8); }
+
+/* 轨道 + 已显示区间 */
+.mtl-track {
+  position: absolute;
+  left: 0; right: 0; top: 20px;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(52, 80, 122, 0.6);
+  overflow: hidden;
+}
+.mtl-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255, 212, 121, 0.16), rgba(255, 212, 121, 0.4));
+  transition: width .08s linear;
+}
+.mtl-fill.glide { transition: left .38s cubic-bezier(.3, .7, .3, 1), width .38s cubic-bezier(.3, .7, .3, 1); }
+
+/* 游标 */
+.mtl-knob {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 0;
+  left: 100%;
+  z-index: 2;
+  pointer-events: none;
+  will-change: left;
+}
+.mtl-knob.glide { transition: left .38s cubic-bezier(.3, .7, .3, 1); }
+.mtl-knob-head {
+  position: absolute;
+  top: 17px;
+  left: -8px;
+  width: 16px; height: 16px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #0d1b2a;
+  border: 2px solid #ffd479;
+  box-shadow: 0 0 0 3px rgba(255, 212, 121, 0.15), 0 0 10px rgba(255, 212, 121, 0.5);
+}
+.mtl-knob-head::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #ffd479;
+}
+.mtl-axis.dragging .mtl-knob-head {
+  box-shadow: 0 0 0 5px rgba(255, 212, 121, 0.2), 0 0 16px rgba(255, 212, 121, 0.65);
+}
+
+/* 两端年份标签 */
+.mtl-ends {
+  position: absolute;
+  left: 0; right: 0; top: 31px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: #9fb3c8;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* 拖动热区（覆盖整轴） */
+.mtl-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  cursor: grab;
+  touch-action: none;
+}
+.mtl-axis.dragging .mtl-hit { cursor: grabbing; }
+
+/* ── 右侧读数 ── */
+.mtl-read {
+  flex: none;
+  min-width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.mtl-year {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffd479;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mtl-count {
+  font-size: 10.5px;
+  color: #9fb3c8;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 720px) {
+  .mtl { padding: 6px 9px 7px; gap: 8px; font-size: 12px; }
+  .mtl-btn { width: 26px; height: 26px; font-size: 11px; }
+  .mtl-year { font-size: 14px; }
+  .mtl-read { min-width: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mtl-knob.glide, .mtl-fill.glide, .mtl-fill, .mtl-pt, .mtl-btn { transition: none; }
+}
