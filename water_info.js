@@ -887,7 +887,7 @@
     + '#info .wi-none{color:#8da2b8}'
     + '#info .wi-src{margin-top:10px;padding-top:6px;border-top:1px dashed #34507a;color:#8da2b8;font-size:.9em}'
     + '#info .wi-tag{display:inline-block;background:rgba(122,180,255,.16);color:#cfe3ff;'
-    + 'border:1px solid #3f5f8a;border-radius:3px;padding:0 5px;font-size:.88em;margin-left:5px;vertical-align:1px}';
+    + 'border:1px solid #3f5f8a;border-radius:3px;padding:0 5px;font-size:.88em;margin-left:5px;vertical-align:1px}'
   function injectCSS(){
     if(document.getElementById('wi-style')) return;
     var s=document.createElement('style'); s.id='wi-style'; s.textContent=CSS;
@@ -913,10 +913,12 @@
     /* 基本信息 */
     h += '<div class="wi-h">基本信息</div><table class="wi-t">';
     h += row('名称', name || '（图层未命名）');
-    h += '<tr><td class="k">类型</td><td class="v">' + kindCN
-       + (props.major ? '<span class="wi-tag">主要</span>' : '<span class="wi-tag">一般</span>')
-       + (isRiver && props.scalerank!=null ? '<span class="wi-tag">等级 ' + esc(props.scalerank) + '</span>' : '')
-       + '</td></tr>';
+    var tags = '';
+    if(typeof props.major === 'boolean'){
+      tags += props.major ? '<span class="wi-tag">主要</span>' : '<span class="wi-tag">一般</span>';
+    }
+    if(isRiver && props.scalerank!=null){ tags += '<span class="wi-tag">等级 ' + esc(props.scalerank) + '</span>'; }
+    h += '<tr><td class="k">类型</td><td class="v">' + kindCN + tags + '</td></tr>';
     if(info){
       h += row('所属水系', info.water);
       h += row('发源', info.origin);
@@ -1009,6 +1011,25 @@
           bind(l, 'lake', p.name || '', p);
         });
       }
+
+      /* 名称标签：点文字也弹出同一份信息（标签本身是 Leaflet marker，天然可点） */
+      function bindLabels(group, kind){
+        if(!group || !group.eachLayer) return;
+        group.eachLayer(function(m){
+          if(!m || !m.options || !m.options.icon){ return; }
+          var io = m.options.icon.options || {};
+          var hm = String(io.html || '').match(/>([^<]*)</);
+          var nm = hm ? hm[1] : '';
+          if(!nm) return;
+          if(m.setZIndexOffset) { try{ m.setZIndexOffset(600); }catch(e){} }  /* 标签置于水系之上，便于点中 */
+          m.on('click', function(ev){
+            if(ev && ev.originalEvent && window.L && L.DomEvent){ try{ L.DomEvent.stopPropagation(ev.originalEvent); }catch(e){} }
+            open(nm, kind, {}, showInfo);
+          });
+        });
+      }
+      bindLabels(opts.riverLabelLayer, 'river');
+      bindLabels(opts.lakeLabelLayer, 'lake');
       return self;
     }
   };
