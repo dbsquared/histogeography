@@ -18,6 +18,32 @@ LAT_MIN, LAT_MAX = 15.0, 55.0
 # 纳入矢量图层的河流等级阈值; 主要(粗线) 由 CHINA_MAJOR 白名单 + scalerank<=2 共同决定
 INCLUDE_MAX_SCALERANK = 7
 
+# ── 手工补绘河流 ────────────────────────────────────────────────────────────
+# Natural Earth 10m 未收录、但中国历史地理重要的河流。每条:
+#   (名称, 折线坐标[[lon,lat],...], scalerank, major, label)
+# 坐标按真实河道走向取关键节点(源→口)，非精确测绘，用于示意。
+HAND_RIVERS = [
+    # 洛水(南洛河)：源陕西洛南县秦岭，东流经卢氏、洛宁、宜阳、洛阳市南，至巩义洛口入黄河
+    # 洛阳因「水北为阳」得名；《洛神赋》所咏即此水。
+    ('洛水', [
+        [109.88, 34.10],  # 洛源镇(秦岭)
+        [110.15, 34.09],  # 洛南县城
+        [110.40, 34.02],
+        [110.70, 34.00],
+        [111.05, 34.05],  # 卢氏县城
+        [111.25, 34.15],
+        [111.42, 34.24],  # 故县水库
+        [111.65, 34.39],  # 洛宁县城
+        [111.90, 34.47],
+        [112.18, 34.51],  # 宜阳县城
+        [112.42, 34.62],  # 洛阳市南
+        [112.62, 34.69],
+        [112.79, 34.72],  # 偃师
+        [112.90, 34.78],
+        [113.00, 34.84],  # 巩义洛口，注入黄河
+    ], 6.0, True, True),
+]
+
 def clip_segment(x0, y0, x1, y1, xmin, xmax, ymin, ymax):
     """Liang-Barsky 线段裁剪到矩形框; 返回 (x1,y1,x2,y2) 或 None"""
     dx, dy = x1 - x0, y1 - y0
@@ -109,6 +135,16 @@ def main():
                 'label': label,
             },
             'geometry': {'type': 'MultiLineString', 'coordinates': clipped},
+        })
+        n_incl += 1
+
+    # ── 追加手工补绘河流（NE 10m 未收录）──────────────────────────────
+    for hname, hcoords, hsr, hmajor, hlabel in HAND_RIVERS:
+        feats.append({
+            'type': 'Feature',
+            'properties': {'kind': 'river', 'name': hname, 'scalerank': hsr,
+                           'major': hmajor, 'label': hlabel, 'source': 'hand-drawn'},
+            'geometry': {'type': 'MultiLineString', 'coordinates': [hcoords]},
         })
         n_incl += 1
 
