@@ -983,12 +983,16 @@
 
       /* 河流：细线不易点中 → 追加一条透明加宽"命中线"，随图层一起显隐 */
       var riverLayer = opts.riverLayer;
+      /* 名称 → 要素属性 索引：让"点标签"与"点本体"拿到完全相同的属性，信息逐字一致 */
+      var propsByKey = {};
+
       if(riverLayer && riverLayer.eachLayer){
         var hits = [];
         riverLayer.eachLayer(function(l){
           if(!l || !l.feature){ return; }
           var p = l.feature.properties || {};
           if(p.kind !== 'river') return;
+          if(p.name) propsByKey['river|' + p.name] = p;
           bind(l, 'river', p.name || '', p);
           if(l.getLatLngs){
             try{
@@ -1008,6 +1012,7 @@
           if(!l || !l.feature){ return; }
           var p = l.feature.properties || {};
           if(p.kind !== 'lake') return;
+          if(p.name) propsByKey['lake|' + p.name] = p;
           bind(l, 'lake', p.name || '', p);
         });
       }
@@ -1024,7 +1029,7 @@
           if(m.setZIndexOffset) { try{ m.setZIndexOffset(600); }catch(e){} }  /* 标签置于水系之上，便于点中 */
           m.on('click', function(ev){
             if(ev && ev.originalEvent && window.L && L.DomEvent){ try{ L.DomEvent.stopPropagation(ev.originalEvent); }catch(e){} }
-            open(nm, kind, {}, showInfo);
+            open(nm, kind, propsByKey[kind + '|' + nm] || {}, showInfo);
           });
         });
       }
