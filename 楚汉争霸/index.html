@@ -310,7 +310,8 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="../data.js?v=2026101801"></script>
+<script src="../data.js?v=2026101802"></script>
+<script src="../water_info.js?v=2026101802"></script>
 <script src="../scs_inset_data.js?v=2026070801"></script>
 <script src="../cities.js?v=2026072001"></script>
 <script src="chu_han_states.js?v=2026101101"></script>
@@ -773,6 +774,7 @@ function lakeCentroid(geom){
 const waterLayer = L.layerGroup([riverLayer, lakeLayer]);
 const waterLabelLayer = L.layerGroup([riverLabelLayer, lakeLabelLayer]);
 waterLayer.addTo(map); waterLabelLayer.addTo(map);
+if(window.WaterInfo) WaterInfo.attach({riverLayer, lakeLayer}, showInfo);
 
 // 2b-3) 主要山脉矢量图层 (Natural Earth 10m geography_regions_polys, public domain)
 // 走向表现: 面内"垂直于走向"的梳齿短线段(mountain_hachure) + 中心轴线/双向箭头(mountain_axis/arrow)
