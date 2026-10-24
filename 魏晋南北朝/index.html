@@ -159,6 +159,11 @@
 /* ── 南北朝战争路线 ── */
 .rgroup { font-size:10px; color:#8fa7c0; letter-spacing:.04em; margin:6px 0 1px; }
 .eratable { font-size:10px; line-height:1.7; color:#bcd; }
+.erabar { display:flex; align-items:center; gap:6px; margin:2px 0 1px; }
+.erabar input[type=range] { flex:1; min-width:56px; }
+.erabtn { background:rgba(30,44,64,.9); color:#cfe0f0; border:1px solid #34507a; border-radius:4px; padding:0 5px; font-size:11px; line-height:16px; cursor:pointer; }
+.erabtn:hover { border-color:#ffd479; color:#ffd479; }
+.eraread { font-size:10px; color:#ffd479; margin-bottom:3px; }
 .wjr-chip{pointer-events:auto;cursor:pointer;}
 .wjr-badge{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;line-height:1;color:#101010;box-shadow:0 0 0 1.5px rgba(0,0,0,0.8),0 1px 3px rgba(0,0,0,0.65);}
 .wjr-label{display:inline-block;white-space:nowrap;pointer-events:auto;cursor:pointer;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}
@@ -261,6 +266,12 @@
     <label style="font-weight:bold;"><input type="checkbox" id="cb-wj-all"> 魏晋南北朝</label>
     <div style="margin-left:18px;">
       <label><input type="checkbox" id="cb-wj-bnd"> 疆域</label>
+      <div class="erabar">
+        <button id="era-prev" type="button" class="erabtn" title="上一个断面">◀</button>
+        <input type="range" id="era-range" min="0" max="6" step="1" value="4" aria-label="疆域纪年">
+        <button id="era-next" type="button" class="erabtn" title="下一个断面">▶</button>
+      </div>
+      <div id="era-readout" class="eraread">546 年 · 东魏｜西魏｜梁</div>
       <label><input type="checkbox" id="cb-wj-seat"> 都邑</label>
       <label><input type="checkbox" id="cb-wj-city"> 城池（34）</label>
       <label><input type="checkbox" id="cb-wj-pass"> 关隘（10）</label>
@@ -352,9 +363,9 @@
 <script src="../water_info.js?v=2026101804"></script>
 <script src="../scs_inset_data.js?v=2026070801"></script>
 <script src="../cities.js?v=2026072001"></script>
-<script src="wei_jin_states.js?v=2026102402"></script>
-    <script src="wei_jin_sites.js?v=2026102402"></script>
-    <script src="wei_jin_routes.js?v=2026102402"></script>
+<script src="wei_jin_states.js?v=2026102501"></script>
+    <script src="wei_jin_sites.js?v=2026102501"></script>
+    <script src="wei_jin_routes.js?v=2026102501"></script>
     <script src="../timeline/map_timeline.js?v=2026101302"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
@@ -965,9 +976,9 @@ const scsLayer = L.layerGroup();
 document.getElementById('cb-scs').onchange = e =>
   e.target.checked ? scsLayer.addTo(map) : map.removeLayer(scsLayer);
 
-// ── 2d) 魏晋南北朝疆域（546 年：东魏 · 西魏 · 梁，附吐谷浑 · 柔然）──
-// 数据: window.WEI_JIN_STATES = {meta, states:[{name,color,boundary,seats,meta}]}
-// 两级图层: 疆域 (cb-wj-bnd) + 都邑 (cb-wj-seat)
+// ── 2d) 魏晋南北朝疆域（七个断面：262 / 300 / 382 / 500 / 546 / 576 / 589）──
+// 数据: window.WEI_JIN_STATES = {meta, snapshots:[{year, name, states:[{name,color,rings,seats}]}]}
+// 两级图层: 疆域 (cb-wj-bnd) + 都邑 (cb-wj-seat)；断面由「疆域纪年」滑条与底部时间轴共同驱动
 const wjBoundaryLayer = L.layerGroup();
 const wjSeatLayer     = L.layerGroup();
 const wjSeatLabelLayer= L.layerGroup();
@@ -1000,6 +1011,7 @@ function computeLabelPoint(ring){
     const cr=x0*y1-x1*y0; A+=cr; Cx+=(x0+x1)*cr; Cy+=(y0+y1)*cr;
   }
   A*=0.5;
+  if(!A) return [pts[0][1], pts[0][0]];
   const clon=Cx/(6*A), clat=Cy/(6*A);
   if(pointInPolygon(clon,clat,pts)) return [clat,clon];
   let lons=pts.map(p=>p[0]), lats=pts.map(p=>p[1]);
@@ -1020,86 +1032,125 @@ function computeLabelPoint(ring){
   return best || [clat,clon];
 }
 
-(function(){
-  const D = window.WEI_JIN_STATES;
-  if(!D || !D.states){ console.warn('魏晋南北朝疆域数据未加载'); return; }
-  // 仅叠加「已校正」(verified) 的国；未校正的自动初稿先不显示（用户校正后可逐个开启）
-  const visibleStates = D.states.filter(st => st.meta && st.meta.verified === true);
-  console.log(`魏晋南北朝政权: 共 ${D.states.length} 国，本次显示已校正的 ${visibleStates.length} 个政权`);
-  visibleStates.forEach(st=>{
-    // 1) 疆域多边形
-    const ring = st.boundary.map(p=>[p[1],p[0]]);  // [lon,lat]→[lat,lon]
-    const fillOpacity = 0.15;  // 统一更低填充透明度，地形底图更清晰；边界 0.92 不透明承担识别任务
-    const baseStyle = {color:st.color, weight:2.6, opacity:0.92, fillColor:st.color, fillOpacity};
-    const poly = L.polygon(ring, baseStyle);
-    // hover 高亮：加粗描边 + 轻微加深填充 + 置顶（不显示文字，用户要求）
-    poly.on('mouseover', function(){
-      this.setStyle({ weight:3.4, opacity:1, fillOpacity:0.22 });
-      this.bringToFront();
+// ── 断面切换 ──
+let WJ_SNAP = -1;                       // 当前断面序号
+function wjSnapList(){ const D = window.WEI_JIN_STATES; return (D && D.snapshots) || []; }
+function wjPickIndex(year){
+  const S = wjSnapList();
+  if(!S.length) return -1;
+  let k = 0;                              // 早于第一个断面时，取第一个（262 三国）
+  for(let i=0;i<S.length;i++){ if(S[i].year <= year + 0.5){ k = i; } else break; }
+  return k;
+}
+function wjEraTip(st, snap){
+  const seats = (st.seats||[]).map(s=>s.name.replace('/', ' · ')).join('、');
+  return `<b>${st.name}</b>　<span style="color:#9fb3c8">${snap.year} 年 · ${snap.name}</span>` +
+         `<br/>都邑：${seats || '—'}`;
+}
+function buildWjEra(idx){
+  const S = wjSnapList();
+  if(!S.length){ console.warn('魏晋南北朝疆域数据未加载'); return; }
+  idx = Math.max(0, Math.min(S.length-1, idx));
+  if(idx === WJ_SNAP) return;            // 同一断面不重建（时间轴拖动时每帧都会调用）
+  WJ_SNAP = idx;
+  const snap = S[idx];
+  [wjBoundaryLayer, wjSeatLayer, wjSeatLabelLayer, wjStateLabelLayer, wjCapitalLayer].forEach(l=>{
+    map.removeLayer(l); l.clearLayers();
+  });
+  snap.states.forEach(st=>{
+    // 1) 疆域（可能由多环组成，逐环绘制）
+    (st.rings || []).forEach(ring0=>{
+      const ring = ring0.map(p=>[p[1],p[0]]);          // [lon,lat] → [lat,lon]
+      const baseStyle = { color:st.color, weight:2.6, opacity:0.92, fillColor:st.color, fillOpacity:0.15 };
+      const poly = L.polygon(ring, baseStyle);
+      poly.on('mouseover', function(){
+        this.setStyle({ weight:3.4, opacity:1, fillOpacity:0.22 });
+        this.bringToFront();
+      });
+      poly.on('mouseout', function(){ this.setStyle(baseStyle); });
+      poly.on('click', () => showInfo(st.name + '（' + snap.year + ' 年）', wjEraTip(st, snap)));
+      wjBoundaryLayer.addLayer(poly);
     });
-    poly.on('mouseout', function(){
-      this.setStyle(baseStyle);
-    });
-    // 悬停不再显示文字（用户要求：hover 不显示任何文字）
-    poly.on('click', () => showInfo(st.name, `<b>${st.name}</b><br/>魏晋南北朝时期政权（546 年）`));
-    wjBoundaryLayer.addLayer(poly);
 
-    // 2) 国名标签（默认落在疆域内：质心在境内则用之，否则取最内点）
-    const labelLL = computeLabelPoint(ring);
-    wjStateLabelLayer.addLayer(L.marker(labelLL,{
-      icon:L.divIcon({className:'', html:'<div class="wjstate-label">'+st.name+'</div>',
-        iconSize:[0,0], iconAnchor:[0,0]}),
-      interactive:false, keyboard:false
-    }));
+    // 2) 国名标签（落在最大一环的内部）
+    const rings = (st.rings || []).slice().sort((a,b)=>b.length-a.length);
+    if(rings.length){
+      const labelLL = computeLabelPoint(rings[0].map(p=>[p[1],p[0]]));
+      wjStateLabelLayer.addLayer(L.marker(labelLL,{
+        icon:L.divIcon({className:'', html:'<div class="wjstate-label">'+st.name+'</div>',
+          iconSize:[0,0], iconAnchor:[0,0]}),
+        interactive:false, keyboard:false
+      }));
+    }
 
-    // 3) 郡治点 + 标签
-    // seat.name 形如 "太原郡/晋阳"（郡在上、治所在下）；无 '/' 则整体当郡名
+    // 3) 都邑点 + 标签
     const splitSeat = n => { const i=n.indexOf('/'); return i<0 ? [n,''] : [n.slice(0,i), n.slice(i+1)]; };
-    st.seats.forEach(seat=>{
+    (st.seats||[]).forEach(seat=>{
       const isCap = seat.role==='capital';
       const [jun, zhi] = splitSeat(seat.name);
-      const dotColor = isCap ? '#ffd24d' : (seat.role==='commandery' ? '#ffb870' : '#c8c8c8');
-      const dot = L.circleMarker([seat.lat,seat.lon],{
+      const dotColor = isCap ? '#ffd24d' : '#ffb870';
+      const dot = L.circleMarker([seat.lat, seat.lon],{
         radius: isCap?3:2,
         color:'#fff', weight:1, opacity:0.95,
         fillColor:dotColor, fillOpacity:0.92,
       });
-      dot.bindTooltip(`<b>${seat.name}</b><br/>${st.name} · ${isCap?'都城':seat.role==='commandery'?'郡治':seat.role}`,
-        {direction:'top', offset:[0,-6], opacity:0.95});
-      dot.on('click', () => showInfo(seat.name + ' · ' + st.name,
-        `<b>${seat.name}</b><br/>${st.name} · ${isCap?'都城':seat.role==='commandery'?'郡治':seat.role}`));
+      const sub = st.name + ' · ' + (isCap?'都城':'郡治') + '（' + snap.year + ' 年）';
+      dot.bindTooltip(`<b>${seat.name}</b><br/>${sub}`, {direction:'top', offset:[0,-6], opacity:0.95});
+      dot.on('click', () => showInfo(seat.name + ' · ' + st.name, `<b>${seat.name}</b><br/>${sub}`));
       wjSeatLayer.addLayer(dot);
-      // 郡模式标签：两行（郡上 / 郡治下）
       const labelCls = isCap ? 'wjseat-label capital' : 'wjseat-label';
       const labelHtml = zhi ? `${jun}<br><span class="zhi">${zhi}</span>` : jun;
-      wjSeatLabelLayer.addLayer(L.marker([seat.lat,seat.lon],{
+      wjSeatLabelLayer.addLayer(L.marker([seat.lat, seat.lon],{
         icon:L.divIcon({className:'', html:`<div class="${labelCls}">${labelHtml}</div>`,
           iconSize:[0,0], iconAnchor:[0,0]}),
         interactive:false, keyboard:false
       }));
-      // 疆域模式：仅都城（显示都城名，不带郡名）+ 黄点定位
       if(isCap){
-        wjCapitalLayer.addLayer(L.circleMarker([seat.lat,seat.lon],{
+        wjCapitalLayer.addLayer(L.circleMarker([seat.lat, seat.lon],{
           radius:3, color:'#fff', weight:1, opacity:0.95,
           fillColor:'#ffd24d', fillOpacity:0.92,
-        }));
-        wjCapitalLayer.addLayer(L.marker([seat.lat,seat.lon],{
-          icon:L.divIcon({className:'', html:`<div class="wjseat-label capital">${zhi||jun}</div>`,
-            iconSize:[0,0], iconAnchor:[0,0]}),
-          interactive:false, keyboard:false
         }));
       }
     });
   });
-  console.log(`魏晋南北朝政权: ${visibleStates.length} 个政权已叠加`);
-})();
+
+  // 4) 读数与滑条同步
+  const ro = document.getElementById('era-readout');
+  if(ro) ro.textContent = snap.year + ' 年 · ' + snap.states.map(s=>s.name).join('｜');
+  const rg = document.getElementById('era-range');
+  if(rg && Number(rg.value) !== idx) rg.value = String(idx);
+  const tt = document.getElementById('era-range');
+  if(tt) tt.setAttribute('aria-valuetext', snap.year + ' 年 ' + snap.name);
+
+  if(document.getElementById('cb-wj-bnd').checked) showWjBnd();
+  if(document.getElementById('cb-wj-seat').checked) showWjSeat();
+  scheduleCollision();
+}
 function showWjBnd(){ wjBoundaryLayer.addTo(map); wjStateLabelLayer.addTo(map); }   // 疆域不再显示都城（用户要求）
 function hideWjBnd(){ map.removeLayer(wjBoundaryLayer); map.removeLayer(wjStateLabelLayer); }
 function showWjSeat(){ wjSeatLayer.addTo(map); wjSeatLabelLayer.addTo(map); }
 function hideWjSeat(){ map.removeLayer(wjSeatLayer); map.removeLayer(wjSeatLabelLayer); }
 document.getElementById('cb-wj-bnd').onchange = e => e.target.checked ? showWjBnd() : hideWjBnd();
 document.getElementById('cb-wj-seat').onchange = e => e.target.checked ? showWjSeat() : hideWjSeat();
-// 初始化
+
+// 纪年滑条：◀ 上一期 / 下一期 ▶（滑条本身按下标走，读数显示年份）
+(function(){
+  const rg = document.getElementById('era-range');
+  const S = wjSnapList();
+  if(rg){
+    rg.max = String(Math.max(0, S.length - 1));
+    rg.oninput = e => buildWjEra(Number(e.target.value));
+  }
+  const pv = document.getElementById('era-prev'), nx = document.getElementById('era-next');
+  if(pv) pv.onclick = () => buildWjEra(WJ_SNAP - 1);
+  if(nx) nx.onclick = () => buildWjEra(WJ_SNAP + 1);
+})();
+
+// 供底部时间轴调用：按年份切到对应断面（同一年份不重建）
+window.__setEraYear = function(year){ buildWjEra(wjPickIndex(year)); };
+
+// 初始断面：546 年（东魏 · 西魏 · 梁）
+buildWjEra(wjPickIndex(546));
 if(document.getElementById('cb-wj-bnd').checked) showWjBnd();
 if(document.getElementById('cb-wj-seat').checked) showWjSeat();
 
@@ -1705,6 +1756,7 @@ function applyBattleTimeFilter(st){
     maxYear: 589,
     onChange: function(st){
       if(!st.all) ensureTimelineLayers();
+      if(!st.all && window.__setEraYear) window.__setEraYear(st.year);
       applyBattleTimeFilter(st);
     },
     onEngage: ensureTimelineLayers,

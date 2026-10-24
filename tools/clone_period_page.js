@@ -73,17 +73,23 @@ const PERIODS = {
       ['<title>中国历史地形图</title>', '<title>中国历史地形图 · 魏晋南北朝</title>'],
       ['魏晋南北朝十八国图层标签', '魏晋南北朝疆域标签'],
       ['/* ── 魏晋南北朝战争路线 ── */',
-       '/* ── 南北朝战争路线 ── */\n.rgroup { font-size:10px; color:#8fa7c0; letter-spacing:.04em; margin:6px 0 1px; }\n.eratable { font-size:10px; line-height:1.7; color:#bcd; }'],
+       '/* ── 南北朝战争路线 ── */\n.rgroup { font-size:10px; color:#8fa7c0; letter-spacing:.04em; margin:6px 0 1px; }\n.eratable { font-size:10px; line-height:1.7; color:#bcd; }\n.erabar { display:flex; align-items:center; gap:6px; margin:2px 0 1px; }\n.erabar input[type=range] { flex:1; min-width:56px; }\n.erabtn { background:rgba(30,44,64,.9); color:#cfe0f0; border:1px solid #34507a; border-radius:4px; padding:0 5px; font-size:11px; line-height:16px; cursor:pointer; }\n.erabtn:hover { border-color:#ffd479; color:#ffd479; }\n.eraread { font-size:10px; color:#ffd479; margin-bottom:3px; }'],
+      // 疆域下方：断面纪年滑条（◀ ▶ + 滑条 + 读数）
+      ['      <label><input type="checkbox" id="cb-wj-bnd"> 疆域</label>',
+       '      <label><input type="checkbox" id="cb-wj-bnd"> 疆域</label>\n' +
+       '      <div class="erabar">\n' +
+       '        <button id="era-prev" type="button" class="erabtn" title="上一个断面">◀</button>\n' +
+       '        <input type="range" id="era-range" min="0" max="6" step="1" value="4" aria-label="疆域纪年">\n' +
+       '        <button id="era-next" type="button" class="erabtn" title="下一个断面">▶</button>\n' +
+       '      </div>\n' +
+       '      <div id="era-readout" class="eraread">546 年 · 东魏｜西魏｜梁</div>'],
+      // 底部时间轴：拖动时顺带把疆域切到对应年份（「全部」态不动）
+      ['    onChange: function(st){\n      if(!st.all) ensureTimelineLayers();\n      applyBattleTimeFilter(st);\n    },',
+       '    onChange: function(st){\n      if(!st.all) ensureTimelineLayers();\n      if(!st.all && window.__setEraYear) window.__setEraYear(st.year);\n      applyBattleTimeFilter(st);\n    },'],
       ['据《中国历史地图集》秦楚之际通行方案示意性重建（非精确数字化）',
        '据《中国历史地图集》南北朝后期（546 年 东魏·西魏·梁）通行方案示意性重建（非精确数字化）'],
       ['魏晋南北朝战争路线', '南北朝战争路线'],
       ['魏晋南北朝争霸', '魏晋南北朝'],
-      ['// ── 2d) 魏晋南北朝十八国（示意性重建：十八王 + 西楚）──',
-       '// ── 2d) 魏晋南北朝疆域（546 年：东魏 · 西魏 · 梁，附吐谷浑 · 柔然）──'],
-      ['魏晋南北朝十八国: ', '魏晋南北朝政权: '],
-      ['<br/>魏晋南北朝之际诸侯国', '<br/>魏晋南北朝时期政权（546 年）'],
-      [' 国已叠加', ' 个政权已叠加'],
-      ['本次显示已校正的 ${visibleStates.length} 州', '本次显示已校正的 ${visibleStates.length} 个政权'],
       ['// ── 2g) 南北朝战争路线（六条路线）',
        '// ── 2g) 南北朝战争路线（十八条，按政权与年代分组）'],
       ['// ── 2f) 魏晋南北朝关键地点', '// ── 2f) 魏晋南北朝关键地点'],
@@ -100,6 +106,10 @@ const PERIODS = {
         '    </div>\n' +
         '  </div>\n' +
         '  <div class="btnbar">\n    <button id="btn-all-on"']
+    ],
+    // ── 2b. 整块替换：疆域 2d 段换成「多断面渲染器」（模板见 tools/templates/）
+    blocks: [
+      { start: '// ── 2d)', end: '// ── 2e)', file: 'tools/templates/wj_era_block.js' }
     ],
     // ── 3. 面板计数（必须与数据文件实际长度一致）──
     counts: [['城池', 34], ['关隘', 10], ['津渡', 6], ['战役', 26], ['大事记', 20]],
@@ -141,9 +151,9 @@ const PERIODS = {
     timeline: { bc: false, minYear: 220, maxYear: 589 },
     // ── 6. 外链版本戳 ──
     stamps: {
-      'wei_jin_states.js': '2026102402',
-      'wei_jin_sites.js': '2026102402',
-      'wei_jin_routes.js': '2026102402'
+      'wei_jin_states.js': '2026102501',
+      'wei_jin_sites.js': '2026102501',
+      'wei_jin_routes.js': '2026102501'
     }
   }
 };
@@ -163,6 +173,14 @@ P.tokens.forEach(([a, b]) => {
   const n = html.split(a).length - 1;
   must(n > 0, 'token ' + a);
   html = html.split(a).join(b);
+});
+// 1b) blocks：按起止标记整块替换（内容来自模板文件）
+(P.blocks || []).forEach(b => {
+  const i = html.indexOf(b.start), j = html.indexOf(b.end, i + 1);
+  must(i >= 0 && j > i, 'block ' + b.start + ' … ' + b.end);
+  const tpl = fs.readFileSync(path.join(ROOT, b.file), 'utf8');
+  html = html.slice(0, i) + tpl + html.slice(j);
+  console.log('  整块替换 ' + b.start + ' … ' + b.end + '（' + tpl.split('\n').length + ' 行模板）');
 });
 // 2) text
 P.text.forEach(([a, b]) => {
