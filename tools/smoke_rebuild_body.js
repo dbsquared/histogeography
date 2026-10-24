@@ -136,7 +136,7 @@ runPage({
   startMark: 'const wjMeta = {',
   endMark: "\n['city','pass','ford','battle','event','merge']",
   rebuildFn: 'rebuildWj', layerVar: 'wjLayer', cbPrefix: 'cb-wj-',
-  expectCount: 26 + 15
+  expectCount: 26 + 20
 });
 
 console.log('\n────────────────────────────');

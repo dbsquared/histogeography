@@ -157,6 +157,8 @@
 .citypt { pointer-events:auto; cursor:help; }
 .citypt svg { display:block; overflow:visible; }.wj-label{display:inline-block;white-space:nowrap;writing-mode:horizontal-tb;pointer-events:none;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}.wj-label.city{color:#ffd479;}.wj-label.pass{color:#cfd8dc;}.wj-label.ford{color:#90caf9;}.wj-label.battle{color:#ffd24d;}.wj-label.event{color:#e1bee7;}
 /* ── 南北朝战争路线 ── */
+.rgroup { font-size:10px; color:#8fa7c0; letter-spacing:.04em; margin:6px 0 1px; }
+.eratable { font-size:10px; line-height:1.7; color:#bcd; }
 .wjr-chip{pointer-events:auto;cursor:pointer;}
 .wjr-badge{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;line-height:1;color:#101010;box-shadow:0 0 0 1.5px rgba(0,0,0,0.8),0 1px 3px rgba(0,0,0,0.65);}
 .wjr-label{display:inline-block;white-space:nowrap;pointer-events:auto;cursor:pointer;font-weight:bold;font-size:calc(9px * var(--tk-lscale,1));letter-spacing:0;line-height:1;transform:translate(calc(13px + var(--lx,0px)), calc(-50% + var(--ly,0px)));text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000,1px -1px 2px #000,-1px 1px 2px #000;}
@@ -260,11 +262,11 @@
     <div style="margin-left:18px;">
       <label><input type="checkbox" id="cb-wj-bnd"> 疆域</label>
       <label><input type="checkbox" id="cb-wj-seat"> 都邑</label>
-      <label><input type="checkbox" id="cb-wj-city"> 城池（33）</label>
+      <label><input type="checkbox" id="cb-wj-city"> 城池（34）</label>
       <label><input type="checkbox" id="cb-wj-pass"> 关隘（10）</label>
       <label><input type="checkbox" id="cb-wj-ford"> 津渡（6）</label>
       <label><input type="checkbox" id="cb-wj-battle"> 战役（26）</label>
-      <label><input type="checkbox" id="cb-wj-event"> 大事记（15）</label>
+      <label><input type="checkbox" id="cb-wj-event"> 大事记（20）</label>
       <label><input type="checkbox" id="cb-wj-merge"> 合并重合地标</label>
       <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
         <span style="font-size:11px;color:#bcd;">合并尺度</span>
@@ -274,13 +276,29 @@
       <div style="margin-top:5px;">
         <label style="font-weight:bold;"><input type="checkbox" id="cb-wjr-all"> 南北朝战争路线</label>
         <div style="margin-left:18px;">
+          <div class="rgroup">三国 · 西晋（220–316）</div>
           <label><input type="checkbox" id="cb-wjr-1"> ①魏灭蜀 263</label>
           <label><input type="checkbox" id="cb-wjr-2"> ②晋灭吴 279-280</label>
-          <label><input type="checkbox" id="cb-wjr-3"> ③淝水之战 383</label>
-          <label><input type="checkbox" id="cb-wjr-4"> ④刘裕北伐 409-417</label>
-          <label><input type="checkbox" id="cb-wjr-5"> ⑤陈庆之入洛 529</label>
-          <label><input type="checkbox" id="cb-wjr-6"> ⑥侯景之乱 547-552</label>
-          <label><input type="checkbox" id="cb-wjr-7"> ⑦隋灭陈 588-589</label>
+          <label><input type="checkbox" id="cb-wjr-3"> ③永嘉之乱 304-316</label>
+          <div class="rgroup">十六国 · 东晋（304–420）</div>
+          <label><input type="checkbox" id="cb-wjr-4"> ④石勒灭前赵 328-329</label>
+          <label><input type="checkbox" id="cb-wjr-5"> ⑤桓温灭成汉 347</label>
+          <label><input type="checkbox" id="cb-wjr-6"> ⑥桓温北伐 354-369</label>
+          <label><input type="checkbox" id="cb-wjr-7"> ⑦淝水之战 383</label>
+          <label><input type="checkbox" id="cb-wjr-8"> ⑧参合陂·北魏开国 395-439</label>
+          <label><input type="checkbox" id="cb-wjr-9"> ⑨刘裕北伐 409-417</label>
+          <div class="rgroup">南朝 · 北魏（420–534）</div>
+          <label><input type="checkbox" id="cb-wjr-10"> ⑩元嘉北伐 430-451</label>
+          <label><input type="checkbox" id="cb-wjr-11"> ⑪萧衍代齐 501-502</label>
+          <label><input type="checkbox" id="cb-wjr-12"> ⑫钟离之战 507</label>
+          <label><input type="checkbox" id="cb-wjr-13"> ⑬陈庆之入洛 529</label>
+          <div class="rgroup">东西魏 · 周齐 · 梁陈（534–581）</div>
+          <label><input type="checkbox" id="cb-wjr-14"> ⑭沙苑·玉壁 537-546</label>
+          <label><input type="checkbox" id="cb-wjr-15"> ⑮侯景之乱 547-552</label>
+          <label><input type="checkbox" id="cb-wjr-16"> ⑯西魏取蜀 553-554</label>
+          <label><input type="checkbox" id="cb-wjr-17"> ⑰北周灭北齐 575-577</label>
+          <div class="rgroup">隋（581–589）</div>
+          <label><input type="checkbox" id="cb-wjr-18"> ⑱隋灭陈 588-589</label>
           <div style="font-size:10px;color:#bcd;margin-top:2px;">点路线名或编号章可看该役经过</div>
         </div>
       </div>
@@ -290,6 +308,16 @@
     <div style="font-weight:bold;margin-bottom:2px;">其他</div>
     <label><input type="checkbox" id="cb-city-ancap"> 古都</label>
     <label><input type="checkbox" id="cb-city-battle"> 古战场/重镇</label>
+  </div>
+  <div class="citysep">
+    <div style="font-weight:bold;margin-bottom:2px;">政权年表（220–589）</div>
+    <div class="eratable">
+      三国 · 魏 220–266 ／ 蜀 221–263 ／ 吴 222–280<br>
+      西晋 266–316 · 东晋 317–420 · 十六国 304–439<br>
+      南朝 · 宋 420–479 ／ 齐 479–502 ／ 梁 502–557 ／ 陈 557–589<br>
+      北朝 · 北魏 386–534 ／ 东魏 534–550 ／ 西魏 535–557 ／ 北齐 550–577 ／ 北周 557–581<br>
+      吐谷浑 · 柔然（见疆域层） · 隋 581–589
+    </div>
   </div>
   <div class="btnbar">
     <button id="btn-all-on" class="btn" type="button">一键叠加全部</button>
@@ -324,9 +352,9 @@
 <script src="../water_info.js?v=2026101804"></script>
 <script src="../scs_inset_data.js?v=2026070801"></script>
 <script src="../cities.js?v=2026072001"></script>
-<script src="wei_jin_states.js?v=2026102401"></script>
-    <script src="wei_jin_sites.js?v=2026102401"></script>
-    <script src="wei_jin_routes.js?v=2026102401"></script>
+<script src="wei_jin_states.js?v=2026102402"></script>
+    <script src="wei_jin_sites.js?v=2026102402"></script>
+    <script src="wei_jin_routes.js?v=2026102402"></script>
     <script src="../timeline/map_timeline.js?v=2026101302"></script>
 <script>
 const LAT_MIN=15, LAT_MAX=55, LON_MIN=72, LON_MAX=140;
@@ -1355,13 +1383,13 @@ function rebuildWj(){
 });
 rebuildWj();
 
-// ── 2g) 南北朝战争路线（七条路线）：折线 + 行进箭头 + 编号章 + 线路说明 ──
+// ── 2g) 南北朝战争路线（十八条，按政权与年代分组）：折线 + 行进箭头 + 编号章 + 线路说明 ──
 // 折线在 overlayPane(400)，标记在 markerPane(600)，故路线恒处于「地形之上、标记之下」
 const wjrLineLayer = L.layerGroup();
 const wjrChipLayer = L.layerGroup();
 (function(){
   const D = window.WEI_JIN_ROUTES; if(!D) return;
-  const subs = ['cb-wjr-1','cb-wjr-2','cb-wjr-3','cb-wjr-4','cb-wjr-5','cb-wjr-6','cb-wjr-7'];
+  const subs = ['cb-wjr-1','cb-wjr-2','cb-wjr-3','cb-wjr-4','cb-wjr-5','cb-wjr-6','cb-wjr-7','cb-wjr-8','cb-wjr-9','cb-wjr-10','cb-wjr-11','cb-wjr-12','cb-wjr-13','cb-wjr-14','cb-wjr-15','cb-wjr-16','cb-wjr-17','cb-wjr-18'];
   const all  = document.getElementById('cb-wjr-all');
   const chk  = id => { const el=document.getElementById(id); return el ? el.checked : false; };
   // 屏幕坐标方向角（度）：CRS.Simple 下 y=-lat，故北向为负 y
