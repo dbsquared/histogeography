@@ -137,6 +137,55 @@
   cursor: grab;
   touch-action: none;
 }
+
+/* ── 纪元标记（可选：疆域断面的年份刻度）── */
+.mtl-marks { display: none; }
+.mtl.has-marks .mtl-axis { height: 58px; }
+.mtl.has-marks .mtl-marks {
+  display: block;
+  position: absolute;
+  left: 0; right: 0; top: 44px; height: 14px;
+  pointer-events: none;
+}
+.mtl-mark { position: absolute; top: 0; width: 0; height: 0; }
+.mtl-mark::before {
+  content: "";
+  position: absolute;
+  left: -0.5px; top: -10px;
+  width: 1px; height: 9px;
+  background: rgba(159, 179, 200, 0.5);
+  transition: background-color .2s, height .2s;
+}
+.mtl-mark span {
+  position: absolute;
+  left: 0; top: 0;
+  transform: translateX(-50%);
+  font-size: 9px;
+  line-height: 1;
+  color: #8fa7c0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: color .2s;
+}
+.mtl-mark:hover span { color: #cfe0f0; }
+.mtl-mark.on span { color: #ffd479; font-weight: 600; }
+.mtl-mark.on::before { background: #ffd479; height: 11px; top: -12px; }
+
+/* 有刻度时，拖动热区收在刻度行之上，否则刻度点不到（.mtl-hit 的 z-index 更高） */
+.mtl.has-marks .mtl-hit { bottom: 14px; }
+
+/* 右侧纪元名（如「东魏｜西魏｜梁」） */
+.mtl-era {
+  font-size: 9.5px;
+  color: #ffd479;
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: .9;
+}
 .mtl-axis.dragging .mtl-hit { cursor: grabbing; }
 
 /* ── 右侧读数 ── */

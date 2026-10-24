@@ -82,7 +82,8 @@ const PERIODS = {
        '        <input type="range" id="era-range" min="0" max="6" step="1" value="4" aria-label="疆域纪年">\n' +
        '        <button id="era-next" type="button" class="erabtn" title="下一个断面">▶</button>\n' +
        '      </div>\n' +
-       '      <div id="era-readout" class="eraread">546 年 · 东魏｜西魏｜梁</div>'],
+       '      <div id="era-readout" class="eraread">546 年 · 东魏｜西魏｜梁</div>\n' +
+       '      <div class="eraread" style="opacity:.55;margin-top:-2px">↕ 亦可拖动或点击底部时间轴的年份刻度</div>'],
       // 底部时间轴：拖动时顺带把疆域切到对应年份（「全部」态不动）
       ['    onChange: function(st){\n      if(!st.all) ensureTimelineLayers();\n      applyBattleTimeFilter(st);\n    },',
        '    onChange: function(st){\n      if(!st.all) ensureTimelineLayers();\n      if(!st.all && window.__setEraYear) window.__setEraYear(st.year);\n      applyBattleTimeFilter(st);\n    },'],
@@ -220,7 +221,8 @@ P.counts.forEach(([label, n]) => {
   html = html.replace('const TL_BC = true;', 'const TL_BC = ' + P.timeline.bc + ';');
   must(html.includes('    bc: true,\n'), 'timeline bc opt');
   html = html.replace('    bc: true,\n',
-    '    bc: ' + P.timeline.bc + ',\n    minYear: ' + P.timeline.minYear + ',\n    maxYear: ' + P.timeline.maxYear + ',\n');
+    '    bc: ' + P.timeline.bc + ',\n    minYear: ' + P.timeline.minYear + ',\n    maxYear: ' + P.timeline.maxYear + ',\n' +
+    '    marks: (window.WEI_JIN_STATES && window.WEI_JIN_STATES.snapshots || []).map(function(x){ return { year: x.year, name: x.name, short: String(x.year) }; }),\n');
   console.log('  时间轴：bc=' + P.timeline.bc + '，跨度 ' + P.timeline.minYear + '–' + P.timeline.maxYear);
 }
 // 6) script stamps

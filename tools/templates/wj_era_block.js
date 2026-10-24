@@ -156,16 +156,24 @@ document.getElementById('cb-wj-bnd').onchange = e => e.target.checked ? showWjBn
 document.getElementById('cb-wj-seat').onchange = e => e.target.checked ? showWjSeat() : hideWjSeat();
 
 // 纪年滑条：◀ 上一期 / 下一期 ▶（滑条本身按下标走，读数显示年份）
+// 同时把底部时间轴的游标一起移到该年——图上只有「一个时间游标」，两处操作等价
+function eraJump(i){
+  const S = wjSnapList(); if(!S.length) return;
+  i = Math.max(0, Math.min(S.length-1, i));
+  buildWjEra(i);
+  const tl = window.__eventTimebar;
+  if(tl && typeof tl.setYear === 'function') tl.setYear(S[i].year, true);
+}
 (function(){
   const rg = document.getElementById('era-range');
   const S = wjSnapList();
   if(rg){
     rg.max = String(Math.max(0, S.length - 1));
-    rg.oninput = e => buildWjEra(Number(e.target.value));
+    rg.oninput = e => eraJump(Number(e.target.value));
   }
   const pv = document.getElementById('era-prev'), nx = document.getElementById('era-next');
-  if(pv) pv.onclick = () => buildWjEra(WJ_SNAP - 1);
-  if(nx) nx.onclick = () => buildWjEra(WJ_SNAP + 1);
+  if(pv) pv.onclick = () => eraJump(WJ_SNAP - 1);
+  if(nx) nx.onclick = () => eraJump(WJ_SNAP + 1);
 })();
 
 // 供底部时间轴调用：按年份切到对应断面（同一年份不重建）

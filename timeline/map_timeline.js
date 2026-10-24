@@ -124,6 +124,8 @@
     this.onEngage = typeof opts.onEngage === 'function' ? opts.onEngage : null;
 
     this.events = buildEvents(opts.events, !!opts.bc);
+    // 纪元标记（可选）：例如疆域断面的年份；画在轴下方，可点击跳转
+    this.marks = Array.isArray(opts.marks) ? opts.marks.slice().sort(function (a, b) { return a.year - b.year; }) : [];
     var ys = this.events.map(function (e) { return e.year; });
     this.minY = opts.minYear != null ? opts.minYear : (ys.length ? ys[0] : 0);
     this.maxY = opts.maxYear != null ? opts.maxYear : (ys.length ? ys[ys.length - 1] : 100);
@@ -148,7 +150,20 @@
       return '<i class="mtl-pt" style="left:' + (d.t * 100).toFixed(3) + '%;top:' + (d.row * 9) + 'px"></i>';
     }).join('');
 
+    /* 纪元标记：轴上的一列年份刻度（有标记时轴加高 14px，无标记的页面外观不变） */
+    var span = (this.maxY - this.minY) || 1;
+    var self = this;
+    var marksHtml = '';
+    if (this.marks.length) {
+      marksHtml = '<div class="mtl-marks">' + this.marks.map(function (m, i) {
+        var pct = (Math.min(Math.max((m.year - self.minY) / span, 0), 1) * 100).toFixed(3);
+        return '<i class="mtl-mark" data-i="' + i + '" style="left:' + pct + '%" title="' +
+          esc((m.name || '') + ' ' + fmtYear(m.year)) + '"><span>' + esc(m.short || m.year) + '</span></i>';
+      }).join('') + '</div>';
+    }
+
     this.root.classList.add('mtl');
+    if (this.marks.length) this.root.classList.add('has-marks');
     this.root.innerHTML =
       '<div class="mtl-side">' +
         '<button class="mtl-btn mtl-all" type="button" title="全部显示（复位，恢复初始视图）">⏭</button>' +
@@ -160,10 +175,11 @@
           '<div class="mtl-track"><div class="mtl-fill"></div></div>' +
           '<div class="mtl-knob"><div class="mtl-knob-head"></div></div>' +
           '<div class="mtl-ends"><span>' + esc(fmtYear(this.minY)) + '</span><span>' + esc(fmtYear(this.maxY)) + '</span></div>' +
+          marksHtml +
           '<div class="mtl-hit"></div>' +
         '</div>' +
       '</div>' +
-      '<div class="mtl-read"><b class="mtl-year"></b><span class="mtl-count"></span></div>';
+      '<div class="mtl-read"><b class="mtl-year"></b><span class="mtl-count"></span><span class="mtl-era"></span></div>';
 
     this.elAxis = this.root.querySelector('.mtl-axis');
     this.elHit = this.root.querySelector('.mtl-hit');
@@ -171,7 +187,9 @@
     this.elFill = this.root.querySelector('.mtl-fill');
     this.elYear = this.root.querySelector('.mtl-year');
     this.elCount = this.root.querySelector('.mtl-count');
+    this.elEra = this.root.querySelector('.mtl-era');
     this.elAll = this.root.querySelector('.mtl-all');
+    this.elMarks = Array.prototype.slice.call(this.root.querySelectorAll('.mtl-mark'));
     this.dots = Array.prototype.slice.call(this.root.querySelectorAll('.mtl-pt'));
   };
 
@@ -235,6 +253,18 @@
       engage();
       self.showAll(true);
       self._settle();
+    });
+
+    /* 纪元标记：点年份刻度直接跳到该断面（等同拖到该年） */
+    this.elMarks.forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var m = self.marks[Number(el.getAttribute('data-i'))];
+        if (!m) return;
+        engage();
+        self.setYear(m.year, true);
+        self._settle();
+      });
     });
   };
 
@@ -316,6 +346,16 @@
     this.elYear.textContent = all ? '全部' : fmtYear(this.year);
     this.elCount.textContent = st.k + ' / ' + st.n + ' 件';
     this.elAll.classList.toggle('on', all);
+
+    /* 纪元标记：高亮「当前年份所属」的断面，并在右侧显示其名称（全部态不高亮） */
+    if (this.marks.length) {
+      var act = -1;
+      if (!all) {
+        for (var mi = 0; mi < this.marks.length; mi++) { if (this.marks[mi].year <= this.year + 0.5) act = mi; }
+      }
+      for (var mj = 0; mj < this.elMarks.length; mj++) this.elMarks[mj].classList.toggle('on', mj === act);
+      if (this.elEra) this.elEra.textContent = act >= 0 ? (this.marks[act].name || '') : '';
+    }
 
     /* 轴面高亮：all=整条；filter=时间窗区间 */
     if (all) {
