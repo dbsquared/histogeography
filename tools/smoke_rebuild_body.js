@@ -19,6 +19,9 @@ const TK = global.window.THREE_KINGDOM_SITES;
 global.window = {};
 require(path.join(ROOT, '楚汉争霸', 'chu_han_sites.js'));
 const CH = global.window.CHU_HAN_SITES;
+global.window = {};
+require(path.join(ROOT, '魏晋南北朝', 'wei_jin_sites.js'));
+const WJ = global.window.WEI_JIN_SITES;
 
 let passed = 0;
 const failures = [];
@@ -125,6 +128,15 @@ runPage({
   endMark: "\n['city','pass','ford','battle','event','merge']",
   rebuildFn: 'rebuildCH', layerVar: 'chLayer', cbPrefix: 'cb-ch-',
   expectCount: 26 + 8
+});
+runPage({
+  lbl: '魏晋南北朝页',
+  file: path.join('魏晋南北朝', 'index.html'),
+  data: WJ, dataName: 'WEI_JIN_SITES',
+  startMark: 'const wjMeta = {',
+  endMark: "\n['city','pass','ford','battle','event','merge']",
+  rebuildFn: 'rebuildWj', layerVar: 'wjLayer', cbPrefix: 'cb-wj-',
+  expectCount: 26 + 15
 });
 
 console.log('\n────────────────────────────');
