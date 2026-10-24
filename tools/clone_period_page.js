@@ -88,7 +88,7 @@ const PERIODS = {
       ['    onChange: function(st){\n      if(!st.all) ensureTimelineLayers();\n      applyBattleTimeFilter(st);\n    },',
        '    onChange: function(st){\n      if(!st.all) ensureTimelineLayers();\n      if(!st.all && window.__setEraYear) window.__setEraYear(st.year);\n      applyBattleTimeFilter(st);\n    },'],
       ['据《中国历史地图集》秦楚之际通行方案示意性重建（非精确数字化）',
-       '据《中国历史地图集》南北朝后期（546 年 东魏·西魏·梁）通行方案示意性重建（非精确数字化）'],
+       '据《中国历史地图集》各期通行方案示意性重建（262–589，十二个断面；非精确数字化）'],
       ['魏晋南北朝战争路线', '南北朝战争路线'],
       ['魏晋南北朝争霸', '魏晋南北朝'],
       ['// ── 2g) 南北朝战争路线（六条路线）',
@@ -152,7 +152,7 @@ const PERIODS = {
     timeline: { bc: false, minYear: 220, maxYear: 589 },
     // ── 6. 外链版本戳 ──
     stamps: {
-      'wei_jin_states.js': '2026102501',
+      'wei_jin_states.js': '2026102502',
       'wei_jin_sites.js': '2026102501',
       'wei_jin_routes.js': '2026102501'
     }
@@ -222,7 +222,7 @@ P.counts.forEach(([label, n]) => {
   must(html.includes('    bc: true,\n'), 'timeline bc opt');
   html = html.replace('    bc: true,\n',
     '    bc: ' + P.timeline.bc + ',\n    minYear: ' + P.timeline.minYear + ',\n    maxYear: ' + P.timeline.maxYear + ',\n' +
-    '    marks: (window.WEI_JIN_STATES && window.WEI_JIN_STATES.snapshots || []).map(function(x){ return { year: x.year, name: x.name, short: String(x.year) }; }),\n');
+    '    marks: (window.WEI_JIN_STATES && window.WEI_JIN_STATES.snapshots || []).map(function(x){ var ns = (x.states || []).map(function(s){ return s.name; }); return { year: x.year, name: (ns.length <= 3 ? ns.join("·") : ns.slice(0, 3).join("·") + " 等" + ns.length + "国"), short: String(x.year) }; }),\n');
   console.log('  时间轴：bc=' + P.timeline.bc + '，跨度 ' + P.timeline.minYear + '–' + P.timeline.maxYear);
 }
 // 6) script stamps

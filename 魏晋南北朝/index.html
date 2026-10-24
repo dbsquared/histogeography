@@ -249,7 +249,7 @@
 
 <div id="title" class="panel">
   <b>中国历史地形图</b>
-  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）<br/>魏晋南北朝疆域/都邑：据《中国历史地图集》南北朝后期（546 年 东魏·西魏·梁）通行方案示意性重建（非精确数字化）<br/>主要山脉：Natural Earth 10m（Range/mtn，公有领域；含 9 条手工补绘中国山脉）<br/>主要河流/湖泊：Natural Earth 10m（Lakes/Rivers，公有领域；含手工补绘云南高原湖群）</div>
+  <div class="src">底图：SRTM 90m DEM（地理空间数据云 www.gscloud.cn）<br/>等高线：由 DEM 实时提取 · 鼠标移动可查海拔<br/>国界/省界：Supeset China-GeoData（遵循自然资源部标准地图，含完整藏南·达旺/珞瑜/阿克赛钦）<br/>十段线：geojson.cn（引自民政部 xzqh.mca.gov.cn）<br/>魏晋南北朝疆域/都邑：据《中国历史地图集》各期通行方案示意性重建（262–589，十二个断面；非精确数字化）<br/>主要山脉：Natural Earth 10m（Range/mtn，公有领域；含 9 条手工补绘中国山脉）<br/>主要河流/湖泊：Natural Earth 10m（Lakes/Rivers，公有领域；含手工补绘云南高原湖群）</div>
 </div>
 
 <div id="controls" class="panel">
@@ -364,7 +364,7 @@
 <script src="../water_info.js?v=2026101804"></script>
 <script src="../scs_inset_data.js?v=2026070801"></script>
 <script src="../cities.js?v=2026072001"></script>
-<script src="wei_jin_states.js?v=2026102501"></script>
+<script src="wei_jin_states.js?v=2026102502"></script>
     <script src="wei_jin_sites.js?v=2026102501"></script>
     <script src="wei_jin_routes.js?v=2026102501"></script>
     <script src="../timeline/map_timeline.js?v=2026102501"></script>
@@ -1763,7 +1763,7 @@ function applyBattleTimeFilter(st){
     bc: false,
     minYear: 220,
     maxYear: 589,
-    marks: (window.WEI_JIN_STATES && window.WEI_JIN_STATES.snapshots || []).map(function(x){ return { year: x.year, name: x.name, short: String(x.year) }; }),
+    marks: (window.WEI_JIN_STATES && window.WEI_JIN_STATES.snapshots || []).map(function(x){ var ns = (x.states || []).map(function(s){ return s.name; }); return { year: x.year, name: (ns.length <= 3 ? ns.join("·") : ns.slice(0, 3).join("·") + " 等" + ns.length + "国"), short: String(x.year) }; }),
     onChange: function(st){
       if(!st.all) ensureTimelineLayers();
       if(!st.all && window.__setEraYear) window.__setEraYear(st.year);

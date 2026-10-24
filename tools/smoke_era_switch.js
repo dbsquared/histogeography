@@ -57,8 +57,8 @@ function ok(name, fn) {
 }
 
 console.log('═══ 魏晋南北朝 · 疆域断面 ═══');
-ok('数据含 7 个断面', () => assert.strictEqual(api.S().length, 7));
-ok('初始断面为 546 年（序号 4）', () => assert.strictEqual(api.idx(), 4));
+ok('数据含 12 个断面', () => assert.strictEqual(api.S().length, 12));
+ok('初始断面为 546 年（序号 9）', () => assert.strictEqual(api.idx(), 9));
 
 console.log('\n【逐年切换】');
 let totalPoly = 0, totalSeats = 0;
@@ -82,14 +82,14 @@ api.S().forEach((snap, i) => {
 console.log('  合计 ' + totalPoly + ' 个政区多边形 / ' + totalSeats + ' 个都邑');
 
 console.log('\n【按年份取断面】');
-[[220, 0], [262, 0], [300, 1], [350, 1], [382, 2], [480, 2], [546, 4], [560, 4], [576, 5], [589, 6], [600, 6]]
+[[220, 0], [262, 0], [300, 1], [318, 2], [330, 2], [340, 3], [356, 4], [370, 4], [382, 5], [400, 6], [416, 7], [480, 7], [546, 9], [560, 9], [576, 10], [589, 11], [600, 11]]
   .forEach(([y, want]) => ok('公元 ' + y + ' 年 → 第 ' + want + ' 断面', () => assert.strictEqual(api.pick(y), want)));
 
 console.log('\n【读数与滑条】');
 const ro = () => els['era-readout'].textContent;
-api.build(6);
+api.build(11);
 ok('589 年读数', () => assert.ok(/589 年 · 隋/.test(ro()), ro()));
-ok('滑条同步到 6', () => assert.strictEqual(els['era-range'].value, '6'));
+ok('滑条同步到 11', () => assert.strictEqual(els['era-range'].value, '11'));
 api.build(0);
 ok('262 年读数含魏蜀吴', () => assert.ok(/262 年 · 魏｜蜀｜吴/.test(ro()), ro()));
 
