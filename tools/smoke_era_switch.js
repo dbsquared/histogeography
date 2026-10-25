@@ -20,15 +20,22 @@ const code = html.slice(A, B);
 global.window = {};
 require(path.join(ROOT, '魏晋南北朝', 'wei_jin_states.js'));
 const DATA = global.window.WEI_JIN_STATES;
+require(path.join(ROOT, '魏晋南北朝', 'wei_jin_regimes.js'));
+const REG = global.window.WEI_JIN_REGIMES;
 
 /* ── Leaflet / DOM 桩 ── */
 const rec = { polygon: 0, marker: 0, dot: 0, groups: 0 };
+const polys = [];
+const shown = [];
 function LG() { return { addLayer() {}, clearLayers() {}, addTo() { return this; } }; }
 const L = {
   layerGroup() { rec.groups++; return LG(); },
   polygon(ring, style) {
     rec.polygon++;
-    return { ring, style, on() { return this; }, setStyle() {}, bringToFront() {} };
+    const o = { ring, style, h: {}, on(e, fn) { this.h[e] = fn; return this; },
+      setStyle() {}, bringToFront() {}, fire(e) { if (this.h[e]) this.h[e](); } };
+    polys.push(o);
+    return o;
   },
   marker(ll, opts) { rec.marker++; return { ll, opts, on() { return this; }, getElement() { return null; } }; },
   circleMarker(ll, opts) { rec.dot++; return { ll, opts, bindTooltip() { return this; }, on() { return this; } }; },
@@ -44,7 +51,7 @@ const document = {
 const map = { removeLayer() {}, addLayer() {} };
 let collisions = 0;
 const scheduleCollision = () => { collisions++; };
-const showInfo = () => {};
+const showInfo = (t, h) => { shown.push([t, h]); };
 
 const api = new Function('L', 'map', 'document', 'window', 'showInfo', 'scheduleCollision', 'console',
   code + '\nreturn { build: buildWjEra, pick: wjPickIndex, S: wjSnapList, idx: () => WJ_SNAP };'
@@ -57,6 +64,16 @@ function ok(name, fn) {
 }
 
 console.log('═══ 魏晋南北朝 · 疆域断面 ═══');
+  const names = new Set();
+  DATA.snapshots.forEach(sp => sp.states.forEach(x => names.add(x.name)));
+  ok('每个政权都有简介（' + names.size + ' 个）', () => {
+    const miss = [...names].filter(n => !REG[n]);
+    assert.deepStrictEqual(miss, [], '缺简介：' + miss.join(','));
+  });
+  ok('简介字段完整（起讫/都城/正文）', () => {
+    const bad = [...names].filter(n => { const r = REG[n]; return !r || !r.span || !r.capital || !r.desc || r.desc.length < 25; });
+    assert.deepStrictEqual(bad, [], '字段不全：' + bad.join(','));
+  });
 ok('数据含 12 个断面', () => assert.strictEqual(api.S().length, 12));
 ok('初始断面为 546 年（序号 9）', () => assert.strictEqual(api.idx(), 9));
 
@@ -92,6 +109,23 @@ ok('589 年读数', () => assert.ok(/589 年 · 隋/.test(ro()), ro()));
 ok('滑条同步到 11', () => assert.strictEqual(els['era-range'].value, '11'));
 api.build(0);
 ok('262 年读数含魏蜀吴', () => assert.ok(/262 年 · 魏｜蜀｜吴/.test(ro()), ro()));
+
+console.log('\n【点击疆域 → 政权简介】');
+  ok('政区多边形注册了 click 处理器', () => assert.ok(polys.some(p => p.h.click)));
+  ok('点击最后一个政区弹出信息面板', () => {
+    const n = shown.length;
+    polys[polys.length - 1].fire('click');
+    assert.strictEqual(shown.length, n + 1);
+  });
+  ok('标题为「全称（年份）」', () => {
+    const t = shown[shown.length - 1][0];
+    assert.ok(/（262 年）/.test(t), t);
+  });
+  ok('正文含立国/都城/简介/都邑四段', () => {
+    const h = shown[shown.length - 1][1];
+    ['立国', '都 ', '都邑'].forEach(k => assert.ok(h.includes(k), '缺「' + k + '」：' + h.slice(0, 80)));
+    assert.ok(h.length > 100, '正文过短：' + h.length);
+  });
 
 console.log('\n【重复调用不重建】');
 const before = rec.polygon;

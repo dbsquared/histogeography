@@ -70,6 +70,8 @@ const PERIODS = {
     // ── 2. 文案：先整体换朝代名，再逐条修细节 ──
     text: [
       ['楚汉', '魏晋南北朝'],
+      ['<script src="wei_jin_states.js?v=2026101101"></script>',
+       '<script src="wei_jin_states.js?v=2026101101"></script>\n    <script src="wei_jin_regimes.js?v=2026102501"></script>'],
       ['<title>中国历史地形图</title>', '<title>中国历史地形图 · 魏晋南北朝</title>'],
       ['魏晋南北朝十八国图层标签', '魏晋南北朝疆域标签'],
       ['/* ── 魏晋南北朝战争路线 ── */',
@@ -153,6 +155,7 @@ const PERIODS = {
     // ── 6. 外链版本戳 ──
     stamps: {
       'wei_jin_states.js': '2026102502',
+      'wei_jin_regimes.js': '2026102501',
       'wei_jin_sites.js': '2026102501',
       'wei_jin_routes.js': '2026102501'
     }

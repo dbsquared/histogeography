@@ -64,10 +64,24 @@ function wjPickIndex(year){
   for(let i=0;i<S.length;i++){ if(S[i].year <= year + 0.5){ k = i; } else break; }
   return k;
 }
+// 政权简介（wei_jin_regimes.js）；缺条目时退回只显示年份与都邑
+function wjRegimeInfo(name){
+  const R = window.WEI_JIN_REGIMES || {};
+  return R[name] || null;
+}
 function wjEraTip(st, snap){
+  const r = wjRegimeInfo(st.name);
   const seats = (st.seats||[]).map(s=>s.name.replace('/', ' · ')).join('、');
-  return `<b>${st.name}</b>　<span style="color:#9fb3c8">${snap.year} 年 · ${snap.name}</span>` +
-         `<br/>都邑：${seats || '—'}`;
+  let h = '<b>' + ((r && r.full) ? r.full : st.name) + '</b>';
+  h += '　<span style="color:#9fb3c8">' + snap.year + ' 年 · ' + snap.name + '</span>';
+  const meta = [];
+  if(r && r.span)    meta.push('立国 ' + r.span);
+  if(r && r.capital) meta.push('都 ' + r.capital);
+  if(r && r.founder) meta.push(r.founder);
+  if(meta.length) h += '<div style="color:#ffd479;margin:3px 0 2px">' + meta.join('　·　') + '</div>';
+  if(r && r.desc) h += '<div style="color:#cfe0f0;font-size:11px;line-height:1.7;margin:5px 0 4px">' + r.desc + '</div>';
+  h += '<div style="margin-top:4px">都邑：' + (seats || '—') + '</div>';
+  return h;
 }
 function buildWjEra(idx){
   const S = wjSnapList();
@@ -90,7 +104,10 @@ function buildWjEra(idx){
         this.bringToFront();
       });
       poly.on('mouseout', function(){ this.setStyle(baseStyle); });
-      poly.on('click', () => showInfo(st.name + '（' + snap.year + ' 年）', wjEraTip(st, snap)));
+      poly.on('click', () => {
+        const r = wjRegimeInfo(st.name);
+        showInfo(((r && r.full) ? r.full : st.name) + '（' + snap.year + ' 年）', wjEraTip(st, snap));
+      });
       wjBoundaryLayer.addLayer(poly);
     });
 
