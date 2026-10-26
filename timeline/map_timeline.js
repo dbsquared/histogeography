@@ -166,6 +166,7 @@
     if (this.marks.length) this.root.classList.add('has-marks');
     this.root.innerHTML =
       '<div class="mtl-side">' +
+        '<button class="mtl-btn mtl-next" type="button" title="下一个事件（步进）">»</button>' +
         '<button class="mtl-btn mtl-all" type="button" title="全部显示（复位，恢复初始视图）">⏭</button>' +
       '</div>' +
       '<div class="mtl-mid">' +
@@ -188,6 +189,7 @@
     this.elYear = this.root.querySelector('.mtl-year');
     this.elCount = this.root.querySelector('.mtl-count');
     this.elEra = this.root.querySelector('.mtl-era');
+    this.elNext = this.root.querySelector('.mtl-next');
     this.elAll = this.root.querySelector('.mtl-all');
     this.elMarks = Array.prototype.slice.call(this.root.querySelectorAll('.mtl-mark'));
     this.dots = Array.prototype.slice.call(this.root.querySelectorAll('.mtl-pt'));
@@ -247,6 +249,12 @@
         default: handled = false;
       }
       if (handled) { engage(); self._settle(); e.preventDefault(); }
+    });
+
+    this.elNext.addEventListener('click', function () {
+      engage();
+      self.nextEvent();
+      self._settle();
     });
 
     this.elAll.addEventListener('click', function () {
@@ -309,6 +317,16 @@
     this._moveKnob(1, !!glide);
     this._render();
     if (changed) this._emit();
+  };
+
+  /* 步进：跳到下一个事件年份；all 态 → 第一个事件；末尾再点 → 回全部显示（循环） */
+  MapTimeline.prototype.nextEvent = function () {
+    if (!this.events.length) return;
+    if (this.mode === 'all') { this.setYear(this.events[0].year, true); return; }
+    for (var i = 0; i < this.events.length; i++) {
+      if (this.events[i].year > this.year) { this.setYear(this.events[i].year, true); return; }
+    }
+    this.showAll(true);
   };
 
   MapTimeline.prototype._moveKnob = function (pos, glide) {

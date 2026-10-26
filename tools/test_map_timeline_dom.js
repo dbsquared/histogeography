@@ -127,6 +127,24 @@ function approx(a, b, eps) { eps = eps || 1e-6; assert.ok(Math.abs(a - b) < eps,
   ok('最左端继续 ArrowLeft → 钳制在 190', () => assert.strictEqual(tl.getState().year, 190));
   ok('键盘也触发 onEngage', () => assert.ok(engageCount >= 2));
 
+  console.log('\n== 步进按钮（下一个事件） ==');
+  el.querySelector('.mtl-all').dispatchEvent(new Ev('click'));      /* 先回 all 态 */
+  el.querySelector('.mtl-next').dispatchEvent(new Ev('click'));
+  ok('all 态点步进 → 第一个事件（190）', () => {
+    assert.strictEqual(tl.getState().all, false);
+    assert.strictEqual(tl.getState().year, 190);
+  });
+  el.querySelector('.mtl-next').dispatchEvent(new Ev('click'));
+  ok('再点 → 200', () => assert.strictEqual(tl.getState().year, 200));
+  el.querySelector('.mtl-next').dispatchEvent(new Ev('click'));
+  el.querySelector('.mtl-next').dispatchEvent(new Ev('click'));
+  el.querySelector('.mtl-next').dispatchEvent(new Ev('click'));
+  ok('连续步进 → 末事件 234', () => assert.strictEqual(tl.getState().year, 234));
+  el.querySelector('.mtl-next').dispatchEvent(new Ev('click'));
+  ok('末事件再点 → 回全部显示', () => assert.strictEqual(tl.getState().all, true));
+  el.querySelector('.mtl-next').dispatchEvent(new Ev('click'));
+  ok('全部态再点 → 回到第一个事件（循环）', () => assert.strictEqual(tl.getState().year, 190));
+
   console.log('\n== 全部复位 ==');
   el.querySelector('.mtl-all').dispatchEvent(new Ev('click'));
   ok('⏭ → 回到 all 态（全部 / 5 / 5 件）', () => {
